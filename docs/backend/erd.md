@@ -92,7 +92,6 @@ JPA:
 - productId FK
 - status: READY / OPEN / ENDED / CANCELED
 - startPrice BIGINT
-- minBidIncrement BIGINT
 - currentPrice BIGINT
 - leadingBidderId FK nullable
 - winningBidId FK → bids.id nullable
@@ -140,7 +139,6 @@ JPA:
 - auctionId FK
 - bidderId FK
 - maxAmount BIGINT
-- incrementAmount BIGINT
 - status: ACTIVE / STOPPED / EXHAUSTED
 - priorityAt
 - createdAt / updatedAt
@@ -150,6 +148,11 @@ JPA:
 JPA:
 - AutoBid → Auction: ManyToOne LAZY
 - AutoBid → User(bidder): ManyToOne LAZY
+
+도메인 정책:
+- AutoBid에는 사용자별 상승폭을 저장하지 않음
+- 현재가에 따른 상승폭은 서버의 `BidIncrementPolicy`가 계산
+- 가격구간별 정책은 Auction row가 아니라 애플리케이션 정책으로 관리
 
 ## trades
 - id PK
@@ -234,7 +237,7 @@ JPA:
 이 프로젝트의 백엔드 기술 중심은 단순 CRUD 기능 수보다 다음 문제를 실제 코드와 테스트로 해결하는 것입니다.
 
 1. 동시 입찰에서 Auction.currentPrice / leadingBidder / Bid 이력 정합성
-2. 여러 AutoBid의 경쟁과 동가 우선순위
+2. 가격구간별 BidIncrementPolicy를 적용한 여러 AutoBid의 경쟁과 동가 우선순위
 3. 경매 종료 Scheduler와 마지막 입찰의 race condition
 4. 중복 요청 / Scheduler 중복 실행에 대한 멱등성
 5. DB commit 이후 WebSocket / Push 전달
