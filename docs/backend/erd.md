@@ -381,6 +381,8 @@ Index:
 | status | VARCHAR(20) | NOT NULL |
 | resourceType | VARCHAR(40) | NULL |
 | resourceId | BIGINT | NULL |
+| responseStatus | SMALLINT | NULL |
+| responseBody | JSON | NULL |
 | createdAt | DATETIME(6) | NOT NULL |
 | updatedAt | DATETIME(6) | NOT NULL |
 
@@ -398,6 +400,8 @@ Index:
 
 정책:
 - 동일 key + 동일 requestHash는 기존 결과 재사용
+- COMPLETED 요청의 HTTP status/body snapshot을 저장해 재요청에 동일한 논리적 결과 반환
+- 재전송 응답에는 `Idempotency-Replayed: true` 헤더 사용
 - 동일 key + 다른 requestHash는 409 Conflict
 
 ---
