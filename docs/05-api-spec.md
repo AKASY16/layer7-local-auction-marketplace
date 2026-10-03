@@ -65,6 +65,8 @@ Idempotency-Key: <UUID>
 ```
 
 적용 scope:
+- AUCTION_CREATE
+- PRODUCT_APPEND_CREATE
 - MANUAL_BID
 - AUTO_BID_SET
 - AUTO_BID_STOP
@@ -136,6 +138,9 @@ Validation 오류 예:
 | IDEMPOTENCY_KEY_REQUIRED | 400 | 필수 Idempotency-Key 없음 |
 | UNAUTHORIZED | 401 | 로그인 필요 |
 | INVALID_TOKEN | 401 | JWT 오류/만료 |
+| INVALID_CREDENTIALS | 401 | 로그인 정보 불일치 |
+| ACCOUNT_WITHDRAWN | 403 | 탈퇴 처리된 계정 |
+| USER_WITHDRAWAL_BLOCKED | 409 | 진행 중 상품/경매/입찰/거래 의무로 탈퇴 불가 |
 | FORBIDDEN | 403 | 권한 없음 |
 | SELF_BID_FORBIDDEN | 403 | 판매자 본인 입찰 |
 | COMPLETION_SELF_CONFIRM_FORBIDDEN | 403 | 본인이 요청한 거래완료를 본인이 승인 |
@@ -149,6 +154,9 @@ Validation 오류 예:
 | BID_AMOUNT_TOO_LOW | 409 | 최소 입찰가 미달 |
 | DUPLICATE_BID_AMOUNT | 409 | 동일 경매 동일 가격 Bid 충돌 |
 | AUTO_BID_MAX_TOO_LOW | 409 | 현재 상태에서 의미 있는 maxAmount 미달 |
+| PRODUCT_IMAGE_LIMIT | 409 | 상품 이미지 최대 개수 초과 |
+| PRODUCT_IMAGE_REQUIRED | 409 | 최소 1장의 상품 이미지가 필요 |
+| AUCTION_RELIST_NOT_ALLOWED | 409 | 현재 경매/거래 상태에서 재경매 불가 |
 | AUCTION_CANNOT_CANCEL | 409 | 입찰 발생 후 판매자 취소 시도 |
 | TRADE_INVALID_STATE | 409 | 허용되지 않은 Trade 상태전이 |
 | TRADE_RESPONSE_EXPIRED | 409 | 응답기한 종료 |
