@@ -129,9 +129,10 @@ endAt 경계에서 입찰 worker와 종료 worker를 동시에 실행.
 기대:
 - 실제 명령 수행 1회
 - IdempotencyRequest 1건
-- 동일 요청 재전송은 기존 성공 결과 재사용
+- 동일 요청 재전송은 기존 성공 결과 재사용 (`Idempotency-Replayed: true`)
+- 앞선 요청이 실패해 롤백되면 대기하던 요청이 그대로 실행되고 기록은 그 결과로 1건
 
-같은 key에 다른 requestHash를 보내면 409 Conflict.
+같은 key에 다른 requestHash를 보내면 409 Conflict. 같은 key와 같은 body로 다른 경매에 입찰해도 경로가 달라 409.
 
 ### C10. Scheduler / 신뢰점수 중복 실행
 동일 Auction 종료 및 동일 Trade NO_RESPONSE 처리를 여러 worker가 동시에 시도.

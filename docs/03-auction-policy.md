@@ -247,6 +247,7 @@ COMMIT
 - 같은 key로 요청 내용이 달라지면 잘못된 key 재사용으로 간주하고 `409 Conflict`
 - 요청 주요 필드로 `requestHash`를 만들어 같은 key의 동일 요청인지 검증
 - Frontend의 버튼 비활성화는 UX 보조 수단이며, 최종 보장은 Backend/DB가 담당
+- 트랜잭션 경계, 실패한 요청의 재시도, 보관 기간은 [API 명세 공통 규칙](05-api-spec.md#idempotency)을 따름
 
 ### Scheduler / 도메인 이벤트
 Scheduler나 내부 이벤트에는 HTTP용 Idempotency-Key를 사용하지 않음.

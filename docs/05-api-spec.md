@@ -79,6 +79,7 @@ Idempotency-Key: <UUID>
 ```
 
 적용 scope:
+- PRODUCT_CREATE
 - AUCTION_CREATE
 - PRODUCT_APPEND_CREATE
 - MANUAL_BID
@@ -93,10 +94,23 @@ Idempotency-Key: <UUID>
 - AUCTION_RELIST
 
 규칙:
-- 동일 user + scope + key + 동일 요청: 최초 처리 결과 재사용
+- 동일 user + scope + key + 동일 요청: 최초 성공 결과 재사용
 - replay 응답에는 `Idempotency-Replayed: true`
 - 동일 key를 다른 요청 내용에 재사용: `409 IDEMPOTENCY_KEY_REUSED`
-- 서버는 requestHash와 최초 HTTP status/body snapshot을 저장
+- Idempotency-Key는 UUID 형식. 형식이 아니면 `400 VALIDATION_ERROR`
+- requestHash = SHA-256(HTTP method + path variable이 포함된 경로 + 정규화한 JSON body). 같은 key로 다른 경매에 입찰하면 경로가 달라 `IDEMPOTENCY_KEY_REUSED`
+- 서버는 성공한 요청의 requestHash와 HTTP status/body snapshot을 저장하고, replay 시 snapshot을 그대로 반환 (serverTime 등도 최초 응답 값)
+- 기록 보관 기간은 24시간이며 이후 정리 배치가 삭제
+
+처리 방식:
+- 멱등 기록은 비즈니스 트랜잭션 안에서 **가장 먼저** INSERT하고, 비즈니스 처리가 끝나면 같은 트랜잭션에서 응답 snapshot을 채움
+- 같은 key의 동시 요청은 UNIQUE index에서 앞선 트랜잭션이 끝날 때까지 대기
+  - 앞선 요청이 커밋되면 duplicate key 오류가 나고, 새 트랜잭션에서 snapshot을 조회해 replay
+  - 앞선 요청이 롤백되면 기록도 사라지므로 대기하던 요청이 그대로 실행
+- 실패한 요청(4xx/5xx)은 롤백과 함께 기록도 사라지므로 같은 key로 재시도하면 다시 실행됨. 비즈니스 효과가 두 번 생기는 일은 없으며, 클라이언트는 4xx를 받으면 다음 사용자 액션에서 새 key를 만듦
+- 멱등 기록 INSERT는 모든 도메인 락보다 먼저이므로 중복 요청은 도메인 락을 잡지 않은 채 대기함 ([락 규칙](backend/locking.md))
+
+키가 필요 없는 API(같은 요청을 반복해도 결과가 같음): 경매 취소, 관심상품 PUT/DELETE, 알림 읽음 처리, PushSubscription 등록/삭제
 
 ### 공통 Error Response
 

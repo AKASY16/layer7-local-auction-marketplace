@@ -20,6 +20,7 @@ Product → Auction → Trade → User (여러 명이면 id 오름차순)
 ```
 
 - 뒤 순서의 락을 쥔 채로 앞 순서의 락을 요청하지 않습니다.
+- Idempotency 기록 INSERT는 이 순서보다 앞, 트랜잭션의 첫 쓰기로 수행합니다. 같은 key의 중복 요청은 도메인 락을 잡지 않은 채 UNIQUE index에서 대기하므로 순환 대기가 생기지 않습니다.
 - 락은 `SELECT ... FOR UPDATE`(PESSIMISTIC_WRITE) 또는 `SELECT ... FOR SHARE`로 잡고 트랜잭션 끝까지 유지합니다.
 
 ## 작업별 락

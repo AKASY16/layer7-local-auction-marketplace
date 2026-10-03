@@ -42,6 +42,7 @@
 - 신뢰점수는 표시용이며 제재는 본인 책임 실패 3회 연속 시 7일 거래 참여 정지(UserRestriction)
 - 부작용이 있는 HTTP 명령은 `Idempotency-Key + requestHash + DB UNIQUE`로 중복 실행 방지
 - 동일 key 재전송은 기존 결과를 재사용하고, 같은 key에 다른 요청 내용은 409 Conflict
+- 멱등 기록은 비즈니스 트랜잭션의 첫 쓰기로 INSERT하고 성공한 결과만 24시간 보관
 - Scheduler/내부 이벤트는 상태 조건, row lock, 도메인 UNIQUE 제약으로 멱등성 보장
 - Trade는 `UNIQUE(auctionId)`, TrustHistory는 `UNIQUE(tradeId,userId,reason)`, Notification은 `dedupeKey UNIQUE` 활용
 - Product 1:N Auction

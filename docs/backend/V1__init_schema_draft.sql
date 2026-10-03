@@ -381,7 +381,6 @@ CREATE TABLE idempotency_requests (
     scope VARCHAR(50) NOT NULL,
     idempotency_key VARCHAR(100) NOT NULL,
     request_hash CHAR(64) NOT NULL,
-    status VARCHAR(20) NOT NULL,
     resource_type VARCHAR(40) NULL,
     resource_id BIGINT NULL,
     response_status SMALLINT NULL,
@@ -391,9 +390,6 @@ CREATE TABLE idempotency_requests (
     PRIMARY KEY (id),
     CONSTRAINT uq_idempotency_user_scope_key
         UNIQUE (user_id, scope, idempotency_key),
-    CONSTRAINT ck_idempotency_status CHECK (
-        status IN ('PROCESSING', 'COMPLETED', 'FAILED')
-    ),
     CONSTRAINT ck_idempotency_resource_pair CHECK (
         (resource_type IS NULL AND resource_id IS NULL)
         OR

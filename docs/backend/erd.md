@@ -440,7 +440,6 @@ Index:
 | scope | VARCHAR(50) | NOT NULL |
 | idempotencyKey | VARCHAR(100) | NOT NULL |
 | requestHash | CHAR(64) | NOT NULL |
-| status | VARCHAR(20) | NOT NULL |
 | resourceType | VARCHAR(40) | NULL |
 | resourceId | BIGINT | NULL |
 | responseStatus | SMALLINT | NULL |
@@ -448,23 +447,22 @@ Index:
 | createdAt | DATETIME(6) | NOT NULL |
 | updatedAt | DATETIME(6) | NOT NULL |
 
-Status:
-- PROCESSING
-- COMPLETED
-- FAILED
+상태 컬럼을 두지 않습니다. 기록은 비즈니스 트랜잭션 안에서 INSERT되고 같은 트랜잭션에서 응답 snapshot이 채워지므로, 커밋되어 다른 트랜잭션에 보이는 기록은 항상 성공한 요청입니다. responseStatus/responseBody가 NULL인 상태는 트랜잭션 내부에서만 존재합니다.
 
 Constraints:
 - UNIQUE(userId, scope, idempotencyKey)
 - resourceType/resourceId는 둘 다 NULL 또는 둘 다 NOT NULL
 
 Index:
-- createdAt
+- createdAt: 24시간 지난 기록 정리 배치용
 
 정책:
 - 동일 key + 동일 requestHash는 기존 결과 재사용
-- COMPLETED 요청의 HTTP status/body snapshot을 저장해 재요청에 동일한 논리적 결과 반환
+- 성공한 요청의 HTTP status/body snapshot을 저장해 재요청에 동일한 논리적 결과 반환
+- 실패한 요청은 롤백과 함께 기록도 사라지므로 같은 key로 재시도하면 다시 실행
 - 재전송 응답에는 `Idempotency-Replayed: true` 헤더 사용
 - 동일 key + 다른 requestHash는 409 Conflict
+- 처리 방식 상세: [API 명세 공통 규칙](../05-api-spec.md#idempotency)
 
 ---
 

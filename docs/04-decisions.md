@@ -87,3 +87,7 @@
 - 후처리 완료 여부는 `finalized` 필드로 제공, `biddingOpen` 필드는 제거
 - READY → OPEN은 쓰기 경로에서 즉시 전이, 종료·거래 기한 전이는 Scheduler만
 - 의무 검사와 재경매 조건은 저장 상태(finalized) 기준
+
+## 2026-10-03 — 설계 리뷰 반영 — 명세 보강
+
+- Idempotency: 기록은 비즈니스 트랜잭션의 첫 쓰기로 INSERT, 성공 결과만 24시간 보관, requestHash에 경로 포함, 상품 등록에도 적용, 상태 컬럼 제거
