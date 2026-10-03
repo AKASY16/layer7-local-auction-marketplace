@@ -327,6 +327,8 @@ CREATE TABLE idempotency_requests (
     status VARCHAR(20) NOT NULL,
     resource_type VARCHAR(40) NULL,
     resource_id BIGINT NULL,
+    response_status SMALLINT NULL,
+    response_body JSON NULL,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
