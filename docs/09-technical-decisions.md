@@ -25,6 +25,11 @@
 - AutoBid 사용자는 `maxAmount`만 설정하며 별도 incrementAmount를 두지 않음
 - 자동입찰은 상시 실행 프로세스가 아니라 수동입찰/AutoBid 설정·변경 이벤트가 발생했을 때만 계산
 - 동일 Auction의 입찰, AutoBid 설정 변경, 종료 Scheduler는 Auction row 기준으로 직렬화
+- 경매 시간 판정은 Auction 락 획득 후 서버 `Clock` 기준으로 수행
+- 입찰 가능 범위는 `startAt <= now < endAt`
+- 애플리케이션 내부 시간 표현은 `Instant`/UTC 기준, 사용자 화면에서 지역시간으로 변환
+- Scheduler 지연은 허용하되 정합성은 endAt 검증으로 보장
+- 낙찰 응답기한은 실제 Scheduler 처리시각이 아닌 `endAt + 24h`로 계산
 - Product 1:N Auction
 - Bid / AutoBid 분리
 - Auction / Trade 분리
