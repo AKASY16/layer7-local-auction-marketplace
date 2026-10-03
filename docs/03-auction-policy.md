@@ -199,12 +199,15 @@ startPrice 9,000원에서 C(max 90,000원) → B(max 120,000원) → A(max 150,0
 ## 동시성 처리
 
 동일 Auction의 다음 작업은 모두 Auction row 기준으로 직렬화:
-- 경매 생성
 - 수동입찰
 - AutoBid 신규 설정
 - AutoBid maxAmount 변경
 - AutoBid 중지
-- 종료 Scheduler
+- 판매자 경매 취소
+- ProductAppend 등록
+- 경매 시작·종료 Scheduler
+
+경매 생성과 재경매는 아직 Auction row가 없으므로 Product row 락으로 직렬화합니다. 작업별 락 대상, 전역 락 순서(Product → Auction → Trade → User), 락 전 조회 규칙, 격리 수준(READ COMMITTED)은 [락 순서와 트랜잭션 규칙](backend/locking.md)을 따릅니다.
 
 1차 구현은 `PESSIMISTIC_WRITE` 사용.
 
@@ -212,6 +215,7 @@ startPrice 9,000원에서 C(max 90,000원) → B(max 120,000원) → A(max 150,0
 ```text
 BEGIN
   → Auction SELECT ... FOR UPDATE
+  → 입찰자 User SELECT ... FOR SHARE (탈퇴·정지 여부)
   → 상태/시간/금액단위 검증
   → 수동 Bid 또는 AutoBid 설정 반영
   → AutoBid 경쟁 계산
@@ -281,7 +285,9 @@ Scheduler나 내부 이벤트에는 HTTP용 Idempotency-Key를 사용하지 않�
 
 ## 상품 내용
 
-- 입찰 1건 이상이면 기존 핵심 상품정보 수정/삭제 불가
+- 핵심 상품정보와 이미지는 경매가 논리적으로 시작되기 전이고 과거 Bid가 0건일 때만 수정 가능
+- OPEN 경매는 입찰이 없어도 수정 불가. 고치려면 경매를 취소한 뒤 수정하고 새로 등록
+- 입찰 1건 이상이 발생한 Product는 이후에도 핵심 상품정보 수정/삭제 불가
 - 판매자는 기존 내용을 덮어쓰지 않고 `ProductAppend` 등록
 - 1회 최대 200자
 

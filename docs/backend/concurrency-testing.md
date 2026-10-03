@@ -11,6 +11,7 @@
 - Idempotency
 - Scheduler 중복 실행
 - UNIQUE 제약의 최종 방어선
+- [락 순서와 트랜잭션 규칙](locking.md) (READ COMMITTED, 전역 락 순서, 락 후 재검증)
 
 ## 테스트 계층
 
@@ -152,6 +153,29 @@ completionDeadline 경계에서 상대방의 확인/거절 worker와 기한 Sche
 - 자동 정지는 정확히 1건
 - 정지 이후 입찰·AutoBid 설정·경매 생성은 `403 USER_RESTRICTED`
 
+### C13. 상품 수정 vs 시작·첫 입찰
+startAt 경계에서 상품 수정 worker와 입찰 worker를 동시에 실행.
+
+기대:
+- 입찰이 먼저 커밋되면 상품 수정은 `409 PRODUCT_LOCKED_AUCTION_STARTED`
+- 상품 수정이 먼저 커밋되면 입찰은 수정된 내용 이후에 성립
+- 입찰이 성립한 뒤 상품 내용이 바뀐 상태는 존재하지 않음
+
+### C14. 회원탈퇴 vs 입찰
+같은 사용자의 탈퇴 요청과 입찰·AutoBid 설정을 동시에 실행.
+
+기대:
+- WITHDRAWN 사용자가 선두이거나 ACTIVE AutoBid를 가진 상태는 존재하지 않음
+- 둘 중 하나만 성공하고 나머지는 `403 ACCOUNT_WITHDRAWN` 또는 `409 USER_WITHDRAWAL_BLOCKED`
+
+### C15. 같은 사용자 신뢰점수 동시 반영
+사용자 X가 판매자인 거래의 완료 확인과, X가 구매자인 다른 거래의 미응답 처리를 동시에 실행.
+
+기대:
+- 최종 trustScore = 초기값 + 모든 delta의 합 (갱신 유실 없음)
+- 각 TrustHistory.scoreAfter가 적용 순서와 일치
+- 두 사용자를 갱신하는 트랜잭션끼리 데드락 없음 (id 오름차순 갱신)
+
 ## 공통 불변조건
 
 모든 동시성 테스트 종료 후 다음을 검사합니다.
@@ -176,5 +200,6 @@ completionDeadline 경계에서 상대방의 확인/거절 worker와 기한 Sche
 
 ## 주의
 - H2 결과만으로 MySQL의 lock/constraint 동작을 검증했다고 판단하지 않음
+- 테스트도 운영과 같은 READ COMMITTED 격리 수준으로 실행
 - 동시성 테스트의 worker는 각각 독립 Transaction을 사용
 - flaky test를 피하기 위해 sleep 기반 동기화보다 CountDownLatch/Barrier 계열을 우선 사용

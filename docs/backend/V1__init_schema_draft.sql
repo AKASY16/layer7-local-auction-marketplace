@@ -1,6 +1,7 @@
 -- V1__init_schema.sql
 -- MySQL 8.4 / InnoDB / utf8mb4
 -- Application time convention: UTC, mapped from Java Instant.
+-- Transaction isolation: READ COMMITTED (see docs/backend/locking.md).
 
 CREATE TABLE regions (
     id BIGINT NOT NULL AUTO_INCREMENT,

@@ -9,6 +9,7 @@
 - 핵심 거래 이력은 물리 삭제보다 상태 전환/이력 보존 우선
 - 구조적으로 변하지 않는 불변조건은 DB 제약으로도 보장
 - 가격구간 규칙처럼 변경 가능한 서비스 정책은 도메인 코드에서 검증
+- 트랜잭션 격리 수준은 READ COMMITTED, 직렬화는 비관적 락으로 보장 ([락 순서와 트랜잭션 규칙](locking.md))
 
 ## JPA 연관관계 원칙
 - 대부분 `@ManyToOne(fetch = LAZY)` 단방향
@@ -54,6 +55,7 @@ Status:
 - 회원탈퇴는 물리삭제가 아니라 WITHDRAWN
 - MVP에서는 탈퇴 후에도 기존 email/nickname UNIQUE를 유지하여 재사용하지 않음
 - 신뢰점수는 음수 허용
+- trustScore는 `trust_score = trust_score + ?` 원자 UPDATE로만 갱신
 
 JPA:
 - User → Region: ManyToOne LAZY
@@ -163,7 +165,7 @@ Indexes:
 2. (productId, status)로 READY/OPEN 존재여부 확인
 3. 없을 때만 새 Auction 생성
 
-MySQL의 단순 UNIQUE만으로 부분조건 UNIQUE를 표현하려고 복잡도를 높이지 않음.
+MySQL의 단순 UNIQUE만으로 부분조건 UNIQUE를 표현하려고 복잡도를 높이지 않음. 작업별 락 대상과 순서는 [락 순서와 트랜잭션 규칙](locking.md)을 따름.
 
 JPA:
 - Auction → Product: ManyToOne LAZY

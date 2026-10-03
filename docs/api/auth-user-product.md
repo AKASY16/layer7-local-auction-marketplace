@@ -111,6 +111,8 @@ Response `200`: 갱신된 User.
 하나라도 존재하면 `409 USER_WITHDRAWAL_BLOCKED`.
 단순 과거 Bid 이력만 있고 현재 선두/AutoBid/Trade 의무가 없다면 탈퇴 가능.
 
+검사는 User 락을 잡은 뒤 수행해 같은 사용자의 동시 입찰과 직렬화합니다 ([락 규칙](../backend/locking.md#입찰과-회원탈퇴)).
+
 Response: `204`
 
 ### GET /users/me/products
@@ -235,9 +237,13 @@ Response `201`:
 삭제(DELETED) 상품은 거래 이력 당사자/소유자 등 허용된 경우를 제외하고 일반 목록에서는 노출하지 않습니다.
 
 ### PATCH /products/{productId}
-판매자만 가능. **해당 Product의 어떤 Auction에도 Bid가 한 건도 발생하지 않았을 때만** 핵심정보 수정 가능.
+판매자만 가능. 다음 조건을 모두 만족할 때만 핵심정보 수정 가능.
+- 해당 Product의 어떤 Auction에도 Bid가 한 건도 발생하지 않음
+- 논리적으로 시작된 Auction이 없음 (OPEN이거나, READY이면서 startAt이 지난 경매)
 
 한 번이라도 Bid가 발생한 Product는 과거 경매 화면의 의미가 바뀌지 않도록 핵심정보를 계속 잠급니다. 재경매 전에 핵심 내용 자체를 바꿔야 한다면 새 Product로 등록합니다.
+
+OPEN 경매는 입찰이 없어도 수정할 수 없습니다. 구매자가 보고 있는 진행 중 경매의 내용이 바뀌지 않게 하기 위함이며, 고치려면 경매를 취소한 뒤 수정하고 새 경매를 등록합니다. 판정은 Product 락과 READY/OPEN Auction 락을 잡은 뒤 수행합니다 ([락 규칙](../backend/locking.md#상품-수정)).
 
 Request:
 ```json
@@ -253,9 +259,10 @@ Request:
 Errors:
 - 403 FORBIDDEN
 - 409 PRODUCT_LOCKED_AFTER_BID
+- 409 PRODUCT_LOCKED_AUCTION_STARTED
 
 ### POST /products/{productId}/images
-판매자 전용. 입찰 전 이미지만 추가.
+판매자 전용. 핵심정보 수정과 같은 조건에서만 이미지 추가.
 
 multipart `images`.
 
@@ -264,11 +271,11 @@ multipart `images`.
 - 초과 시 `409 PRODUCT_IMAGE_LIMIT`
 
 ### DELETE /products/{productId}/images/{imageId}
-판매자 전용. 입찰 전 이미지만 제거.
+판매자 전용. 핵심정보 수정과 같은 조건에서만 이미지 제거.
 삭제 후 최소 1장 이상 남아야 하며, 마지막 이미지를 삭제하려 하면 `409 PRODUCT_IMAGE_REQUIRED`.
 
 ### PATCH /products/{productId}/images/order
-판매자 전용. 입찰 전 순서변경.
+판매자 전용. 핵심정보 수정과 같은 조건에서만 순서변경.
 
 Request:
 ```json
@@ -282,7 +289,10 @@ Request:
 ### DELETE /products/{productId}
 판매자 전용. Product를 `DELETED`로 전환.
 
-READY/OPEN Auction이 존재하면 먼저 경매 취소가 필요합니다.
+- ACTIVE 상품만 삭제 가능. SOLD 상품은 거래 기록 보존을 위해 삭제하지 않음
+- READY/OPEN Auction이 존재하면 먼저 경매 취소가 필요
+- AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED Trade가 있으면 삭제 불가
+- 조건을 만족하지 않으면 `409 PRODUCT_DELETE_NOT_ALLOWED`
 
 Response: `204`
 

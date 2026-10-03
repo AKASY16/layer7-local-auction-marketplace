@@ -27,6 +27,9 @@
 - AutoBid 경쟁은 도전자 1명 대 현재 선두 1명 비교. 동액이면 현재 선두 우선이며 priorityAt은 두지 않음
 - Bid는 패자가 버틴 금액과 승자 최종가만 저장 (이벤트당 최대 2건)
 - 동일 Auction의 입찰, AutoBid 설정 변경, 종료 Scheduler는 Auction row 기준으로 직렬화
+- 트랜잭션 격리 수준은 READ COMMITTED, 직렬화는 비관적 락으로 보장
+- 전역 락 순서는 Product → Auction → Trade → User(id 오름차순). 락 전 조회는 ID 탐색용이며 판단은 락 후 재검증한 값으로 함
+- 상품 핵심정보는 경매가 논리적으로 시작되기 전이고 과거 Bid가 0건일 때만 수정
 - 경매 시간 판정은 Auction 락 획득 후 서버 `Clock` 기준으로 수행
 - 입찰 가능 범위는 `startAt <= now < endAt`
 - 애플리케이션 내부 시간 표현은 `Instant`/UTC 기준, 사용자 화면에서 지역시간으로 변환
@@ -86,5 +89,4 @@ Kafka, Kubernetes, MSA, Redis 등을 근거 없이 추가하지 않습니다. �
 - Object Storage 제공자
 - 대표 AI 기능 2~3개
 - 추가 차별 기능
-- Auction Lock 세부 전략
 

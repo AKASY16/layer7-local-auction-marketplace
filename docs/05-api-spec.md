@@ -150,6 +150,8 @@ Validation 오류 예:
 | DUPLICATE_EMAIL | 409 | 이메일 중복 |
 | DUPLICATE_NICKNAME | 409 | 닉네임 중복 |
 | PRODUCT_LOCKED_AFTER_BID | 409 | 입찰 후 핵심 상품 수정 시도 |
+| PRODUCT_LOCKED_AUCTION_STARTED | 409 | 논리적으로 시작된 경매가 있는 상품 수정 시도 |
+| PRODUCT_DELETE_NOT_ALLOWED | 409 | SOLD 상품, 진행 중 경매·거래가 있는 상품 삭제 시도 |
 | ACTIVE_AUCTION_ALREADY_EXISTS | 409 | 동일 상품 READY/OPEN 경매 존재 |
 | AUCTION_NOT_OPEN | 409 | READY/CANCELED/ENDED 경매에 입찰 |
 | AUCTION_ENDED | 409 | serverNow >= endAt |
