@@ -307,6 +307,8 @@ Backend:
 
 로그아웃 UI에서는 현재 브라우저의 subscriptionId를 DELETE한 뒤 토큰을 제거하는 것을 권장합니다.
 
+발송 시 Push 서비스가 404/410을 반환하면 만료된 구독으로 보고 서버가 삭제합니다 ([발송 방식](realtime.md#발송-방식)).
+
 Response `200`:
 ```json
 {

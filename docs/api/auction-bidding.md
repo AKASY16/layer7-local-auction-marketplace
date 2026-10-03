@@ -93,6 +93,7 @@ Response `200` 주요 필드:
   "id": 40,
   "status": "OPEN",
   "finalized": false,
+  "version": 6,
   "startPrice": 9000,
   "currentPrice": 10000,
   "nextBidAmount": 10500,
@@ -122,6 +123,7 @@ Response `200` 주요 필드:
 - startAt이 지났는데 저장 status가 READY로 남아 있으면 `status=OPEN`으로 반환하고 입찰을 받음
 - 입찰 가능 여부는 `status == OPEN`으로 판단하며 별도 `biddingOpen` 필드는 두지 않음
 - `ENDED + finalized=false`는 집계 중이며 winningBid는 아직 null. 낙찰 예정자는 leadingBid로 표시 가능
+- `version`은 Auction row가 바뀔 때마다 증가하는 값으로, 실시간 이벤트의 순서 판단에 사용 ([Realtime](realtime.md#공개-auction-topic))
 
 ### POST /auctions/{auctionId}/cancel
 판매자 전용. 판정은 논리 상태 기준.
@@ -214,6 +216,7 @@ Response `201`:
   "auction": {
     "id": 40,
     "status": "OPEN",
+    "version": 8,
     "currentPrice": 10500,
     "nextBidAmount": 11000,
     "bidCount": 5,
@@ -315,6 +318,7 @@ Response `200`:
   },
   "auction": {
     "id": 40,
+    "version": 9,
     "currentPrice": 81000,
     "nextBidAmount": 82000,
     "leadingBidder": {

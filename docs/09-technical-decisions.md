@@ -15,7 +15,7 @@
 - Backend: Java 21 / Spring Boot 3.5 / Spring Data JPA / Spring Security + JWT
 - Database: MySQL 8.4
 - 입찰 처리: REST + Transaction/Lock
-- 실시간 전달: WebSocket(STOMP)
+- 실시간 전달: WebSocket(STOMP). 경매 이벤트에 `version`을 넣어 순서를 판단하고, 발송은 AFTER_COMMIT 이후 별도 executor에서 수행
 - Scheduler: 예약 시작 / 종료 / 응답 마감
 - 이미지 저장: Object Storage
 - 배포 단위: Docker

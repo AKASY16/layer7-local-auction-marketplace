@@ -128,6 +128,7 @@ Constraints:
 | startAt | DATETIME(6) | NOT NULL |
 | endAt | DATETIME(6) | NOT NULL |
 | relistedFromAuctionId | BIGINT | NULL, self FK |
+| version | BIGINT | NOT NULL, DEFAULT 0 |
 | createdAt | DATETIME(6) | NOT NULL |
 | updatedAt | DATETIME(6) | NOT NULL |
 
@@ -136,6 +137,10 @@ Status:
 - OPEN
 - ENDED
 - CANCELED
+
+version:
+- Auction row가 바뀔 때마다 1씩 증가 (JPA `@Version`)
+- 동시성 제어는 비관적 락이 담당하고, version은 실시간 이벤트와 REST 응답의 순서 판단용
 
 핵심 의미:
 - 생성 시 `currentPrice = startPrice`

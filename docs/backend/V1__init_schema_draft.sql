@@ -85,6 +85,7 @@ CREATE TABLE auctions (
     start_at DATETIME(6) NOT NULL,
     end_at DATETIME(6) NOT NULL,
     relisted_from_auction_id BIGINT NULL,
+    version BIGINT NOT NULL DEFAULT 0,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     PRIMARY KEY (id),

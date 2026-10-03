@@ -91,3 +91,4 @@
 ## 2026-10-03 — 설계 리뷰 반영 — 명세 보강
 
 - Idempotency: 기록은 비즈니스 트랜잭션의 첫 쓰기로 INSERT, 성공 결과만 24시간 보관, requestHash에 경로 포함, 상품 등록에도 적용, 상태 컬럼 제거
+- 실시간: 경매 이벤트에 version 추가(오래된 이벤트 무시), 발송은 별도 executor, Web Push 404/410 구독 삭제, 단일 서버 Simple Broker 전제
