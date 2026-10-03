@@ -4,6 +4,7 @@
 
 ### POST /products/{productId}/auctions
 판매자 전용.
+Header: `Idempotency-Key`
 
 Request:
 ```json
@@ -117,6 +118,15 @@ Header: `Idempotency-Key`
 
 기존 Auction은 변경하지 않고 동일 Product에 새 Auction 생성.
 
+허용 조건:
+- 원 Auction.status = ENDED
+- Product.status = ACTIVE
+- Trade가 없으면(유찰) 허용
+- Trade가 있으면 status가 DECLINED 또는 NO_RESPONSE일 때만 허용
+- AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED / COMPLETED이면 불가
+
+불가 시 `409 AUCTION_RELIST_NOT_ALLOWED`.
+
 Request:
 ```json
 {
@@ -208,7 +218,12 @@ Response `201`:
 ### GET /auctions/{auctionId}/bids
 공개 Bid 이력.
 
+Query:
+- page / size
+- 기본 정렬: createdAt DESC
+
 다른 사용자의 AutoBid 설정 상한은 노출하지 않고 실제 성립한 Bid만 반환.
+`bidCount`는 이 API에 나타나는 **실제 Bid row 개수**이며 AutoBid 내부의 가상 중간 상승단계는 포함하지 않습니다.
 
 ---
 
@@ -235,6 +250,14 @@ Response:
 신규 설정 또는 기존 maxAmount 변경/재활성화.
 Header: `Idempotency-Key`
 
+AutoBid는 저장만 해두는 예약값이 아니라 **설정/변경 요청이 성공한 Transaction 안에서 즉시 경매 경쟁에 참여**합니다.
+
+Bid가 0건인 경매에서 첫 AutoBid를 설정하면:
+- maxAmount >= startPrice 검증
+- startPrice 금액의 실제 `AUTO Bid`를 생성
+- 해당 사용자가 leadingBidder가 됨
+- 이 Bid가 생긴 순간부터 판매자의 OPEN 경매 취소는 불가
+
 Request:
 ```json
 {
@@ -255,6 +278,14 @@ priorityAt:
 - 실제 maxAmount 변경: now
 - STOPPED/EXHAUSTED → ACTIVE 재활성화: now
 - ACTIVE 상태에서 동일 maxAmount 재요청: 기존 priorityAt 유지
+
+경쟁 계산:
+- 현재 accepted leadingBid도 하나의 실제 경쟁 기준으로 포함
+- 현재 선두 사용자가 ACTIVE AutoBid를 가지고 있으면 그 사용자의 경쟁 상한은 currentPrice가 아니라 maxAmount
+- 수동 최고입찰자에게 AutoBid가 없으면 그 사용자의 경쟁 상한은 현재 accepted Bid.amount
+- 다른 ACTIVE AutoBid들의 maxAmount와 함께 가장 강한 두 경쟁 상한을 계산
+- 승자의 최소 필요가격은 strongest competitor가 버틸 수 있는 금액 다음의 `nextValidAmount()`
+- 최고 AutoBid가 하나뿐이고 기존 실제 Bid가 있으면 그 기존 Bid 금액을 strongest competitor로 사용
 
 Response `200`:
 ```json
@@ -283,6 +314,17 @@ Response `200`:
 Header: `Idempotency-Key`
 
 AutoBid를 삭제하지 않고 `STOPPED`로 전환. 이미 성립한 Bid에는 영향 없음.
+현재 선두 사용자가 AutoBid를 중지해도 이미 성립한 leadingBid는 그대로 유지되며 가격은 내려가지 않습니다.
+
+### AutoBid EXHAUSTED 의미
+- AutoBid 사용자가 현재 선두가 아니고
+- 자신의 maxAmount로는 `nextValidAmount(currentPrice)` 이상을 만들 수 없게 된 순간
+
+`EXHAUSTED`로 전환합니다.
+
+현재 선두이면서 currentPrice == maxAmount인 경우에는 아직 이기고 있으므로 ACTIVE를 유지합니다.
+이후 다른 Bid가 maxAmount를 넘어 상회하면 EXHAUSTED가 되며 `AUTO_BID_EXHAUSTED` 알림을 생성합니다.
+maxAmount를 상향하면 PUT 요청으로 다시 ACTIVE가 될 수 있습니다.
 
 Response `200`: AutoBid 상태.
 
@@ -292,6 +334,7 @@ Response `200`: AutoBid 상태.
 
 ### POST /auctions/{auctionId}/appends
 판매자 전용.
+Header: `Idempotency-Key`
 - OPEN
 - Bid 1건 이상
 - content 1~200자
