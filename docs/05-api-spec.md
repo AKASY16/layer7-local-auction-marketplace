@@ -192,6 +192,7 @@ Validation 오류 예:
 | AUTO_BID_MAX_TOO_LOW | 409 | 현재 상태에서 의미 있는 maxAmount 미달 |
 | PRODUCT_IMAGE_LIMIT | 409 | 상품 이미지 최대 개수 초과 |
 | PRODUCT_IMAGE_REQUIRED | 409 | 최소 1장의 상품 이미지가 필요 |
+| PRODUCT_APPEND_LIMIT | 409 | 경매당 내용 추가 최대 개수(10건) 초과 |
 | AUCTION_RELIST_NOT_ALLOWED | 409 | 현재 경매/거래 상태에서 재경매 불가 |
 | AUCTION_CANNOT_CANCEL | 409 | 입찰 발생 후 판매자 취소 시도 |
 | TRADE_INVALID_STATE | 409 | 허용되지 않은 Trade 상태전이 |

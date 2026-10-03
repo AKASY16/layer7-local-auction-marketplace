@@ -264,6 +264,10 @@ Indexes:
 Index:
 - (auctionId, createdAt)
 
+정책:
+- 경매당 최대 10건, 개수 확인은 Auction 락 안에서 수행
+- 상세 조회는 `auctions.productId`로 같은 Product의 경매를 찾은 뒤 그 경매들의 append를 시간순으로 조회
+
 ## trades
 
 | 컬럼 | 타입 | 제약 |

@@ -124,6 +124,7 @@ Response `200` 주요 필드:
 - 입찰 가능 여부는 `status == OPEN`으로 판단하며 별도 `biddingOpen` 필드는 두지 않음
 - `ENDED + finalized=false`는 집계 중이며 winningBid는 아직 null. 낙찰 예정자는 leadingBid로 표시 가능
 - `version`은 Auction row가 바뀔 때마다 증가하는 값으로, 실시간 이벤트의 순서 판단에 사용 ([Realtime](realtime.md#공개-auction-topic))
+- `appends`는 같은 Product의 모든 경매에서 등록한 내용 추가를 시간순으로 담고, 항목마다 `auctionId`를 포함해 어느 경매에서 고지했는지 보여줌
 
 ### POST /auctions/{auctionId}/cancel
 판매자 전용. 판정은 논리 상태 기준.
@@ -364,9 +365,10 @@ Response `200`: AutoBid 상태.
 ### POST /auctions/{auctionId}/appends
 판매자 전용.
 Header: `Idempotency-Key`
-- 논리 상태 OPEN
-- Bid 1건 이상
+- 논리 상태 READY 또는 OPEN (입찰 여부 무관)
 - content 1~200자
+- 경매당 최대 10건 (`409 PRODUCT_APPEND_LIMIT`)
+- 개수 확인은 Auction 락 안에서 수행
 
 Request:
 ```json
@@ -386,3 +388,5 @@ Response `201`:
 ```
 
 등록 후 참여자에게 Notification 생성, AFTER_COMMIT WebSocket/Web Push 발송.
+- 참여자: 해당 경매에 Bid 또는 AutoBid가 있는 사용자, 해당 상품을 관심상품으로 등록한 사용자
+- dedupeKey: `PRODUCT_APPEND_ADDED:{appendId}:{userId}`

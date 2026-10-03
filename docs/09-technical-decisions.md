@@ -33,6 +33,7 @@
 - Scheduler는 대상 하나당 하나의 트랜잭션, 경매 시작·종료 1초 / 거래 기한 1분 주기
 - 전역 락 순서는 Product → Auction → Trade → User(id 오름차순). 락 전 조회는 ID 탐색용이며 판단은 락 후 재검증한 값으로 함
 - 상품 핵심정보는 경매가 논리적으로 시작되기 전이고 과거 Bid가 0건일 때만 수정
+- 내용 추가(ProductAppend)는 READY/OPEN 경매에 입찰 여부와 관계없이 등록(경매당 10건), 상세에는 같은 Product의 이전 경매 고지까지 표시
 - 경매 시간 판정은 Auction 락 획득 후 서버 `Clock` 기준으로 수행
 - 입찰 가능 범위는 `startAt <= now < endAt`
 - 애플리케이션 내부 시간 표현은 `Instant`/UTC 기준, 사용자 화면에서 지역시간으로 변환

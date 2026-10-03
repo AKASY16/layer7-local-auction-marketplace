@@ -59,5 +59,5 @@ User >──< Product
 - User의 현재 trustScore + TrustHistory 이력
 - 신뢰점수는 표시용이며 제재는 UserRestriction(기간제 거래 참여 정지)으로 분리
 - Notification과 PushSubscription 분리
-- ProductAppend는 특정 Auction 중 추가 고지 전용이며 Product는 Auction을 통해 파생
+- ProductAppend는 특정 Auction 중 추가 고지 전용이며 Product는 Auction을 통해 파생. 경매 상세는 같은 Product의 모든 Auction 고지를 함께 보여줌
 - 명령형 HTTP 중복실행은 IdempotencyRequest로 제어
