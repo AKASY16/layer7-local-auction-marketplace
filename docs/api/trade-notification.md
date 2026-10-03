@@ -44,6 +44,8 @@ Header: `Idempotency-Key`
 낙찰자(buyer)만 가능.
 `AWAITING_RESPONSE → IN_PROGRESS`.
 
+상태가 아직 AWAITING_RESPONSE로 남아 있더라도 서버시간이 `responseDeadline` 이상이면 거절합니다. Scheduler 반영 지연으로 응답기한이 늘어나지 않습니다.
+
 Response `200`: Trade.
 
 Errors:
@@ -57,11 +59,15 @@ Header: `Idempotency-Key`
 낙찰자만 가능.
 `AWAITING_RESPONSE → DECLINED`.
 
+서버시간이 `responseDeadline` 이상이면 거절합니다.
+
 효과:
 - buyer 신뢰점수 -5
 - TrustHistory WINNER_DECLINED
 - seller 알림
+- Product는 ACTIVE 유지
 - 차순위 승계 없음
+- seller는 새 Auction 재경매 가능
 
 ### POST /trades/{tradeId}/completion-request
 Header: `Idempotency-Key`
@@ -119,7 +125,9 @@ Scheduler가:
 - buyer -10
 - TrustHistory WINNER_NO_RESPONSE
 - seller Notification
+- Product는 ACTIVE 유지
 - 차순위 승계 없음
+- seller는 새 Auction 재경매 가능
 
 ---
 
