@@ -155,6 +155,28 @@ JPA:
 - 현재가에 따른 상승폭은 서버의 `BidIncrementPolicy`가 계산
 - 가격구간별 정책은 Auction row가 아니라 애플리케이션 정책으로 관리
 
+## idempotency_requests
+- id PK
+- userId FK
+- scope
+- idempotencyKey
+- requestHash
+- status: PROCESSING / COMPLETED / FAILED
+- resourceType nullable
+- resourceId nullable
+- createdAt
+- updatedAt
+- UNIQUE(userId, scope, idempotencyKey)
+
+의미:
+- 같은 사용자/명령 scope에서 동일 key는 한 번만 처리
+- 동일 key + 동일 requestHash 재요청은 기존 처리 결과 재사용
+- 동일 key + 다른 requestHash는 409 Conflict
+- 실제 구현 시 필요한 응답 재구성을 위해 resourceType/resourceId를 저장
+
+JPA:
+- IdempotencyRequest → User: ManyToOne LAZY
+
 ## trades
 - id PK
 - auctionId FK UNIQUE
