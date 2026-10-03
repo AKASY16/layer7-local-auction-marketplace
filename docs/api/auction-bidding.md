@@ -19,7 +19,10 @@ Request:
 - 미래 startAt: READY
 - endAt > effective startAt
 - startPrice는 유효 가격단위
+- Product 소유자이며 Product.status = ACTIVE
 - 동일 Product에 READY/OPEN Auction이 이미 있으면 409
+- `startAt = null`이면 즉시 시작
+- `startAt`을 명시했다면 serverNow보다 미래여야 함
 
 Response `201`:
 ```json
@@ -27,6 +30,7 @@ Response `201`:
   "id": 40,
   "productId": 30,
   "status": "OPEN",
+  "biddingOpen": true,
   "startPrice": 9000,
   "currentPrice": 9000,
   "bidCount": 0,
@@ -81,6 +85,7 @@ Response `200` 주요 필드:
 {
   "id": 40,
   "status": "OPEN",
+  "biddingOpen": true,
   "startPrice": 9000,
   "currentPrice": 10000,
   "nextBidAmount": 10500,
@@ -104,6 +109,9 @@ Response `200` 주요 필드:
 ```
 
 다른 사용자의 AutoBid.maxAmount는 절대 노출하지 않습니다.
+
+`biddingOpen`은 `status == OPEN && serverTime < endAt`으로 계산한 논리적 입찰 가능 여부입니다.
+Scheduler 반영이 늦어 DB status가 잠시 OPEN이어도 endAt이 지났다면 `biddingOpen=false`, `nextBidAmount=null`로 반환합니다.
 
 ### POST /auctions/{auctionId}/cancel
 판매자 전용.
@@ -158,6 +166,7 @@ Response:
 Bid가 0건이면 `minimumBidAmount = startPrice`.
 
 Frontend 편의를 위한 조회이며 최종 검증은 Bid 요청 Transaction 안에서 다시 수행합니다.
+논리적으로 입찰 불가능한 상태면 `409 AUCTION_NOT_OPEN` 또는 `409 AUCTION_ENDED`를 반환합니다.
 
 ---
 
