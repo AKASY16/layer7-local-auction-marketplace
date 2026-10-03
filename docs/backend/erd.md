@@ -491,6 +491,7 @@ DB CHECK:
 
 Domain:
 - 가격구간별 유효 금액
+- 금액 상한(10,000,000원)과 경매 기간(1시간~7일), 예약 시작 범위(7일 이내)
 - 첫 Bid = startPrice 규칙
 - seller self-bid 금지
 - Auction 상태 전이

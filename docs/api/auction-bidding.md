@@ -17,8 +17,8 @@ Request:
 
 - `startAt = null`: 즉시 시작. Backend가 serverNow를 startAt으로 사용하고 OPEN으로 생성
 - 미래 startAt: READY
-- endAt > effective startAt
-- startPrice는 유효 가격단위
+- 경매 기간(`endAt - effective startAt`)은 1시간 이상 7일 이하, startAt은 serverNow + 7일 이내 (`400 AUCTION_PERIOD_INVALID`)
+- startPrice는 유효 가격단위이며 10,000,000원 이하 (`400 AMOUNT_LIMIT_EXCEEDED`)
 - Product 소유자이며 Product.status = ACTIVE
 - 판매자가 거래 참여 정지 상태가 아님 (`403 USER_RESTRICTED`)
 - 동일 Product에 READY/OPEN Auction이 이미 있으면 409
@@ -145,7 +145,7 @@ Header: `Idempotency-Key`
 - Trade가 있으면 finalized 상태가 DECLINED / NO_RESPONSE / CANCELED / EXPIRED일 때만 허용
 - AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED / COMPLETED이면 불가
 
-불가 시 `409 AUCTION_RELIST_NOT_ALLOWED`. 판매자가 거래 참여 정지 중이면 `403 USER_RESTRICTED`.
+불가 시 `409 AUCTION_RELIST_NOT_ALLOWED`. 판매자가 거래 참여 정지 중이면 `403 USER_RESTRICTED`. 기간과 금액 제한은 경매 생성과 같습니다.
 
 Request:
 ```json
@@ -201,6 +201,7 @@ Request:
 - 현재 선두 아님 (`409 ALREADY_LEADING`)
 - 입찰자가 거래 참여 정지 상태가 아님 (`403 USER_RESTRICTED`)
 - 유효 가격단위
+- 10,000,000원 이하 (`400 AMOUNT_LIMIT_EXCEEDED`)
 - Bid 0건: amount >= startPrice
 - Bid 존재: amount >= nextValidAmount(currentPrice)
 
@@ -295,7 +296,7 @@ Request:
 - 논리 상태 OPEN (수동입찰과 동일)
 - 판매자 본인 금지
 - 요청자가 거래 참여 정지 상태가 아님 (`403 USER_RESTRICTED`)
-- maxAmount 유효 가격단위
+- maxAmount 유효 가격단위이며 10,000,000원 이하 (`400 AMOUNT_LIMIT_EXCEEDED`)
 - Bid 0건이면 maxAmount >= startPrice
 - 현재 사용자가 leader라면 maxAmount >= currentPrice
 - leader가 아니라면 maxAmount >= nextValidAmount(currentPrice)

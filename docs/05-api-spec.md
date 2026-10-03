@@ -165,6 +165,8 @@ Validation 오류 예:
 |---|---:|---|
 | VALIDATION_ERROR | 400 | 일반 필드 검증 실패 |
 | INVALID_PRICE_UNIT | 400 | 가격단위표에 맞지 않는 금액 |
+| AMOUNT_LIMIT_EXCEEDED | 400 | 금액 상한(10,000,000원) 초과 |
+| AUCTION_PERIOD_INVALID | 400 | 경매 기간 1시간~7일, 예약 시작 7일 이내 조건 위반 |
 | IDEMPOTENCY_KEY_REQUIRED | 400 | 필수 Idempotency-Key 없음 |
 | UNAUTHORIZED | 401 | 로그인 필요 |
 | INVALID_TOKEN | 401 | JWT 오류/만료 |
