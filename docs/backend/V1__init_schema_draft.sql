@@ -117,7 +117,6 @@ CREATE TABLE auto_bids (
     bidder_id BIGINT NOT NULL,
     max_amount BIGINT NOT NULL,
     status VARCHAR(20) NOT NULL,
-    priority_at DATETIME(6) NOT NULL,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
@@ -131,10 +130,7 @@ CREATE TABLE auto_bids (
         ON DELETE RESTRICT,
     CONSTRAINT fk_auto_bids_bidder
         FOREIGN KEY (bidder_id) REFERENCES users(id)
-        ON DELETE RESTRICT,
-    INDEX idx_auto_bids_competition (
-        auction_id, status, max_amount, priority_at
-    )
+        ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE bids (

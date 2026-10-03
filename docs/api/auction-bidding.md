@@ -187,6 +187,7 @@ Request:
 - OPEN
 - `serverNow < endAt`
 - 판매자 본인 아님
+- 현재 선두 아님 (`409 ALREADY_LEADING`)
 - 유효 가격단위
 - Bid 0건: amount >= startPrice
 - Bid 존재: amount >= nextValidAmount(currentPrice)
@@ -224,12 +225,16 @@ Response `201`:
 
 수동 Bid가 정상 성립한 뒤 기존 AutoBid가 즉시 반응한 경우에도 HTTP 요청 자체는 성공입니다. 최종 선두 여부를 resolution으로 전달합니다.
 
+경쟁 판정과 저장되는 Bid는 [경매 정책의 AutoBid 경쟁 처리](../03-auction-policy.md#autobid-경쟁-처리)를 따릅니다.
+
+입찰 금액이 현재 선두의 AutoBid 상한과 정확히 같으면 동액 선두 우선 규칙에 따라 선두가 그 금액으로 응답하고, 요청자의 Bid는 저장되지 않습니다. 생성된 resource가 없으므로 이 경우는 `200`과 함께 `acceptedBid: null`, `resolution: OUTBID_BY_AUTO_BID`를 반환합니다.
+
 ### GET /auctions/{auctionId}/bids
 공개 Bid 이력.
 
 Query:
 - page / size
-- 기본 정렬: createdAt DESC
+- 기본 정렬: id DESC (같은 트랜잭션에서 저장된 패자·승자 Bid의 순서를 보존)
 
 다른 사용자의 AutoBid 설정 상한은 노출하지 않고 실제 성립한 Bid만 반환.
 `bidCount`는 이 API에 나타나는 **실제 Bid row 개수**이며 AutoBid 내부의 가상 중간 상승단계는 포함하지 않습니다.
@@ -250,7 +255,6 @@ Response:
   "auctionId": 40,
   "maxAmount": 100000,
   "status": "ACTIVE",
-  "priorityAt": "2026-10-03T05:00:00Z",
   "currentUserLeading": true
 }
 ```
@@ -282,19 +286,12 @@ Request:
 - 현재 사용자가 leader라면 maxAmount >= currentPrice
 - leader가 아니라면 maxAmount >= nextValidAmount(currentPrice)
 
-priorityAt:
-- 최초 생성: now
-- 실제 maxAmount 변경: now
-- STOPPED/EXHAUSTED → ACTIVE 재활성화: now
-- ACTIVE 상태에서 동일 maxAmount 재요청: 기존 priorityAt 유지
-
 경쟁 계산:
-- 현재 accepted leadingBid도 하나의 실제 경쟁 기준으로 포함
-- 현재 선두 사용자가 ACTIVE AutoBid를 가지고 있으면 그 사용자의 경쟁 상한은 currentPrice가 아니라 maxAmount
-- 수동 최고입찰자에게 AutoBid가 없으면 그 사용자의 경쟁 상한은 현재 accepted Bid.amount
-- 다른 ACTIVE AutoBid들의 maxAmount와 함께 가장 강한 두 경쟁 상한을 계산
-- 승자의 최소 필요가격은 strongest competitor가 버틸 수 있는 금액 다음의 `nextValidAmount()`
-- 최고 AutoBid가 하나뿐이고 기존 실제 Bid가 있으면 그 기존 Bid 금액을 strongest competitor로 사용
+- leader 본인의 설정·변경·재활성화는 경쟁 없이 maxAmount만 갱신
+- leader가 아니면 요청한 maxAmount와 현재 leader의 상한(ACTIVE AutoBid의 maxAmount, 없으면 currentPrice)을 비교
+- 요청 maxAmount가 더 크면 요청자가 선두, 같거나 작으면 기존 leader 유지 (동액 선두 우선)
+- STOPPED/EXHAUSTED → ACTIVE 재활성화도 같은 규칙으로 경쟁
+- 저장되는 Bid는 [경매 정책의 Bid 저장 규칙](../03-auction-policy.md#bid-저장-규칙)을 따름
 
 Response `200`:
 ```json
@@ -302,8 +299,7 @@ Response `200`:
   "autoBid": {
     "id": 501,
     "maxAmount": 100000,
-    "status": "ACTIVE",
-    "priorityAt": "2026-10-03T05:00:00Z"
+    "status": "ACTIVE"
   },
   "auction": {
     "id": 40,
@@ -315,9 +311,16 @@ Response `200`:
     },
     "currentUserLeading": true,
     "serverTime": "2026-10-03T05:00:00Z"
-  }
+  },
+  "resolution": "LEADING"
 }
 ```
+
+`resolution`:
+- LEADING: 처리 후 요청자가 선두
+- OUTBID_BY_AUTO_BID: 기존 leader가 이겨 요청자의 AutoBid는 `EXHAUSTED`로 저장됨
+
+설정 직후 바로 지는 경우에도 HTTP 요청 자체는 성공이며, 결과를 resolution과 `autoBid.status`로 전달합니다.
 
 ### DELETE /auctions/{auctionId}/auto-bid
 Header: `Idempotency-Key`

@@ -24,6 +24,8 @@
 - 시작가, 수동입찰, AutoBid maxAmount 모두 같은 가격 격자를 공유
 - AutoBid 사용자는 `maxAmount`만 설정하며 별도 incrementAmount를 두지 않음
 - 자동입찰은 상시 실행 프로세스가 아니라 수동입찰/AutoBid 설정·변경 이벤트가 발생했을 때만 계산
+- AutoBid 경쟁은 도전자 1명 대 현재 선두 1명 비교. 동액이면 현재 선두 우선이며 priorityAt은 두지 않음
+- Bid는 패자가 버틴 금액과 승자 최종가만 저장 (이벤트당 최대 2건)
 - 동일 Auction의 입찰, AutoBid 설정 변경, 종료 Scheduler는 Auction row 기준으로 직렬화
 - 경매 시간 판정은 Auction 락 획득 후 서버 `Clock` 기준으로 수행
 - 입찰 가능 범위는 `startAt <= now < endAt`
@@ -82,5 +84,4 @@ Kafka, Kubernetes, MSA, Redis 등을 근거 없이 추가하지 않습니다. �
 - 대표 AI 기능 2~3개
 - 추가 차별 기능
 - Auction Lock 세부 전략
-- AutoBid 경쟁 결과 계산 및 Bid 이력 압축 규칙
 

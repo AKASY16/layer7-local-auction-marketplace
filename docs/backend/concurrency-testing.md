@@ -19,8 +19,9 @@ DB 없이 순수 정책을 검증합니다.
 - BidIncrementPolicy.isValidAmount()
 - BidIncrementPolicy.nextValidAmount()
 - 가격구간 경계
-- AutoBid 승자/가격 계산
-- 동일 maxAmount + priorityAt
+- 도전자 대 현재 선두 승패/가격 계산
+- 동액 현재 선두 우선
+- Bid 저장 규칙 (패자 금액 생략 조건 포함)
 
 ### 2. Integration Test
 Testcontainers로 MySQL 8.4를 실행합니다.
@@ -88,15 +89,16 @@ A max 150,000 / B max 120,000 / C max 90,000을 동시에 설정.
 기대:
 - 최종 leader = A
 - final price = nextValidAmount(120,000) = 125,000
-- worker 실행 순서와 관계없이 동일한 최종 비즈니스 결과
+- worker 실행 순서와 관계없이 검증하는 값은 최종 leader와 currentPrice뿐
+- 저장 Bid 수와 C의 결과는 순서에 따라 다름. C가 먼저 처리되면 Bid를 남기고 EXHAUSTED, A가 먼저 선두가 된 뒤라면 `409 AUTO_BID_MAX_TOO_LOW`
 
-### C07. 동일 maxAmount 경쟁
-A와 B가 모두 max 100,000.
+### C07. 동액 경쟁
+A가 AutoBid max 100,000원으로 선두.
 
 기대:
-- priorityAt이 빠른 사용자가 leader
-- currentPrice = 100,000
-- maxAmount 변경 시 priorityAt이 새 시각으로 갱신되어 우선순위 재계산
+- B가 AutoBid max 100,000원 설정 → A 선두 유지, currentPrice = 100,000, B EXHAUSTED, B의 Bid 없음
+- B가 100,000원 수동입찰 → 같은 결과, 응답은 `200` + `acceptedBid: null`
+- Bid 0건에서 A와 B가 동시에 max 100,000원을 설정하면 먼저 락을 잡은 쪽이 선두이고 currentPrice = 100,000
 
 ### C08. 입찰 vs 종료 Scheduler
 endAt 경계에서 입찰 worker와 종료 worker를 동시에 실행.
@@ -136,6 +138,8 @@ endAt 경계에서 입찰 worker와 종료 worker를 동시에 실행.
 
 - Auction.currentPrice는 유효 가격 격자 위에 있음
 - leadingBidder는 currentPrice를 만든 최종 상태와 일치
+- ACTIVE AutoBid는 경매당 최대 1개이며 있다면 leader의 것
+- Bid 금액은 id 순으로 엄격히 증가하고 leadingBid는 최고 금액 Bid
 - ENDED Auction에는 종료 이후 생성된 Bid가 없음
 - winningBid가 존재하면 해당 Bid.auctionId가 동일 Auction
 - Trade는 Auction당 최대 1개

@@ -152,6 +152,7 @@ Validation 오류 예:
 | AUCTION_NOT_OPEN | 409 | READY/CANCELED/ENDED 경매에 입찰 |
 | AUCTION_ENDED | 409 | serverNow >= endAt |
 | BID_AMOUNT_TOO_LOW | 409 | 최소 입찰가 미달 |
+| ALREADY_LEADING | 409 | 현재 선두가 수동입찰로 자기 가격을 올리려 함 |
 | DUPLICATE_BID_AMOUNT | 409 | 동일 경매 동일 가격 Bid 충돌 |
 | AUTO_BID_MAX_TOO_LOW | 409 | 현재 상태에서 의미 있는 maxAmount 미달 |
 | PRODUCT_IMAGE_LIMIT | 409 | 상품 이미지 최대 개수 초과 |

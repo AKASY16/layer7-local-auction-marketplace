@@ -184,7 +184,6 @@ JPA:
 | bidderId | BIGINT | NOT NULL, FK → users |
 | maxAmount | BIGINT | NOT NULL |
 | status | VARCHAR(20) | NOT NULL |
-| priorityAt | DATETIME(6) | NOT NULL |
 | createdAt | DATETIME(6) | NOT NULL |
 | updatedAt | DATETIME(6) | NOT NULL |
 
@@ -198,12 +197,13 @@ Constraints:
 - maxAmount >= 100
 
 Index:
-- (auctionId, status, maxAmount, priorityAt)
+- 현재 선두의 AutoBid는 leadingBid의 bidder로 `UNIQUE(auctionId, bidderId)`를 통해 조회하므로 경쟁용 별도 인덱스를 두지 않음
 
 도메인 정책:
 - maxAmount는 BidIncrementPolicy의 유효 가격 격자여야 함
 - 사용자는 상승폭을 설정하지 않음
-- maxAmount 변경 시 priorityAt 갱신
+- 경매당 ACTIVE AutoBid는 최대 1개이며 있다면 현재 선두의 것
+- 동액 우선순위는 현재 선두 우선 규칙으로 처리하며 별도 우선순위 시각을 저장하지 않음
 
 ## bids
 
@@ -234,6 +234,8 @@ Indexes:
 정책:
 - Bid는 append-only
 - 성립한 Bid는 수정/삭제/철회하지 않음
+- 금액은 경매 안에서 id 순으로 엄격히 증가하며 leadingBid는 항상 최고 금액 Bid
+- 한 경쟁 이벤트에서 저장되는 Bid는 최대 2건(패자가 버틴 금액, 승자 최종가)이므로 이력 정렬은 id 기준
 
 ## product_appends
 
@@ -451,3 +453,6 @@ Domain:
 
 5. Product당 READY/OPEN Auction 단일성
    - Product row lock + 존재검사 + (productId,status) index로 보장
+
+6. `AutoBid.priorityAt` 제거
+   - 동액이면 현재 선두 우선 규칙으로 처리하므로 우선순위 시각과 경쟁용 인덱스가 필요 없음
