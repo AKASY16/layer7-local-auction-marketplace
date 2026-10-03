@@ -20,6 +20,8 @@ OPEN ── 입찰 0건 ───→ CANCELED
 - 예약경매를 MVP에 포함합니다.
 - startAt 이전에는 입찰할 수 없습니다.
 - Scheduler가 READY → OPEN, OPEN → ENDED 전이를 처리합니다.
+- Auction별 Timer/Thread를 유지하지 않고 `status + startAt/endAt` 조건으로 전이 대상을 조회합니다.
+- 입찰 처리와 종료 Scheduler는 동일 Auction row에 대해 쓰기 락 규칙을 공유해 경계시각 경쟁 상태를 직렬화합니다.
 - ENDED + leadingBidderId == null 이면 유찰입니다.
 - ENDED + leadingBidderId != null 이면 낙찰입니다.
 - 낙찰 시에만 Trade를 생성합니다.
