@@ -22,9 +22,15 @@ OPEN ── 입찰 0건 ───→ CANCELED
 - Scheduler가 READY → OPEN, OPEN → ENDED 전이를 처리합니다.
 - Auction별 Timer/Thread를 유지하지 않고 `status + startAt/endAt` 조건으로 전이 대상을 조회합니다.
 - 입찰 처리와 종료 Scheduler는 동일 Auction row에 대해 쓰기 락 규칙을 공유해 경계시각 경쟁 상태를 직렬화합니다.
+- 논리적 입찰 가능 시간은 `startAt <= now < endAt`입니다.
+- 서버가 Auction 쓰기 락을 획득한 뒤의 현재시각을 기준으로 판정합니다.
+- `status = OPEN`이어도 `now >= endAt`이면 입찰할 수 없습니다.
+- Scheduler의 실제 상태 전환이 약간 늦어져도 endAt 이후 입찰은 허용되지 않습니다.
+- 애플리케이션 시간 판정은 주입된 `Clock`과 `Instant` 기준으로 통일합니다.
 - ENDED + leadingBidderId == null 이면 유찰입니다.
 - ENDED + leadingBidderId != null 이면 낙찰입니다.
 - 낙찰 시에만 Trade를 생성합니다.
+- 낙찰 Trade의 responseDeadline은 `Auction.endAt + 24시간`으로 계산합니다.
 
 ## Trade
 
