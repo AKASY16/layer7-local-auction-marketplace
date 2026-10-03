@@ -37,6 +37,8 @@ MVP 기본 정책:
 - `isValidAmount(amount)`: 해당 금액이 가격단위표에 맞는지 검증
 - `nextValidAmount(currentPrice)`: 현재가보다 큰 가장 가까운 유효 입찰금액 계산
 
+가격단위표는 `GET /bid-increment-policy`로 Frontend에 제공하며, Frontend는 표를 하드코딩하지 않습니다.
+
 경계 처리 예:
 - 현재가 9,900원 → 다음 유효 금액 10,000원
 - 현재가 10,000원 → 다음 유효 금액 10,500원

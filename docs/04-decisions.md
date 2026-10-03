@@ -95,3 +95,4 @@
 - 락 대기 3초 후 503 RESOURCE_BUSY, Scheduler 주기·배치 크기·기한 임박 알림 시점을 scheduler.md로 정리
 - 금액 상한 10,000,000원, 경매 기간 1시간~7일, 예약 시작 7일 이내
 - 내용 추가: READY/OPEN 경매에 입찰 여부 무관 등록, 경매당 10건, 상세에 이전 경매 고지 포함, 알림 대상 정의
+- 가격단위표 전체를 GET /bid-increment-policy로 제공, bid-policy의 currentUnit을 minimumBidUnit으로 변경

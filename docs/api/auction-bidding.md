@@ -163,6 +163,27 @@ Response `201`: 새 Auction. `relistedFromAuctionId`는 기존 id.
 
 ## 2. BidIncrement Policy API
 
+### GET /bid-increment-policy
+인증 불필요. 서비스 공통 가격단위표 전체.
+
+Response:
+```json
+{
+  "minAmount": 100,
+  "maxAmount": 10000000,
+  "bands": [
+    { "from": 100, "to": 9999, "unit": 100 },
+    { "from": 10000, "to": 49999, "unit": 500 },
+    { "from": 50000, "to": 99999, "unit": 1000 },
+    { "from": 100000, "to": 499999, "unit": 5000 },
+    { "from": 500000, "to": 999999, "unit": 10000 },
+    { "from": 1000000, "to": 10000000, "unit": 20000 }
+  ]
+}
+```
+
+Frontend는 이 표로 시작가·입찰가·maxAmount가 유효 금액인지 입력 즉시 검증하고, 표를 코드에 하드코딩하지 않습니다. 정책이 바뀌면 이 응답만 바뀝니다. 최종 검증은 Backend가 수행합니다.
+
 ### GET /auctions/{auctionId}/bid-policy
 
 Response:
@@ -171,12 +192,14 @@ Response:
   "currentPrice": 9900,
   "hasBid": true,
   "minimumBidAmount": 10000,
-  "currentUnit": 100,
+  "minimumBidUnit": 500,
   "serverTime": "2026-10-03T05:00:00Z"
 }
 ```
 
 Bid가 0건이면 `minimumBidAmount = startPrice`.
+
+`minimumBidUnit`은 minimumBidAmount가 속한 구간의 단위입니다. 현재가 구간의 단위가 아니므로, 위 예시처럼 9,900원에서는 다음 금액부터 500원 단위가 적용됩니다. 최소 입찰가보다 높은 임의 금액의 유효성은 가격단위표 전체로 판단합니다.
 
 Frontend 편의를 위한 조회이며 최종 검증은 Bid 요청 Transaction 안에서 다시 수행합니다.
 논리적으로 입찰 불가능한 상태면 `409 AUCTION_NOT_OPEN` 또는 `409 AUCTION_ENDED`를 반환합니다.
