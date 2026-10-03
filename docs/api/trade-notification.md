@@ -232,7 +232,11 @@ Request:
 
 Backend:
 - endpoint SHA-256 → endpointHash
-- 동일 endpointHash가 있으면 현재 사용자 구독값 갱신
+- 동일 endpointHash가 현재 사용자에게 이미 있으면 key 정보 갱신
+- 동일 endpointHash가 다른 사용자에게 연결되어 있으면 현재 사용자로 소유권을 이전하고 key 정보 갱신
+- 공유 브라우저에서 이전 계정의 알림이 새 로그인 사용자에게 섞이지 않도록 함
+
+로그아웃 UI에서는 현재 브라우저의 subscriptionId를 DELETE한 뒤 토큰을 제거하는 것을 권장합니다.
 
 Response `200`:
 ```json
