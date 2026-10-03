@@ -1,65 +1,191 @@
-# API 명세 - 1차 작성 대상
+# API 명세 v1
 
-아직 Endpoint / Payload 상세 확정 전 단계입니다.
+Base URL: `/api/v1`
 
-## Auth / User
-- 회원가입
-- 로그인
-- 지역 설정
-- 회원탈퇴 상태 전환
-- 신뢰점수 조회
+이 문서는 Frontend/Backend 간 계약의 기준입니다. 실제 구현 시 DTO/Controller 이름은 달라질 수 있지만 HTTP method, path, payload 의미, 상태코드와 비즈니스 규칙은 이 명세를 기준으로 합니다.
 
-## Product
-- 상품 등록
-- 상품 상태 등급 / 상태 상세설명
-- 이미지 업로드
-- 지역별 조회 / 검색
-- 상품 수정
-- 입찰 이후 내용 추가
+## 상세 문서
+- [Auth / User / Product](api/auth-user-product.md)
+- [Auction / Bid / AutoBid](api/auction-bidding.md)
+- [Trade / Trust / Notification](api/trade-notification.md)
+- [WebSocket / Realtime](api/realtime.md)
 
-## Auction
-- 경매 생성
-- 예약 시작
-- 조회 / 상태 확인
-- 재경매 생성
+---
 
-## Bid
-- 수동 입찰
-- 자동입찰 설정
-- 자동입찰 maxAmount 변경
-- 현재 가격구간의 유효 금액 단위/다음 최소 입찰가 조회
-- 시작가·수동입찰·maxAmount 유효 금액 검증
-- 자동입찰 중지
+## 공통 규칙
 
-## Trade
-- 낙찰 결과
-- 거래 진행 응답
-- 거래 포기
-- 거래 완료 요청
-- 상대방 완료 확인
-- 미완료 처리
-- 미응답 처리
+### 인증
+인증이 필요한 REST API는 다음 헤더를 사용합니다.
 
-## Notification
-- 알림 목록 조회
-- 읽음 처리
-- Web Push 구독 등록/해제
+```http
+Authorization: Bearer <access-token>
+```
 
-## Realtime
-- WebSocket 경매 현재가 변경
-- 경매 상태 변경
+MVP는 JWT Access Token 방식으로 구현합니다. Login 응답은 token과 `expiresAt`을 반환합니다. Refresh Token 흐름은 MVP 범위에서 제외하며 토큰 만료 시 재로그인합니다.
 
+### 시간
+- JSON 시간은 ISO-8601 UTC 문자열 사용
+- 예: `2026-10-03T04:30:00Z`
+- 서버 내부 판정은 `Instant` / UTC
+- 경매 입찰 가능 시간: `startAt <= serverNow < endAt`
+- 브라우저 카운트다운은 표시용이며 서버시간이 최종 권위
 
-## Idempotency
-부작용이 있는 명령형 API는 `Idempotency-Key` 헤더를 사용합니다.
+### 금액
+- KRW 원 단위 정수
+- JSON에서는 number
+- 음수/소수 금액 없음
+- startPrice, Bid.amount, AutoBid.maxAmount는 모두 BidIncrementPolicy의 유효 가격 격자를 따라야 함
 
-적용 대상:
-- 수동입찰
-- AutoBid 설정 / maxAmount 변경 / 중지
-- 거래 진행 / 포기
-- 거래 완료 요청 / 확인
-- 재경매 생성
+### 페이지
+목록 API 기본값:
+- `page=0`
+- `size=20`
+- 최대 `size=50`
+
+응답:
+
+```json
+{
+  "content": [],
+  "page": 0,
+  "size": 20,
+  "totalElements": 0,
+  "totalPages": 0
+}
+```
+
+### 성공 응답
+별도 공통 `data` wrapper를 사용하지 않습니다. Resource 또는 Command Result를 직접 반환합니다.
+
+### Idempotency
+중복 실행 시 부작용이 발생하는 명령 API는 다음 헤더를 필수로 사용합니다.
+
+```http
+Idempotency-Key: <UUID>
+```
+
+적용 scope:
+- MANUAL_BID
+- AUTO_BID_SET
+- AUTO_BID_STOP
+- TRADE_PROCEED
+- TRADE_DECLINE
+- COMPLETION_REQUEST
+- COMPLETION_CONFIRM
+- COMPLETION_REJECT
+- AUCTION_RELIST
 
 규칙:
-- 동일 사용자 + 동일 scope + 동일 key + 동일 요청 → 기존 결과 반환
-- 동일 key + 다른 요청 본문 → 409 Conflict
+- 동일 user + scope + key + 동일 요청: 최초 처리 결과 재사용
+- replay 응답에는 `Idempotency-Replayed: true`
+- 동일 key를 다른 요청 내용에 재사용: `409 IDEMPOTENCY_KEY_REUSED`
+- 서버는 requestHash와 최초 HTTP status/body snapshot을 저장
+
+### 공통 Error Response
+
+```json
+{
+  "timestamp": "2026-10-03T04:30:00Z",
+  "status": 409,
+  "code": "AUCTION_ENDED",
+  "message": "종료된 경매에는 입찰할 수 없습니다.",
+  "path": "/api/v1/auctions/10/bids",
+  "traceId": "optional",
+  "fieldErrors": []
+}
+```
+
+Validation 오류 예:
+
+```json
+{
+  "timestamp": "2026-10-03T04:30:00Z",
+  "status": 400,
+  "code": "VALIDATION_ERROR",
+  "message": "요청 값을 확인해주세요.",
+  "path": "/api/v1/products",
+  "fieldErrors": [
+    {
+      "field": "title",
+      "code": "NOT_BLANK",
+      "message": "제목은 필수입니다."
+    }
+  ]
+}
+```
+
+## HTTP Status 기준
+
+| Status | 의미 |
+|---|---|
+| 200 | 조회/수정/상태전이 성공 |
+| 201 | Resource 생성 성공 |
+| 204 | 반환 본문 없는 삭제/탈퇴 성공 |
+| 400 | 형식/필드/가격단위 등 요청 자체가 잘못됨 |
+| 401 | 인증 필요 또는 토큰 오류 |
+| 403 | 인증은 됐으나 해당 행위 권한 없음 |
+| 404 | Resource 없음 |
+| 409 | 현재 상태/동시성/중복키 때문에 명령 수행 불가 |
+
+## 주요 Error Code
+
+| Code | HTTP | 의미 |
+|---|---:|---|
+| VALIDATION_ERROR | 400 | 일반 필드 검증 실패 |
+| INVALID_PRICE_UNIT | 400 | 가격단위표에 맞지 않는 금액 |
+| IDEMPOTENCY_KEY_REQUIRED | 400 | 필수 Idempotency-Key 없음 |
+| UNAUTHORIZED | 401 | 로그인 필요 |
+| INVALID_TOKEN | 401 | JWT 오류/만료 |
+| FORBIDDEN | 403 | 권한 없음 |
+| SELF_BID_FORBIDDEN | 403 | 판매자 본인 입찰 |
+| COMPLETION_SELF_CONFIRM_FORBIDDEN | 403 | 본인이 요청한 거래완료를 본인이 승인 |
+| RESOURCE_NOT_FOUND | 404 | 대상 없음 |
+| DUPLICATE_EMAIL | 409 | 이메일 중복 |
+| DUPLICATE_NICKNAME | 409 | 닉네임 중복 |
+| PRODUCT_LOCKED_AFTER_BID | 409 | 입찰 후 핵심 상품 수정 시도 |
+| ACTIVE_AUCTION_ALREADY_EXISTS | 409 | 동일 상품 READY/OPEN 경매 존재 |
+| AUCTION_NOT_OPEN | 409 | READY/CANCELED/ENDED 경매에 입찰 |
+| AUCTION_ENDED | 409 | serverNow >= endAt |
+| BID_AMOUNT_TOO_LOW | 409 | 최소 입찰가 미달 |
+| DUPLICATE_BID_AMOUNT | 409 | 동일 경매 동일 가격 Bid 충돌 |
+| AUTO_BID_MAX_TOO_LOW | 409 | 현재 상태에서 의미 있는 maxAmount 미달 |
+| AUCTION_CANNOT_CANCEL | 409 | 입찰 발생 후 판매자 취소 시도 |
+| TRADE_INVALID_STATE | 409 | 허용되지 않은 Trade 상태전이 |
+| TRADE_RESPONSE_EXPIRED | 409 | 응답기한 종료 |
+| IDEMPOTENCY_KEY_REUSED | 409 | 동일 key를 다른 요청에 재사용 |
+
+## 공통 User Summary
+
+```json
+{
+  "id": 15,
+  "nickname": "seller01",
+  "trustScore": 4
+}
+```
+
+## 공통 Region
+
+```json
+{
+  "id": 11020,
+  "regionCode": "11200",
+  "sidoName": "서울특별시",
+  "sigunguName": "성동구"
+}
+```
+
+## Category Code
+MVP:
+- DIGITAL
+- HOME_APPLIANCE
+- FURNITURE
+- LIVING_KITCHEN
+- FASHION
+- BEAUTY
+- SPORTS_LEISURE
+- HOBBY_GAME
+- BOOK_MEDIA
+- ETC
+
+`GET /categories`로 Frontend에 제공하며 화면에서는 서버 응답 label을 사용합니다.
