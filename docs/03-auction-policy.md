@@ -80,6 +80,8 @@ MVP 기본 정책:
 - maxAmount 역시 가격단위표에 맞는 유효 금액이어야 함
 - 사용자는 상승폭을 직접 설정하지 않음
 - 다른 유효 입찰 또는 AutoBid 설정/변경 이벤트가 발생했을 때만 자동입찰 계산
+- AutoBid 설정/변경 요청이 성공하면 같은 Transaction 안에서 즉시 경쟁에 참여
+- Bid가 0건일 때 첫 AutoBid가 설정되면 startPrice의 실제 AUTO Bid를 생성
 - 경매가 OPEN인 동안 AutoBid가 지속적으로 CPU/Thread를 점유하지 않음
 - 서비스 가격단위표를 기준으로 필요한 최소 금액만 자동입찰
 - maxAmount를 초과하지 않음
@@ -90,6 +92,9 @@ MVP 기본 정책:
 - 하향은 이미 성립한 currentPrice 미만으로 불가
 - 자동입찰 중지 가능
 - 이미 성립한 Bid는 설정 변경/중지 후에도 유지
+- 현재 선두가 AutoBid를 중지해도 leadingBid와 currentPrice는 내려가지 않음
+- 현재 선두가 아니고 maxAmount로 다음 유효 입찰가를 만들 수 없게 되면 EXHAUSTED
+- 선두 상태에서 currentPrice == maxAmount인 경우에는 ACTIVE 유지, 이후 상회되면 EXHAUSTED
 
 ### maxAmount와 가격단위
 
@@ -116,6 +121,12 @@ maxAmount도 유효 단위만 허용하므로 별도의 "마지막 예외 금액
 ## AutoBid 경쟁 처리
 
 AutoBid는 이벤트 발생 시 한 번 계산하고 종료함.
+
+경쟁 계산에는 현재 accepted leadingBid도 포함합니다.
+- 현재 선두가 ACTIVE AutoBid를 가지고 있으면 경쟁 상한 = 해당 maxAmount
+- 수동 선두이고 AutoBid가 없으면 경쟁 상한 = 현재 Bid.amount
+- 다른 ACTIVE AutoBid의 maxAmount와 함께 strongest competitor를 결정
+- 최고 AutoBid가 하나뿐이고 기존 수동 Bid가 있으면 해당 Bid.amount를 경쟁 상한으로 사용
 
 ### 기본 계산
 
@@ -171,6 +182,7 @@ AutoBid 후보를:
 ## 동시성 처리
 
 동일 Auction의 다음 작업은 모두 Auction row 기준으로 직렬화:
+- 경매 생성
 - 수동입찰
 - AutoBid 신규 설정
 - AutoBid maxAmount 변경
@@ -205,6 +217,7 @@ COMMIT
 - 거래 완료 요청
 - 거래 완료 확인
 - 재경매 생성
+- ProductAppend 등록
 
 규칙:
 - Frontend는 사용자 액션 1회마다 UUID 기반 `Idempotency-Key` 생성
@@ -265,6 +278,10 @@ Scheduler나 내부 이벤트에는 HTTP용 Idempotency-Key를 사용하지 않�
 - 판매자가 새 Auction 생성
 - `relistedFromAuctionId`로 이전 경매 참조
 - 기존 Bid / AutoBid / Trade 이력은 변경하지 않음
+- 원 Auction이 ENDED이고 Product가 ACTIVE일 때만 가능
+- Trade가 없으면 유찰로 재경매 가능
+- Trade가 있으면 DECLINED 또는 NO_RESPONSE일 때만 가능
+- AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED / COMPLETED 상태에서는 재경매 불가
 
 ## 즉시구매
 
