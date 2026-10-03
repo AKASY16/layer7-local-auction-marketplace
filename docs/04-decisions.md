@@ -98,3 +98,4 @@
 - 가격단위표 전체를 GET /bid-increment-policy로 제공, bid-policy의 currentUnit을 minimumBidUnit으로 변경
 - 인증: Access Token 30분 + Refresh Token 14일(HttpOnly 쿠키, 해시 저장, rotation, 재사용 시 family 폐기, 10초 동시 갱신 유예), 쓰기 API는 요청마다 사용자 상태 확인
 - 이미지: Presigned URL 직접 업로드, image_uploads로 발급·연결·정리 상태 관리, 상품 등록은 JSON + imageKeys
+- 탐색: auctions에 regionId/category 복사와 탐색 인덱스 추가, keyword LIKE는 측정 후 개선 대상으로 명시

@@ -50,6 +50,7 @@
 - 멱등 기록은 비즈니스 트랜잭션의 첫 쓰기로 INSERT하고 성공한 결과만 24시간 보관
 - Scheduler/내부 이벤트는 상태 조건, row lock, 도메인 UNIQUE 제약으로 멱등성 보장
 - Trade는 `UNIQUE(auctionId)`, TrustHistory는 `UNIQUE(tradeId,userId,reason)`, Notification은 `dedupeKey UNIQUE` 활용
+- 경매 탐색용으로 auctions에 regionId/category를 복사해 조인 없이 필터링. keyword LIKE 검색은 부하 테스트로 측정한 뒤 개선
 - Product 1:N Auction
 - Bid / AutoBid 분리
 - Auction / Trade 분리

@@ -171,6 +171,8 @@ Index:
 |---|---|---|
 | id | BIGINT | PK |
 | productId | BIGINT | NOT NULL, FK → products |
+| regionId | BIGINT | NOT NULL, FK → regions |
+| category | VARCHAR(50) | NOT NULL |
 | status | VARCHAR(20) | NOT NULL |
 | startPrice | BIGINT | NOT NULL |
 | currentPrice | BIGINT | NOT NULL |
@@ -215,9 +217,17 @@ Checks:
 Indexes:
 - (status, startAt)
 - (status, endAt)
+- (regionId, status, endAt): 지역별 탐색
+- (category, status, endAt): 카테고리별 탐색
 - (productId, status)
 - (productId, createdAt)
 - relistedFromAuctionId
+
+regionId / category:
+- 탐색(`GET /auctions`)이 products 조인 없이 auctions만으로 필터링하도록 경매 생성 시 Product 값을 복사
+- Product.region은 생성 후 바뀌지 않으므로 regionId는 그대로 유지
+- category는 경매가 논리적으로 시작되기 전에만 바뀔 수 있으므로, 상품 수정 트랜잭션이 잠근 READY Auction의 category를 같은 트랜잭션에서 갱신
+- keyword 검색은 MVP에서 `products.title LIKE '%keyword%'`로 처리하며 전체 스캔임을 인정. 부하 테스트 결과에 따라 FULLTEXT(ngram parser) 도입을 검토하는 측정 후 개선 대상
 
 동일 Product에 READY/OPEN Auction이 동시에 둘 이상 존재하지 않도록:
 1. Product row를 PESSIMISTIC_WRITE로 잠금

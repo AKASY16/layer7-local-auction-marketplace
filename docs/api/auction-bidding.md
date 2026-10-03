@@ -61,6 +61,8 @@ Query:
 
 기본 정렬: 최신 등록순. Frontend 요구에 따라 종료임박순을 추가할 수 있음.
 
+지역·카테고리·상태 필터는 auctions 테이블의 복사된 regionId/category로 처리해 products 조인 없이 인덱스를 탑니다. keyword는 MVP에서 상품 제목 LIKE 검색이며, 부하 테스트에서 병목으로 확인되면 FULLTEXT 검색으로 바꿉니다 ([ERD](../backend/erd.md#auctions)).
+
 Item:
 ```json
 {

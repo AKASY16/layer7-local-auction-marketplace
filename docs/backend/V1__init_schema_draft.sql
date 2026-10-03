@@ -121,6 +121,8 @@ CREATE TABLE image_uploads (
 CREATE TABLE auctions (
     id BIGINT NOT NULL AUTO_INCREMENT,
     product_id BIGINT NOT NULL,
+    region_id BIGINT NOT NULL,
+    category VARCHAR(50) NOT NULL,
     status VARCHAR(20) NOT NULL,
     start_price BIGINT NOT NULL,
     current_price BIGINT NOT NULL,
@@ -147,11 +149,16 @@ CREATE TABLE auctions (
     CONSTRAINT fk_auctions_product
         FOREIGN KEY (product_id) REFERENCES products(id)
         ON DELETE RESTRICT,
+    CONSTRAINT fk_auctions_region
+        FOREIGN KEY (region_id) REFERENCES regions(id)
+        ON DELETE RESTRICT,
     CONSTRAINT fk_auctions_relisted_from
         FOREIGN KEY (relisted_from_auction_id) REFERENCES auctions(id)
         ON DELETE RESTRICT,
     INDEX idx_auctions_status_start (status, start_at),
     INDEX idx_auctions_status_end (status, end_at),
+    INDEX idx_auctions_region_status_end (region_id, status, end_at),
+    INDEX idx_auctions_category_status_end (category, status, end_at),
     INDEX idx_auctions_product_status (product_id, status),
     INDEX idx_auctions_product_created (product_id, created_at),
     INDEX idx_auctions_relisted_from (relisted_from_auction_id)
