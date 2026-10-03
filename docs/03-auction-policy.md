@@ -191,6 +191,35 @@ COMMIT
   → AFTER_COMMIT WebSocket / Push
 ```
 
+## Idempotency / 중복 요청 처리
+
+### HTTP 명령
+다음과 같이 중복 실행 시 부작용이 생길 수 있는 명령형 API는 `Idempotency-Key`를 사용:
+- 수동입찰
+- AutoBid 신규 설정
+- AutoBid maxAmount 변경
+- AutoBid 중지
+- 거래 진행
+- 거래 포기
+- 거래 완료 요청
+- 거래 완료 확인
+- 재경매 생성
+
+규칙:
+- Frontend는 사용자 액션 1회마다 UUID 기반 `Idempotency-Key` 생성
+- 동일 사용자의 동일 scope에서 같은 key가 재전송되면 원래 요청을 다시 실행하지 않음
+- 같은 key로 요청 내용이 달라지면 잘못된 key 재사용으로 간주하고 `409 Conflict`
+- 요청 주요 필드로 `requestHash`를 만들어 같은 key의 동일 요청인지 검증
+- Frontend의 버튼 비활성화는 UX 보조 수단이며, 최종 보장은 Backend/DB가 담당
+
+### Scheduler / 도메인 이벤트
+Scheduler나 내부 이벤트에는 HTTP용 Idempotency-Key를 사용하지 않음.
+대신 다음 조합으로 중복 실행 방지:
+- Auction 종료: Auction 상태검사 + PESSIMISTIC_WRITE
+- Trade 생성: `UNIQUE(auctionId)`
+- 신뢰점수 반영: `UNIQUE(tradeId, userId, reason)`
+- Notification 생성: `dedupeKey UNIQUE`
+
 ## 판매자 취소
 
 - `READY`: 취소 가능
