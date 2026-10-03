@@ -1,57 +1,80 @@
-# ERD / DB Schema - 1차 초안
+# ERD / DB Schema - V1 후보
 
 ## 공통 원칙
-- PK: BIGINT
-- 금액: BIGINT, 원 단위 정수
-- 시간: DATETIME(6)
-- Enum: 애플리케이션 Enum + DB 문자열 저장
+- MySQL 8.4 / InnoDB / utf8mb4
+- PK: `BIGINT AUTO_INCREMENT`
+- 금액: `BIGINT`, 원 단위 정수
+- 시간: `DATETIME(6)`, 애플리케이션에서는 `Instant`/UTC 기준
+- Enum: Java `EnumType.STRING` + DB `VARCHAR`
 - 핵심 거래 이력은 물리 삭제보다 상태 전환/이력 보존 우선
-- 경매 정합성, 추적 가능성, 동시성 검증을 설계 우선순위로 둡니다.
+- 구조적으로 변하지 않는 불변조건은 DB 제약으로도 보장
+- 가격구간 규칙처럼 변경 가능한 서비스 정책은 도메인 코드에서 검증
 
 ## JPA 연관관계 원칙
-- 대부분의 관계는 `@ManyToOne(fetch = LAZY)` 단방향으로 설계합니다.
-- DB의 1:N 관계라고 해서 부모 Entity에 무조건 `List<...>`를 만들지 않습니다.
-- User에는 Product/Bid/Trade/Notification 등의 대형 컬렉션을 두지 않습니다.
-- Auction에도 Bid/AutoBid 컬렉션을 두지 않고 Repository 조회로 처리합니다.
-- `Product ↔ ProductImage`만 생명주기가 강하게 결합되어 있어 양방향 관계를 허용합니다.
-- ProductImage에는 `cascade = ALL`, `orphanRemoval = true`를 사용합니다.
-- Favorite는 `@ManyToMany` 대신 별도 Entity로 유지합니다.
-- Trade → Auction은 단방향 `@OneToOne(fetch = LAZY)`로 둡니다.
-- 재경매는 Auction → Auction 단방향 self reference로 둡니다.
-- 거래/경매 이력에 대한 Cascade REMOVE는 사용하지 않습니다.
+- 대부분 `@ManyToOne(fetch = LAZY)` 단방향
+- User / Auction에 대형 1:N 컬렉션을 두지 않음
+- `Product ↔ ProductImage`만 양방향 + `cascade = ALL` + `orphanRemoval = true`
+- Favorite는 별도 Entity, `@ManyToMany` 미사용
+- 거래/경매 이력에 Cascade REMOVE 미사용
+- Trade → Auction은 단방향 `@OneToOne(fetch = LAZY)`
+
+---
+
+## regions
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| regionCode | VARCHAR(20) | NOT NULL, UNIQUE |
+| sidoName | VARCHAR(50) | NOT NULL |
+| sigunguName | VARCHAR(50) | NOT NULL |
+
+- MVP 지역 단위는 시·군·구
+- 공식 행정구역 코드 사용
 
 ## users
-- id PK
-- email UNIQUE NOT NULL
-- passwordHash NOT NULL
-- nickname UNIQUE NOT NULL
-- regionId FK NOT NULL
-- trustScore NOT NULL DEFAULT 0
-- status: ACTIVE / WITHDRAWN
-- createdAt / updatedAt
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| email | VARCHAR(320) | NOT NULL, UNIQUE |
+| passwordHash | VARCHAR(255) | NOT NULL |
+| nickname | VARCHAR(50) | NOT NULL, UNIQUE |
+| regionId | BIGINT | NOT NULL, FK → regions |
+| trustScore | INT | NOT NULL, DEFAULT 0 |
+| status | VARCHAR(20) | NOT NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+| updatedAt | DATETIME(6) | NOT NULL |
+
+Status:
+- ACTIVE
+- WITHDRAWN
+
+정책:
+- 회원탈퇴는 물리삭제가 아니라 WITHDRAWN
+- MVP에서는 탈퇴 후에도 기존 email/nickname UNIQUE를 유지하여 재사용하지 않음
+- 신뢰점수는 음수 허용
 
 JPA:
 - User → Region: ManyToOne LAZY
 
-## regions
-- id PK
-- regionCode UNIQUE
-- sidoName
-- sigunguName
-
 ## products
-- id PK
-- sellerId FK
-- regionId FK
-- category
-- title
-- description
-- condition
-- conditionDescription VARCHAR(500) NOT NULL
-- status: ACTIVE / SOLD / DELETED
-- createdAt / updatedAt
 
-ProductCondition:
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| sellerId | BIGINT | NOT NULL, FK → users |
+| regionId | BIGINT | NOT NULL, FK → regions |
+| category | VARCHAR(50) | NOT NULL |
+| title | VARCHAR(120) | NOT NULL |
+| description | TEXT | NOT NULL |
+| condition | VARCHAR(30) | NOT NULL |
+| conditionDescription | VARCHAR(500) | NOT NULL |
+| status | VARCHAR(20) | NOT NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+| updatedAt | DATETIME(6) | NOT NULL |
+
+Condition:
 - UNOPENED
 - LIKE_NEW
 - GOOD
@@ -59,211 +82,368 @@ ProductCondition:
 - DAMAGED
 - NEEDS_REPAIR
 
+Status:
+- ACTIVE
+- SOLD
+- DELETED
+
+Indexes:
+- (regionId, status, createdAt)
+- (sellerId, status, createdAt)
+
 JPA:
 - Product → User(seller): ManyToOne LAZY
 - Product → Region: ManyToOne LAZY
-- Product ↔ ProductImage: OneToMany / ManyToOne 양방향
+- Product ↔ ProductImage: 양방향
 
 ## product_images
-- id PK
-- productId FK
-- objectKey
-- sortOrder
-- createdAt
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| productId | BIGINT | NOT NULL, FK → products |
+| objectKey | VARCHAR(512) | NOT NULL |
+| sortOrder | INT | NOT NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+
+Constraints:
 - UNIQUE(productId, sortOrder)
-
-JPA:
-- ProductImage → Product: ManyToOne LAZY
-- Product.images: cascade ALL + orphanRemoval
-
-## product_appends
-- id PK
-- productId FK
-- auctionId FK
-- content VARCHAR(200)
-- createdAt
-
-JPA:
-- ProductAppend → Product: ManyToOne LAZY
-- ProductAppend → Auction: ManyToOne LAZY
+- sortOrder >= 0
+- ProductImage는 Product에 강하게 종속되므로 물리삭제 시 CASCADE 허용
 
 ## auctions
-- id PK
-- productId FK
-- status: READY / OPEN / ENDED / CANCELED
-- startPrice BIGINT
-- currentPrice BIGINT
-- leadingBidderId FK nullable
-- winningBidId FK → bids.id nullable
-- startAt
-- endAt
-- relistedFromAuctionId self FK nullable
-- createdAt / updatedAt
 
-의미:
-- `currentPrice + leadingBidderId`: 진행 중 빠른 조회를 위한 현재 상태 snapshot
-- `winningBidId`: 종료 시 확정된 낙찰의 실제 Bid 근거
-- 별도 winnerId는 두지 않으며 winningBid.bidder로 추적
-- 유찰이면 winningBidId = null
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| productId | BIGINT | NOT NULL, FK → products |
+| status | VARCHAR(20) | NOT NULL |
+| startPrice | BIGINT | NOT NULL |
+| currentPrice | BIGINT | NOT NULL |
+| leadingBidId | BIGINT | NULL, FK → bids |
+| winningBidId | BIGINT | NULL, FK → bids |
+| startAt | DATETIME(6) | NOT NULL |
+| endAt | DATETIME(6) | NOT NULL |
+| relistedFromAuctionId | BIGINT | NULL, self FK |
+| createdAt | DATETIME(6) | NOT NULL |
+| updatedAt | DATETIME(6) | NOT NULL |
+
+Status:
+- READY
+- OPEN
+- ENDED
+- CANCELED
+
+핵심 의미:
+- 생성 시 `currentPrice = startPrice`
+- 아직 Bid가 없으면 `leadingBidId = null`
+- **첫 실제 Bid의 최소금액은 startPrice 자체**
+- Bid가 하나라도 생긴 뒤부터 다음 최소금액은 `nextValidAmount(currentPrice)`
+- `leadingBidId`: 진행 중 현재 선두를 만든 정확한 Bid
+- `winningBidId`: 종료 시 확정된 낙찰 Bid
+- 낙찰자가 필요하면 Bid.bidder로 추적하며 별도 winnerId/leadingBidderId를 중복 저장하지 않음
+- ENDED 유찰이면 winningBidId = null
+- 낙찰 종료 시 일반적으로 `winningBidId = leadingBidId`
+
+Checks:
+- startPrice >= 100
+- currentPrice >= startPrice
+- startAt < endAt
+- relistedFromAuctionId IS NULL OR relistedFromAuctionId <> id
 
 Indexes:
 - (status, startAt)
 - (status, endAt)
+- (productId, status)
 - (productId, createdAt)
 - relistedFromAuctionId
 
+동일 Product에 READY/OPEN Auction이 동시에 둘 이상 존재하지 않도록:
+1. Product row를 PESSIMISTIC_WRITE로 잠금
+2. (productId, status)로 READY/OPEN 존재여부 확인
+3. 없을 때만 새 Auction 생성
+
+MySQL의 단순 UNIQUE만으로 부분조건 UNIQUE를 표현하려고 복잡도를 높이지 않음.
+
 JPA:
 - Auction → Product: ManyToOne LAZY
-- Auction → User(leadingBidder): ManyToOne LAZY
-- Auction → Bid(winningBid): OneToOne LAZY 또는 ManyToOne LAZY + UNIQUE FK 검토
+- Auction → Bid(leadingBid): OneToOne/ManyToOne LAZY 단방향
+- Auction → Bid(winningBid): OneToOne/ManyToOne LAZY 단방향
 - Auction → Auction(relistedFrom): ManyToOne LAZY
-- Auction.bids / Auction.autoBids 컬렉션은 두지 않음
+- Auction.bids / Auction.autoBids 컬렉션 없음
 
-## bids
-- id PK
-- auctionId FK
-- bidderId FK
-- amount BIGINT
-- type: MANUAL / AUTO
-- autoBidId FK nullable
-- createdAt
-- UNIQUE(auctionId, amount)
-
-JPA:
-- Bid → Auction: ManyToOne LAZY
-- Bid → User(bidder): ManyToOne LAZY
-- Bid → AutoBid: ManyToOne LAZY, nullable
+주의:
+- leadingBid/winningBid가 반드시 자기 Auction의 Bid여야 한다는 교차행 불변조건은 Service 검증 + 통합테스트로 보장
 
 ## auto_bids
-- id PK
-- auctionId FK
-- bidderId FK
-- maxAmount BIGINT
-- status: ACTIVE / STOPPED / EXHAUSTED
-- priorityAt
-- createdAt / updatedAt
-- UNIQUE(auctionId, bidderId)
-- INDEX(auctionId, status, maxAmount, priorityAt)
 
-JPA:
-- AutoBid → Auction: ManyToOne LAZY
-- AutoBid → User(bidder): ManyToOne LAZY
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| auctionId | BIGINT | NOT NULL, FK → auctions |
+| bidderId | BIGINT | NOT NULL, FK → users |
+| maxAmount | BIGINT | NOT NULL |
+| status | VARCHAR(20) | NOT NULL |
+| priorityAt | DATETIME(6) | NOT NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+| updatedAt | DATETIME(6) | NOT NULL |
+
+Status:
+- ACTIVE
+- STOPPED
+- EXHAUSTED
+
+Constraints:
+- UNIQUE(auctionId, bidderId)
+- maxAmount >= 100
+
+Index:
+- (auctionId, status, maxAmount, priorityAt)
 
 도메인 정책:
-- startPrice, Bid.amount, AutoBid.maxAmount는 모두 `BidIncrementPolicy`의 유효 가격 격자를 따라야 함
-- AutoBid에는 사용자별 상승폭을 저장하지 않음
-- 현재가에 따른 상승폭은 서버의 `BidIncrementPolicy`가 계산
-- 가격구간별 정책은 Auction row가 아니라 애플리케이션 정책으로 관리
+- maxAmount는 BidIncrementPolicy의 유효 가격 격자여야 함
+- 사용자는 상승폭을 설정하지 않음
+- maxAmount 변경 시 priorityAt 갱신
 
-## idempotency_requests
-- id PK
-- userId FK
-- scope
-- idempotencyKey
-- requestHash
-- status: PROCESSING / COMPLETED / FAILED
-- resourceType nullable
-- resourceId nullable
-- createdAt
-- updatedAt
-- UNIQUE(userId, scope, idempotencyKey)
+## bids
 
-의미:
-- 같은 사용자/명령 scope에서 동일 key는 한 번만 처리
-- 동일 key + 동일 requestHash 재요청은 기존 처리 결과 재사용
-- 동일 key + 다른 requestHash는 409 Conflict
-- 실제 구현 시 필요한 응답 재구성을 위해 resourceType/resourceId를 저장
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| auctionId | BIGINT | NOT NULL, FK → auctions |
+| bidderId | BIGINT | NOT NULL, FK → users |
+| amount | BIGINT | NOT NULL |
+| type | VARCHAR(20) | NOT NULL |
+| autoBidId | BIGINT | NULL, FK → auto_bids |
+| createdAt | DATETIME(6) | NOT NULL |
 
-JPA:
-- IdempotencyRequest → User: ManyToOne LAZY
+Type:
+- MANUAL
+- AUTO
+
+Constraints:
+- UNIQUE(auctionId, amount)
+- amount >= 100
+- MANUAL이면 autoBidId IS NULL
+- AUTO이면 autoBidId IS NOT NULL
+
+Indexes:
+- (auctionId, createdAt)
+- (bidderId, createdAt)
+
+정책:
+- Bid는 append-only
+- 성립한 Bid는 수정/삭제/철회하지 않음
+
+## product_appends
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| auctionId | BIGINT | NOT NULL, FK → auctions |
+| content | VARCHAR(200) | NOT NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+
+변경점:
+- 기존 `productId + auctionId` 이중 참조에서 productId 제거
+- Product는 `auction.productId`로 유일하게 결정 가능
+- 두 FK가 서로 다른 Product/Auction을 가리키는 불일치 가능성을 제거
+
+Index:
+- (auctionId, createdAt)
 
 ## trades
-- id PK
-- auctionId FK UNIQUE
-- sellerId FK
-- buyerId FK
-- status
-- responseDeadline
-- completionRequestedBy FK nullable
-- completionRequestedAt nullable
-- completedAt nullable
-- createdAt / updatedAt
-- INDEX(status, responseDeadline)
 
-JPA:
-- Trade → Auction: OneToOne LAZY
-- Trade → User(seller): ManyToOne LAZY
-- Trade → User(buyer): ManyToOne LAZY
-- Trade → User(completionRequestedBy): ManyToOne LAZY, nullable
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| auctionId | BIGINT | NOT NULL, UNIQUE, FK → auctions |
+| sellerId | BIGINT | NOT NULL, FK → users |
+| buyerId | BIGINT | NOT NULL, FK → users |
+| status | VARCHAR(30) | NOT NULL |
+| responseDeadline | DATETIME(6) | NOT NULL |
+| completionRequestedBy | BIGINT | NULL, FK → users |
+| completionRequestedAt | DATETIME(6) | NULL |
+| completedAt | DATETIME(6) | NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+| updatedAt | DATETIME(6) | NOT NULL |
+
+Status:
+- AWAITING_RESPONSE
+- IN_PROGRESS
+- COMPLETION_REQUESTED
+- COMPLETED
+- DECLINED
+- NO_RESPONSE
+
+Checks:
+- sellerId <> buyerId
+- completionRequestedBy / completionRequestedAt은 둘 다 NULL 또는 둘 다 NOT NULL
+
+Index:
+- (status, responseDeadline)
+- (sellerId, createdAt)
+- (buyerId, createdAt)
+
+정책:
+- responseDeadline = Auction.endAt + 24h
+- seller/buyer가 실제 Auction 당사자인지는 Service에서 검증
 
 ## trust_histories
-- id PK
-- userId FK
-- tradeId FK
-- delta
-- reason
-- scoreAfter
-- createdAt
-- UNIQUE(tradeId, userId, reason)
 
-JPA:
-- TrustHistory → User: ManyToOne LAZY
-- TrustHistory → Trade: ManyToOne LAZY
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| userId | BIGINT | NOT NULL, FK → users |
+| tradeId | BIGINT | NOT NULL, FK → trades |
+| delta | INT | NOT NULL |
+| reason | VARCHAR(40) | NOT NULL |
+| scoreAfter | INT | NOT NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+
+Reason:
+- TRADE_COMPLETED
+- WINNER_DECLINED
+- WINNER_NO_RESPONSE
+
+Constraints:
+- UNIQUE(tradeId, userId, reason)
+- delta <> 0
+
+Index:
+- (userId, createdAt)
+
+append-only.
 
 ## notifications
-- id PK
-- userId FK
-- type
-- message
-- productId nullable
-- auctionId nullable
-- tradeId nullable
-- readAt nullable
-- dedupeKey UNIQUE
-- createdAt
 
-JPA:
-- Notification → User: ManyToOne LAZY
-- Notification → Product/Auction/Trade: ManyToOne LAZY, nullable
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| userId | BIGINT | NOT NULL, FK → users |
+| type | VARCHAR(50) | NOT NULL |
+| message | VARCHAR(500) | NOT NULL |
+| productId | BIGINT | NULL, FK → products |
+| auctionId | BIGINT | NULL, FK → auctions |
+| tradeId | BIGINT | NULL, FK → trades |
+| readAt | DATETIME(6) | NULL |
+| dedupeKey | VARCHAR(200) | NOT NULL, UNIQUE |
+| createdAt | DATETIME(6) | NOT NULL |
+
+Index:
+- (userId, readAt, createdAt)
+
+Notification 저장은 비즈니스 상태변경 Transaction 안에서 처리하고 실제 WebSocket/Web Push 전송은 AFTER_COMMIT.
 
 ## push_subscriptions
-- id PK
-- userId FK
-- endpoint UNIQUE
-- p256dh
-- auth
-- createdAt / updatedAt
 
-JPA:
-- PushSubscription → User: ManyToOne LAZY
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| userId | BIGINT | NOT NULL, FK → users |
+| endpoint | TEXT | NOT NULL |
+| endpointHash | CHAR(64) | NOT NULL, UNIQUE |
+| p256dh | VARCHAR(255) | NOT NULL |
+| auth | VARCHAR(255) | NOT NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+| updatedAt | DATETIME(6) | NOT NULL |
+
+- 긴 Web Push endpoint 자체를 UNIQUE index로 잡지 않고 SHA-256 endpointHash로 중복 구독 방지
+- endpointHash는 애플리케이션에서 계산
+
+Index:
+- (userId, createdAt)
 
 ## favorites
-- id PK
-- userId FK
-- productId FK
-- createdAt
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| userId | BIGINT | NOT NULL, FK → users |
+| productId | BIGINT | NOT NULL, FK → products |
+| createdAt | DATETIME(6) | NOT NULL |
+
+Constraints:
 - UNIQUE(userId, productId)
 
-JPA:
-- Favorite → User: ManyToOne LAZY
-- Favorite → Product: ManyToOne LAZY
-- @ManyToMany 사용하지 않음
+Index:
+- (userId, createdAt)
 
-## 삭제 원칙
-- 거래 이력이 연결된 핵심 엔티티는 ON DELETE RESTRICT를 기본 방향으로 사용합니다.
-- 회원탈퇴는 User 삭제가 아니라 WITHDRAWN 상태 전환입니다.
-- Product 삭제도 일반적으로 DELETED 상태 전환으로 처리합니다.
-- Auction / Bid / Trade / TrustHistory는 비즈니스 이력 보존을 우선합니다.
-- 연쇄 삭제는 ProductImage 같은 강한 종속 데이터에만 제한적으로 사용합니다.
+## idempotency_requests
 
-## 백엔드 기술 검증 핵심
-이 프로젝트의 백엔드 기술 중심은 단순 CRUD 기능 수보다 다음 문제를 실제 코드와 테스트로 해결하는 것입니다.
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| userId | BIGINT | NOT NULL, FK → users |
+| scope | VARCHAR(50) | NOT NULL |
+| idempotencyKey | VARCHAR(100) | NOT NULL |
+| requestHash | CHAR(64) | NOT NULL |
+| status | VARCHAR(20) | NOT NULL |
+| resourceType | VARCHAR(40) | NULL |
+| resourceId | BIGINT | NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+| updatedAt | DATETIME(6) | NOT NULL |
 
-1. 동시 입찰에서 Auction.currentPrice / leadingBidder / Bid 이력 정합성
-2. 가격구간별 BidIncrementPolicy를 적용한 여러 AutoBid의 경쟁과 동가 우선순위
-3. 경매 종료 Scheduler와 마지막 입찰의 race condition
-4. 중복 요청 / Scheduler 중복 실행에 대한 멱등성
-5. DB commit 이후 WebSocket / Push 전달
-6. 낙찰 근거 winningBid 추적
-7. Testcontainers + MySQL 기반 동시성 통합테스트
-8. 부하 테스트와 운영 지표를 통한 병목 확인
+Status:
+- PROCESSING
+- COMPLETED
+- FAILED
+
+Constraints:
+- UNIQUE(userId, scope, idempotencyKey)
+- resourceType/resourceId는 둘 다 NULL 또는 둘 다 NOT NULL
+
+Index:
+- createdAt
+
+정책:
+- 동일 key + 동일 requestHash는 기존 결과 재사용
+- 동일 key + 다른 requestHash는 409 Conflict
+
+---
+
+## FK / 삭제 원칙
+
+기본:
+- 핵심 거래/이력 관계는 ON DELETE RESTRICT
+- User / Product는 상태 기반 soft delete
+- ProductImage만 Product의 강한 종속 데이터이므로 ON DELETE CASCADE 허용
+- 나머지 연쇄 물리삭제는 사용하지 않음
+
+## DB CHECK와 Domain 검증의 경계
+
+DB CHECK:
+- 양수 금액
+- startAt < endAt
+- enum 문자열 허용값
+- 타입과 nullable 조합
+- seller != buyer
+- pair nullable 일관성
+
+Domain:
+- 가격구간별 유효 금액
+- 첫 Bid = startPrice 규칙
+- seller self-bid 금지
+- Auction 상태 전이
+- AutoBid 경쟁 계산
+- leadingBid/winningBid가 해당 Auction의 Bid인지
+- READY/OPEN Auction의 Product당 단일성
+- Trade 당사자 일치
+
+## V1에서 확정한 주요 변경
+
+1. `leadingBidderId` → `leadingBidId`
+   - 현재 선두를 만든 정확한 Bid를 추적하고 bidder는 Bid에서 파생
+
+2. 첫 입찰 규칙 확정
+   - Bid가 0건이면 첫 입찰 최소금액 = startPrice
+   - 이후부터 `nextValidAmount(currentPrice)`
+
+3. `ProductAppend.productId` 제거
+   - Auction을 통해 Product가 이미 결정되므로 중복 FK 제거
+
+4. PushSubscription endpoint 중복검사
+   - 긴 URL 자체 대신 `endpointHash` UNIQUE 사용
+
+5. Product당 READY/OPEN Auction 단일성
+   - Product row lock + 존재검사 + (productId,status) index로 보장
