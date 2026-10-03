@@ -21,7 +21,15 @@ Base URL: `/api/v1`
 Authorization: Bearer <access-token>
 ```
 
-MVP는 JWT Access Token 방식으로 구현합니다. Login 응답은 token과 `expiresAt`을 반환합니다. Refresh Token 흐름은 MVP 범위에서 제외하며 토큰 만료 시 재로그인합니다.
+Access Token과 Refresh Token을 함께 사용합니다. 경매는 마감 직전에 참여가 몰리는데, 그 순간 토큰이 만료되어 재로그인하느라 마감을 놓치는 일이 없도록 하기 위함입니다.
+
+- Access Token: JWT, 유효기간 30분. Login/Refresh 응답 본문으로 전달하며 Frontend는 메모리에만 보관 (localStorage 저장 금지)
+- Refresh Token: 서버가 생성한 256bit 임의 문자열, 유효기간 14일. `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth` 쿠키로만 전달하며 서버는 SHA-256 해시만 저장
+- `POST /auth/refresh`를 호출할 때마다 Refresh Token을 새로 발급(rotation)하고 이전 토큰은 교체 처리
+- 이미 교체된 Refresh Token이 다시 오면 탈취로 보고, 같은 로그인에서 이어진 토큰 묶음(family)을 모두 폐기한 뒤 401. 단, 교체 후 10초 이내라면 여러 탭이 동시에 갱신한 경우로 보고 새 Access Token만 발급
+- 로그아웃은 현재 family 폐기, 회원탈퇴는 그 사용자의 모든 Refresh Token 폐기
+- Access Token은 만료 전에 폐기할 수 없으므로 쓰기 API는 요청마다 사용자 상태(ACTIVE)를 확인. 조회 API는 탈퇴 전에 발급된 토큰을 최대 30분까지 허용
+- 쿠키를 사용하므로 Frontend와 API는 같은 사이트(등록 도메인)에 배포 ([Infra](08-infra.md))
 
 ### 시간
 - JSON 시간은 ISO-8601 UTC 문자열 사용
@@ -171,6 +179,7 @@ Validation 오류 예:
 | UNAUTHORIZED | 401 | 로그인 필요 |
 | INVALID_TOKEN | 401 | JWT 오류/만료 |
 | INVALID_CREDENTIALS | 401 | 로그인 정보 불일치 |
+| INVALID_REFRESH_TOKEN | 401 | Refresh Token 없음/만료/폐기/재사용 감지. 재로그인 필요 |
 | ACCOUNT_WITHDRAWN | 403 | 탈퇴 처리된 계정 |
 | USER_WITHDRAWAL_BLOCKED | 409 | 진행 중 상품/경매/입찰/거래 의무로 탈퇴 불가 |
 | FORBIDDEN | 403 | 권한 없음 |

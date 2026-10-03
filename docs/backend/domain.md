@@ -2,6 +2,7 @@
 
 ## Core Domain
 - User
+- RefreshToken
 - Region
 - Product
 - ProductImage
@@ -39,6 +40,7 @@ Auction ──> leadingBid  (nullable)
 Auction ──> winningBid  (nullable)
 Auction ──> relistedFromAuction (nullable)
 
+User ──< RefreshToken
 User ──< TrustHistory
 User ──< UserRestriction
 User ──< Notification

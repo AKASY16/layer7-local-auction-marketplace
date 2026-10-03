@@ -49,11 +49,14 @@ Request:
 ```
 
 Response `200`:
+```http
+Set-Cookie: refresh_token=<opaque>; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=1209600
+```
 ```json
 {
   "accessToken": "<jwt>",
   "tokenType": "Bearer",
-  "expiresAt": "2026-10-03T06:30:00Z",
+  "expiresAt": "2026-10-03T05:00:00Z",
   "user": {
     "id": 15,
     "nickname": "layer7",
@@ -62,9 +65,32 @@ Response `200`:
 }
 ```
 
+- `expiresAt`은 Access Token 만료 시각 (발급 후 30분)
+- 로그인할 때마다 새 Refresh Token family를 시작
+
 Errors:
 - 401 INVALID_CREDENTIALS
 - 403 ACCOUNT_WITHDRAWN
+
+### POST /auth/refresh
+Refresh Token 쿠키로 새 Access Token을 발급합니다. 요청 본문은 없습니다.
+
+- 정상: 이전 Refresh Token을 교체 처리하고 새 Refresh Token 쿠키와 Access Token을 반환
+- 교체된 지 10초 이내의 토큰: 여러 탭의 동시 갱신으로 보고 Access Token만 반환 (쿠키는 이미 먼저 응답한 요청이 갱신함)
+- 그보다 오래전에 교체된 토큰: 탈취로 보고 family 전체 폐기 후 `401 INVALID_REFRESH_TOKEN`
+- 교체 처리는 `rotatedAt IS NULL` 조건의 UPDATE로 한 번만 성공하므로, 같은 토큰의 동시 요청 중 하나만 새 Refresh Token을 받음
+
+Response `200`: Login 응답과 같은 형태
+
+Errors:
+- 401 INVALID_REFRESH_TOKEN (없음, 만료, 폐기, 재사용, 탈퇴한 사용자)
+
+### POST /auth/logout
+현재 Refresh Token의 family를 폐기하고 쿠키를 삭제합니다. 쿠키가 없거나 이미 폐기됐어도 `204`.
+
+로그아웃 UI는 PushSubscription을 먼저 삭제한 뒤 이 API를 호출합니다.
+
+Response: `204`
 
 ---
 
@@ -112,6 +138,8 @@ Response `200`: 갱신된 User.
 단순 과거 Bid 이력만 있고 현재 선두/AutoBid/Trade 의무가 없다면 탈퇴 가능.
 
 검사는 User 락을 잡은 뒤 수행해 같은 사용자의 동시 입찰과 직렬화합니다 ([락 규칙](../backend/locking.md#입찰과-회원탈퇴)).
+
+탈퇴 시 그 사용자의 모든 Refresh Token을 폐기하고 쿠키를 삭제합니다. 이미 발급된 Access Token은 최대 30분 남을 수 있지만 쓰기 API는 요청마다 사용자 상태를 확인하므로 사용할 수 없습니다.
 
 Response: `204`
 

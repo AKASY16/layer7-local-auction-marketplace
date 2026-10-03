@@ -61,6 +61,30 @@ Status:
 JPA:
 - User → Region: ManyToOne LAZY
 
+## refresh_tokens
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| userId | BIGINT | NOT NULL, FK → users |
+| familyId | CHAR(36) | NOT NULL |
+| tokenHash | CHAR(64) | NOT NULL, UNIQUE |
+| expiresAt | DATETIME(6) | NOT NULL |
+| rotatedAt | DATETIME(6) | NULL |
+| revokedAt | DATETIME(6) | NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+
+Index:
+- (userId): 탈퇴 시 전체 폐기
+- (familyId): 재사용 감지 시 family 폐기
+- expiresAt: 만료 토큰 정리 배치
+
+정책:
+- 토큰 원문은 저장하지 않고 SHA-256 해시만 저장
+- 로그인마다 새 familyId(UUID), refresh 시 같은 familyId로 새 row 발급
+- 교체는 `UPDATE ... SET rotatedAt = now WHERE id = ? AND rotatedAt IS NULL AND revokedAt IS NULL`로 한 번만 성공
+- 사용 가능 = `rotatedAt IS NULL AND revokedAt IS NULL AND expiresAt > now`
+
 ## products
 
 | 컬럼 | 타입 | 제약 |

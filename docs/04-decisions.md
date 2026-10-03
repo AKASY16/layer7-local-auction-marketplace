@@ -96,3 +96,4 @@
 - 금액 상한 10,000,000원, 경매 기간 1시간~7일, 예약 시작 7일 이내
 - 내용 추가: READY/OPEN 경매에 입찰 여부 무관 등록, 경매당 10건, 상세에 이전 경매 고지 포함, 알림 대상 정의
 - 가격단위표 전체를 GET /bid-increment-policy로 제공, bid-policy의 currentUnit을 minimumBidUnit으로 변경
+- 인증: Access Token 30분 + Refresh Token 14일(HttpOnly 쿠키, 해시 저장, rotation, 재사용 시 family 폐기, 10초 동시 갱신 유예), 쓰기 API는 요청마다 사용자 상태 확인

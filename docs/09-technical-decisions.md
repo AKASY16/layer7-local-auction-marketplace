@@ -13,6 +13,7 @@
 - 서비스 형태: 웹 애플리케이션
 - Frontend: React / JavaScript / Styled Components / React Router
 - Backend: Java 21 / Spring Boot 3.5 / Spring Data JPA / Spring Security + JWT
+- 인증: Access Token(JWT, 30분) + Refresh Token(14일, HttpOnly 쿠키, 해시 저장, rotation과 재사용 감지)
 - Database: MySQL 8.4
 - 입찰 처리: REST + Transaction/Lock
 - 실시간 전달: WebSocket(STOMP). 경매 이벤트에 `version`을 넣어 순서를 판단하고, 발송은 AFTER_COMMIT 이후 별도 executor에서 수행

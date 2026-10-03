@@ -7,8 +7,8 @@
 이미 정리된 주제:
 - 자동입찰 경쟁 규칙: [경매 정책](../03-auction-policy.md#autobid-경쟁-처리)
 - 락 전략: [락 순서와 트랜잭션 규칙](../backend/locking.md)
+- JWT 인증 방식: [API 명세 공통 규칙](../05-api-spec.md#인증)
 
 예정 주제:
-- JWT 인증 방식
 - WebSocket 이벤트 전달 구조
 - Notification / Web Push 처리

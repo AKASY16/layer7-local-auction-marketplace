@@ -12,7 +12,7 @@
 | 거래 기한 만료 | `status = IN_PROGRESS AND tradeDeadline <= now` | 1분 | EXPIRED |
 | 완료 자동 확정 | `status = COMPLETION_REQUESTED AND completionDeadline <= now` | 1분 | COMPLETED, 신뢰점수, 상품 SOLD |
 | 기한 임박 알림 | 아래 "기한 임박 알림" 참고 | 10분 | TRADE_DEADLINE_SOON |
-| 정리 배치 | 24시간 지난 Idempotency 기록 | 1시간 | 삭제 |
+| 정리 배치 | 24시간 지난 Idempotency 기록, 만료된 Refresh Token | 1시간 | 삭제 |
 
 ## 실행 규칙
 
