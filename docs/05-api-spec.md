@@ -72,6 +72,7 @@ Idempotency-Key: <UUID>
 - AUTO_BID_STOP
 - TRADE_PROCEED
 - TRADE_DECLINE
+- TRADE_CANCEL
 - COMPLETION_REQUEST
 - COMPLETION_CONFIRM
 - COMPLETION_REJECT
@@ -143,6 +144,7 @@ Validation 오류 예:
 | USER_WITHDRAWAL_BLOCKED | 409 | 진행 중 상품/경매/입찰/거래 의무로 탈퇴 불가 |
 | FORBIDDEN | 403 | 권한 없음 |
 | SELF_BID_FORBIDDEN | 403 | 판매자 본인 입찰 |
+| USER_RESTRICTED | 403 | 거래 참여 정지 중 입찰·AutoBid 설정·경매 생성 시도 |
 | COMPLETION_SELF_CONFIRM_FORBIDDEN | 403 | 본인이 요청한 거래완료를 본인이 승인 |
 | RESOURCE_NOT_FOUND | 404 | 대상 없음 |
 | DUPLICATE_EMAIL | 409 | 이메일 중복 |
@@ -161,6 +163,7 @@ Validation 오류 예:
 | AUCTION_CANNOT_CANCEL | 409 | 입찰 발생 후 판매자 취소 시도 |
 | TRADE_INVALID_STATE | 409 | 허용되지 않은 Trade 상태전이 |
 | TRADE_RESPONSE_EXPIRED | 409 | 응답기한 종료 |
+| TRADE_DEADLINE_PASSED | 409 | 거래 기한 또는 완료 응답 기한 종료 |
 | IDEMPOTENCY_KEY_REUSED | 409 | 동일 key를 다른 요청에 재사용 |
 
 ## 공통 User Summary

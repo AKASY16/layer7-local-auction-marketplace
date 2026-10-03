@@ -137,7 +137,7 @@ READY 중 AutoBid 사전 등록을 허용하면 startAt 시점에 ACTIVE AutoBid
 ### 판정
 
 - 도전자 금액 `a`: 수동입찰이면 입찰 금액 X, AutoBid 설정·변경이면 maxAmount M
-- 선두 상한 `C`: 현재 선두에게 ACTIVE AutoBid가 있으면 그 maxAmount, 없으면 현재 leadingBid 금액(= currentPrice)
+- 선두 상한 `C`: 현재 선두에게 ACTIVE AutoBid가 있으면 그 maxAmount, 없으면 현재 leadingBid 금액(= currentPrice). 선두가 거래 참여 정지 중이면 그 AutoBid를 이 트랜잭션에서 STOPPED로 바꾸고 currentPrice로 취급 (아래 이용 정지 참고)
 - `a > C`면 도전자 승, `a <= C`면 현재 선두 승
 - Bid가 0건이면 선두가 없으므로 도전자가 바로 선두
 
@@ -225,14 +225,16 @@ COMMIT
 
 ### HTTP 명령
 다음과 같이 중복 실행 시 부작용이 생길 수 있는 명령형 API는 `Idempotency-Key`를 사용:
+- 경매 생성
 - 수동입찰
-- AutoBid 신규 설정
-- AutoBid maxAmount 변경
+- AutoBid 신규 설정 / maxAmount 변경
 - AutoBid 중지
 - 거래 진행
 - 거래 포기
+- 거래 취소
 - 거래 완료 요청
 - 거래 완료 확인
+- 거래 완료 거절
 - 재경매 생성
 - ProductAppend 등록
 
@@ -248,7 +250,9 @@ Scheduler나 내부 이벤트에는 HTTP용 Idempotency-Key를 사용하지 않�
 대신 다음 조합으로 중복 실행 방지:
 - Auction 종료: Auction 상태검사 + PESSIMISTIC_WRITE
 - Trade 생성: `UNIQUE(auctionId)`
+- Trade 기한 처리: Trade 상태검사 + PESSIMISTIC_WRITE
 - 신뢰점수 반영: `UNIQUE(tradeId, userId, reason)`
+- 자동 이용 정지: `UNIQUE(triggerTradeId)`
 - Notification 생성: `dedupeKey UNIQUE`
 
 ## 판매자 취소
@@ -289,6 +293,37 @@ Scheduler나 내부 이벤트에는 HTTP용 Idempotency-Key를 사용하지 않�
 - 낙찰자 응답 기한 24시간
 - Trade.responseDeadline은 Scheduler 실제 처리시각이 아니라 `Auction.endAt + 24시간`으로 계산
 
+## 거래 기한과 취소
+
+- 거래 기한 `tradeDeadline = Auction.endAt + 7일`. 거래 진행 중의 완료 요청과 취소는 이 기한 안에서만 가능
+- 완료 요청을 받은 상대방은 요청 시점부터 최소 24시간을 보장받음: `completionDeadline = max(tradeDeadline, completionRequestedAt + 24시간)`
+- tradeDeadline 이후에는 완료 요청을 받은 상대방의 확인/거절만 허용
+- 가장 긴 거래 기간은 endAt + 8일. 기한 직전에 요청과 거절을 반복해도 마지막 요청 하나만 연장됨
+- 기한 처리 (Scheduler):
+  - IN_PROGRESS가 tradeDeadline에 도달 → `EXPIRED`, 신뢰점수 변동 없음
+  - COMPLETION_REQUESTED가 completionDeadline에 도달 → 자동 `COMPLETED`. 요청자가 완료를 주장했고 상대방이 기한 안에 거절하지 않았다고 봄
+  - tradeDeadline 이후 연장 구간에서 거절하면 IN_PROGRESS로 돌아가지 않고 바로 `EXPIRED`
+- 일방 취소:
+  - 판매자: AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED에서 가능
+  - 구매자: IN_PROGRESS / COMPLETION_REQUESTED에서 가능 (AWAITING_RESPONSE에서는 거래 포기 사용)
+  - 결과는 `CANCELED`, 취소한 쪽 신뢰점수 -5
+- EXPIRED는 귀책을 가릴 수단이 없어 페널티를 주지 않음. 거래 진행 후 응답하지 않는 상대를 점수로 제재할 수 없다는 한계가 있으며, 채팅 기록·신고 기능이 생기면 다시 검토
+
+## 이용 정지
+
+- 신뢰점수는 표시용 지표이며 점수만으로 입찰을 막지 않음
+- 본인 책임의 거래 실패가 3회 연속되면 7일간 거래 참여 정지
+  - 실패: 낙찰 포기(DECLINED), 낙찰 미응답(NO_RESPONSE), 본인이 한 거래 취소(CANCELED)
+  - 연속: 그 사이에 본인이 당사자인 거래 완료(COMPLETED)가 없음. EXPIRED는 실패로도 완료로도 세지 않음
+  - 정지가 걸리면 실패 횟수는 0부터 다시 셈
+- 정지 중 불가: 수동입찰, AutoBid 설정·변경·재활성화, 경매 생성·재경매
+- 정지 중 허용: AutoBid 중지, 진행 중 거래의 모든 명령, 상품 수정·내용 추가 등 기존 의무 이행. 이미 성립한 선두 Bid는 유지
+- 정지된 사용자의 ACTIVE AutoBid는 정지 시점에 바로 끄지 않음. 정지를 거는 트랜잭션은 거래를 처리하는 중이라 다른 경매의 Auction 락을 잡지 않기 때문. 대신 다음 경쟁 이벤트에서 현재 선두가 정지 상태면 그 AutoBid를 STOPPED로 바꾸고 선두 상한을 currentPrice로 취급
+- 정지 해제는 Scheduler 없이 endsAt과 서버시간으로 판정
+- 자동 정지는 실패를 만든 트랜잭션 안에서 생성하고, 원인 Trade 기준 UNIQUE로 중복 생성을 막음
+- 수동 정지: MVP에는 관리자 API를 두지 않음. 운영자가 DB에 `source = ADMIN` 기록을 직접 생성하며, 신고·관리자 기능과 함께 추후 확장
+- 한계: 정지 기준에 닿기 전까지의 실패와 재가입을 통한 초기화는 막지 못함
+
 ## 재경매
 
 - 기존 Auction을 다시 OPEN으로 되돌리지 않음
@@ -297,8 +332,9 @@ Scheduler나 내부 이벤트에는 HTTP용 Idempotency-Key를 사용하지 않�
 - 기존 Bid / AutoBid / Trade 이력은 변경하지 않음
 - 원 Auction이 ENDED이고 Product가 ACTIVE일 때만 가능
 - Trade가 없으면 유찰로 재경매 가능
-- Trade가 있으면 DECLINED 또는 NO_RESPONSE일 때만 가능
+- Trade가 있으면 DECLINED / NO_RESPONSE / CANCELED / EXPIRED일 때만 가능
 - AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED / COMPLETED 상태에서는 재경매 불가
+- 거래 참여 정지 중에는 재경매 불가
 
 ## 즉시구매
 

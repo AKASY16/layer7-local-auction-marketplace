@@ -264,9 +264,13 @@ Index:
 | buyerId | BIGINT | NOT NULL, FK → users |
 | status | VARCHAR(30) | NOT NULL |
 | responseDeadline | DATETIME(6) | NOT NULL |
+| tradeDeadline | DATETIME(6) | NOT NULL |
 | completionRequestedBy | BIGINT | NULL, FK → users |
 | completionRequestedAt | DATETIME(6) | NULL |
+| completionDeadline | DATETIME(6) | NULL |
 | completedAt | DATETIME(6) | NULL |
+| canceledBy | BIGINT | NULL, FK → users |
+| canceledAt | DATETIME(6) | NULL |
 | createdAt | DATETIME(6) | NOT NULL |
 | updatedAt | DATETIME(6) | NOT NULL |
 
@@ -277,18 +281,26 @@ Status:
 - COMPLETED
 - DECLINED
 - NO_RESPONSE
+- CANCELED
+- EXPIRED
 
 Checks:
 - sellerId <> buyerId
-- completionRequestedBy / completionRequestedAt은 둘 다 NULL 또는 둘 다 NOT NULL
+- responseDeadline < tradeDeadline
+- completionRequestedBy / completionRequestedAt / completionDeadline은 모두 NULL 또는 모두 NOT NULL
+- canceledBy / canceledAt은 둘 다 NULL 또는 둘 다 NOT NULL
 
 Index:
 - (status, responseDeadline)
+- (status, tradeDeadline)
+- (status, completionDeadline)
 - (sellerId, createdAt)
 - (buyerId, createdAt)
 
 정책:
 - responseDeadline = Auction.endAt + 24h
+- tradeDeadline = Auction.endAt + 7d
+- completionDeadline = max(tradeDeadline, completionRequestedAt + 24h). 완료 요청 시 저장하고 거절 시 clear. 계산식이 아니라 컬럼으로 두어 Scheduler가 인덱스로 조회
 - seller/buyer가 실제 Auction 당사자인지는 Service에서 검증
 
 ## trust_histories
@@ -307,6 +319,7 @@ Reason:
 - TRADE_COMPLETED
 - WINNER_DECLINED
 - WINNER_NO_RESPONSE
+- TRADE_CANCELED
 
 Constraints:
 - UNIQUE(tradeId, userId, reason)
@@ -316,6 +329,48 @@ Index:
 - (userId, createdAt)
 
 append-only.
+
+연속 실패 판정(이용 정지)은 이 테이블에서 마지막 TRADE_COMPLETED와 마지막 자동 정지 이후의 실패 reason 수로 계산합니다.
+
+## user_restrictions
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| userId | BIGINT | NOT NULL, FK → users |
+| type | VARCHAR(30) | NOT NULL |
+| reason | VARCHAR(50) | NOT NULL |
+| source | VARCHAR(20) | NOT NULL |
+| triggerTradeId | BIGINT | NULL, UNIQUE, FK → trades |
+| startsAt | DATETIME(6) | NOT NULL |
+| endsAt | DATETIME(6) | NULL |
+| liftedAt | DATETIME(6) | NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+
+Type:
+- TRADING: 수동입찰, AutoBid 설정·변경·재활성화, 경매 생성·재경매 금지
+
+Reason:
+- CONSECUTIVE_FAILURES
+- ADMIN_ACTION
+
+Source:
+- SYSTEM
+- ADMIN
+
+Constraints:
+- UNIQUE(triggerTradeId): 같은 실패로 자동 정지가 두 번 생기지 않음. 수동 정지는 NULL
+- endsAt IS NULL OR startsAt < endsAt
+- SYSTEM이면 triggerTradeId와 endsAt NOT NULL
+
+Index:
+- (userId, createdAt)
+
+정책:
+- 정지 여부 = `liftedAt IS NULL AND startsAt <= now AND (endsAt IS NULL OR endsAt > now)`
+- 해제는 Scheduler 없이 서버시간으로 판정
+- users.status(ACTIVE/WITHDRAWN)는 로그인 판정용이므로 정지와 섞지 않음
+- MVP의 수동 정지는 운영자가 ADMIN 기록을 DB에 직접 생성
 
 ## notifications
 
@@ -456,3 +511,10 @@ Domain:
 
 6. `AutoBid.priorityAt` 제거
    - 동액이면 현재 선두 우선 규칙으로 처리하므로 우선순위 시각과 경쟁용 인덱스가 필요 없음
+
+7. Trade 기한·취소 컬럼
+   - tradeDeadline, completionDeadline, canceledBy, canceledAt 추가
+   - CANCELED / EXPIRED 상태 추가
+
+8. `user_restrictions` 추가
+   - 신뢰점수와 분리된 기간제 거래 참여 정지

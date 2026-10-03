@@ -73,6 +73,17 @@ Errors:
 ### GET /users/me
 현재 사용자 정보.
 
+거래 참여 정지 중이면 `tradingRestriction`에 사유와 해제 시각을, 아니면 `null`을 반환합니다.
+
+```json
+{
+  "tradingRestriction": {
+    "reason": "CONSECUTIVE_FAILURES",
+    "endsAt": "2026-10-10T04:30:00Z"
+  }
+}
+```
+
 ### PATCH /users/me/region
 지역 변경.
 

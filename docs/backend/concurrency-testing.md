@@ -131,6 +131,26 @@ endAt 경계에서 입찰 worker와 종료 worker를 동시에 실행.
 - TrustHistory 1건: UNIQUE(tradeId, userId, reason)
 - 신뢰점수 delta 1회만 반영
 - Notification도 dedupeKey 기준 1건
+- EXPIRED / 자동 완료 처리도 같은 Trade에 대해 효과 1회
+- 자동 이용 정지 1건: UNIQUE(triggerTradeId)
+
+### C11. 완료 응답 기한 경계
+completionDeadline 경계에서 상대방의 확인/거절 worker와 기한 Scheduler를 동시에 실행.
+
+기대:
+- now < completionDeadline: 확인/거절 가능
+- now >= completionDeadline: 확인/거절 거절, Scheduler가 자동 완료
+- 최종 상태는 정확히 하나 (COMPLETED 또는 IN_PROGRESS/EXPIRED)
+- TRADE_COMPLETED TrustHistory 중복 없음
+- tradeDeadline 이후 연장 구간의 거절은 IN_PROGRESS가 아니라 EXPIRED
+
+### C12. 연속 실패 3회째 동시 발생
+실패 2회가 누적된 사용자에게 서로 다른 Trade의 포기와 미응답 처리가 동시에 일어남.
+
+기대:
+- 두 실패 모두 TrustHistory로 반영
+- 자동 정지는 정확히 1건
+- 정지 이후 입찰·AutoBid 설정·경매 생성은 `403 USER_RESTRICTED`
 
 ## 공통 불변조건
 

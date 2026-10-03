@@ -34,31 +34,37 @@ OPEN ── 입찰 0건 ───→ CANCELED
 
 ## Trade
 
-상태는 `AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED / COMPLETED / DECLINED / NO_RESPONSE`입니다.
+상태는 `AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED / COMPLETED / DECLINED / NO_RESPONSE / CANCELED / EXPIRED`입니다.
 
 ```text
 AWAITING_RESPONSE
-      │
-      ├─ 거래 진행 ──→ IN_PROGRESS
-      │                   │
-      │                   └─ 판매자/구매자 중 한 명이 완료 요청
-      │                               ▼
-      │                     COMPLETION_REQUESTED
-      │                               │
-      │                               ├─ 상대방 확인 ──→ COMPLETED
-      │                               └─ 미완료 판단 ─→ IN_PROGRESS
-      │
-      ├─ 거래 포기 ──→ DECLINED
-      └─ 24시간 경과 ─→ NO_RESPONSE
+  ├─ 낙찰자 거래 진행 ──────────→ IN_PROGRESS
+  ├─ 낙찰자 거래 포기 ──────────→ DECLINED
+  ├─ 판매자 취소 ───────────────→ CANCELED
+  └─ responseDeadline 도달 ─────→ NO_RESPONSE
+
+IN_PROGRESS
+  ├─ 한쪽이 완료 요청 ──────────→ COMPLETION_REQUESTED
+  ├─ 한쪽이 취소 ───────────────→ CANCELED
+  └─ tradeDeadline 도달 ────────→ EXPIRED
+
+COMPLETION_REQUESTED
+  ├─ 상대방 확인 ───────────────→ COMPLETED
+  ├─ completionDeadline 도달 ───→ COMPLETED (자동)
+  ├─ 상대방 거절 ───────────────→ IN_PROGRESS (tradeDeadline 이후면 EXPIRED)
+  └─ 한쪽이 취소 ───────────────→ CANCELED (tradeDeadline 이전만)
 ```
 
+- `responseDeadline = endAt + 24시간`, `tradeDeadline = endAt + 7일`, `completionDeadline = max(tradeDeadline, completionRequestedAt + 24시간)`입니다.
+- 완료 요청을 받은 상대방은 요청 시점부터 최소 24시간을 보장받으므로 가장 긴 거래 기간은 endAt + 8일입니다.
 - 완료 요청자는 seller 또는 buyer 중 한 명입니다.
 - 본인이 생성한 완료 요청을 본인이 승인할 수 없습니다.
 - COMPLETED 시 판매자와 구매자 모두 신뢰점수 +2입니다.
-- DECLINED 시 구매자 -5, NO_RESPONSE 시 구매자 -10입니다.
+- DECLINED 시 구매자 -5, NO_RESPONSE 시 구매자 -10, CANCELED 시 취소한 쪽 -5입니다. EXPIRED는 변동이 없습니다.
+- DECLINED / NO_RESPONSE / 본인 CANCELED가 COMPLETED 없이 3회 연속되면 7일간 거래 참여 정지입니다.
 
 ## 재경매
 
-거래가 DECLINED 또는 NO_RESPONSE로 실패하면 기존 Auction은 ENDED 상태로 보존합니다.
+거래가 DECLINED / NO_RESPONSE / CANCELED / EXPIRED로 실패하면 기존 Auction은 ENDED 상태로 보존합니다.
 
 판매자가 재경매를 선택하면 동일 Product에 새 Auction을 생성하고 `relistedFromAuctionId`로 이전 Auction을 참조합니다.

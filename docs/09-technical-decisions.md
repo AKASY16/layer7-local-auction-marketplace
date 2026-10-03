@@ -32,6 +32,9 @@
 - 애플리케이션 내부 시간 표현은 `Instant`/UTC 기준, 사용자 화면에서 지역시간으로 변환
 - Scheduler 지연은 허용하되 정합성은 endAt 검증으로 보장
 - 낙찰 응답기한은 실제 Scheduler 처리시각이 아닌 `endAt + 24h`로 계산
+- 거래 기한은 `endAt + 7d`, 완료 요청을 받은 상대방에게는 요청 시점부터 최소 24시간 보장
+- 거래 일방 취소는 취소한 쪽 -5, 기한 만료(EXPIRED)는 페널티 없음
+- 신뢰점수는 표시용이며 제재는 본인 책임 실패 3회 연속 시 7일 거래 참여 정지(UserRestriction)
 - 부작용이 있는 HTTP 명령은 `Idempotency-Key + requestHash + DB UNIQUE`로 중복 실행 방지
 - 동일 key 재전송은 기존 결과를 재사용하고, 같은 key에 다른 요청 내용은 409 Conflict
 - Scheduler/내부 이벤트는 상태 조건, row lock, 도메인 UNIQUE 제약으로 멱등성 보장

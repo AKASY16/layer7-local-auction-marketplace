@@ -20,6 +20,7 @@ Request:
 - endAt > effective startAt
 - startPrice는 유효 가격단위
 - Product 소유자이며 Product.status = ACTIVE
+- 판매자가 거래 참여 정지 상태가 아님 (`403 USER_RESTRICTED`)
 - 동일 Product에 READY/OPEN Auction이 이미 있으면 409
 - `startAt = null`이면 즉시 시작
 - `startAt`을 명시했다면 serverNow보다 미래여야 함
@@ -130,10 +131,10 @@ Header: `Idempotency-Key`
 - 원 Auction.status = ENDED
 - Product.status = ACTIVE
 - Trade가 없으면(유찰) 허용
-- Trade가 있으면 status가 DECLINED 또는 NO_RESPONSE일 때만 허용
+- Trade가 있으면 status가 DECLINED / NO_RESPONSE / CANCELED / EXPIRED일 때만 허용
 - AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED / COMPLETED이면 불가
 
-불가 시 `409 AUCTION_RELIST_NOT_ALLOWED`.
+불가 시 `409 AUCTION_RELIST_NOT_ALLOWED`. 판매자가 거래 참여 정지 중이면 `403 USER_RESTRICTED`.
 
 Request:
 ```json
@@ -188,6 +189,7 @@ Request:
 - `serverNow < endAt`
 - 판매자 본인 아님
 - 현재 선두 아님 (`409 ALREADY_LEADING`)
+- 입찰자가 거래 참여 정지 상태가 아님 (`403 USER_RESTRICTED`)
 - 유효 가격단위
 - Bid 0건: amount >= startPrice
 - Bid 존재: amount >= nextValidAmount(currentPrice)
@@ -281,6 +283,7 @@ Request:
 검증:
 - OPEN / endAt 이전
 - 판매자 본인 금지
+- 요청자가 거래 참여 정지 상태가 아님 (`403 USER_RESTRICTED`)
 - maxAmount 유효 가격단위
 - Bid 0건이면 maxAmount >= startPrice
 - 현재 사용자가 leader라면 maxAmount >= currentPrice
@@ -291,6 +294,7 @@ Request:
 - leader가 아니면 요청한 maxAmount와 현재 leader의 상한(ACTIVE AutoBid의 maxAmount, 없으면 currentPrice)을 비교
 - 요청 maxAmount가 더 크면 요청자가 선두, 같거나 작으면 기존 leader 유지 (동액 선두 우선)
 - STOPPED/EXHAUSTED → ACTIVE 재활성화도 같은 규칙으로 경쟁
+- 현재 leader가 거래 참여 정지 상태면 그 leader의 AutoBid를 이 트랜잭션에서 STOPPED로 바꾸고, leader 상한을 currentPrice로 취급 (수동입찰도 동일)
 - 저장되는 Bid는 [경매 정책의 Bid 저장 규칙](../03-auction-policy.md#bid-저장-규칙)을 따름
 
 Response `200`:
@@ -325,7 +329,7 @@ Response `200`:
 ### DELETE /auctions/{auctionId}/auto-bid
 Header: `Idempotency-Key`
 
-AutoBid를 삭제하지 않고 `STOPPED`로 전환. 이미 성립한 Bid에는 영향 없음.
+AutoBid를 삭제하지 않고 `STOPPED`로 전환. 이미 성립한 Bid에는 영향 없음. 거래 참여 정지 중에도 중지는 가능합니다.
 현재 선두 사용자가 AutoBid를 중지해도 이미 성립한 leadingBid는 그대로 유지되며 가격은 내려가지 않습니다.
 
 ### AutoBid EXHAUSTED 의미
