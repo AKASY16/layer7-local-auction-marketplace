@@ -35,7 +35,7 @@ TEAM LAYER7의 캡스톤 프로젝트입니다.
 - Database: MySQL 8.4
 - Realtime: WebSocket(STOMP)
 - Auction consistency: Transaction / Lock
-- Scheduler: 예약 시작, 경매 종료, 낙찰 응답 기한 처리
+- Scheduler: 예약 시작, 경매 종료, 낙찰 응답·거래 기한 처리
 - File: Object Storage
 - Deploy: Docker
 - Development Assist: ChatGPT, Claude Code
