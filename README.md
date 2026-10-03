@@ -54,6 +54,7 @@ TEAM LAYER7의 캡스톤 프로젝트입니다.
 - [API 명세](docs/05-api-spec.md)
 - [Backend Domain](docs/backend/domain.md)
 - [ERD / DB Schema](docs/backend/erd.md)
+- [Flyway V1 Schema 초안](docs/backend/V1__init_schema_draft.sql)
 - [Auction / Trade 상태 모델](docs/backend/auction-state.md)
 - [경매 동시성 테스트 계획](docs/backend/concurrency-testing.md)
 - [Frontend](docs/07-frontend.md)
