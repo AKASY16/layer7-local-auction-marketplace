@@ -57,14 +57,15 @@ MVP 기본 정책:
 1. Auction이 OPEN
 2. 서버 현재시각이 endAt 이전
 3. 판매자 본인 입찰이 아님
-4. `amount >= nextValidAmount(currentPrice)`
-5. `isValidAmount(amount) == true`
+4. `isValidAmount(amount) == true`
+5. 아직 Bid가 없다면 `amount >= startPrice`
+6. Bid가 하나 이상이면 `amount >= nextValidAmount(currentPrice)`
 
-따라서 사용자는 반드시 바로 다음 한 칸만 입찰할 필요는 없고, **유효한 단위에 맞는 더 높은 금액으로 건너뛸 수 있음**.
+따라서 **첫 실제 Bid는 startPrice 자체로 입찰 가능**합니다. 첫 Bid 이후에는 현재가보다 다음 유효 금액 이상이어야 하며, 사용자는 유효한 단위에 맞는 더 높은 금액으로 건너뛸 수 있습니다.
 
 예:
-- 현재가 9,000원
-- 다음 최소 유효 금액 9,100원
+- startPrice 9,000원 / Bid 0건 → 9,000원 첫 입찰 허용
+- 첫 Bid 이후 현재가 9,000원 → 다음 최소 유효 금액 9,100원
 - 9,100원 → 허용
 - 9,500원 → 허용
 - 10,000원 → 허용
