@@ -150,6 +150,7 @@ JPA:
 - AutoBid → User(bidder): ManyToOne LAZY
 
 도메인 정책:
+- startPrice, Bid.amount, AutoBid.maxAmount는 모두 `BidIncrementPolicy`의 유효 가격 격자를 따라야 함
 - AutoBid에는 사용자별 상승폭을 저장하지 않음
 - 현재가에 따른 상승폭은 서버의 `BidIncrementPolicy`가 계산
 - 가격구간별 정책은 Auction row가 아니라 애플리케이션 정책으로 관리
