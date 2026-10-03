@@ -4,7 +4,10 @@ Spring WebSocket + STOMP를 사용합니다.
 
 ## 연결
 - WebSocket endpoint: `/ws`
-- 인증이 필요한 user queue는 JWT 인증 사용자만 구독 가능
+- STOMP `CONNECT` frame의 `Authorization: Bearer <access-token>` 헤더로 JWT 인증
+- 공개 Auction topic만 사용할 경우 인증 없이 연결 가능
+- `/user/queue/**` 구독은 인증된 CONNECT session만 허용
+- 클라이언트는 WebSocket을 통해 입찰 명령을 보내지 않으며, 상태변경 명령은 REST API를 사용
 
 ## 공개 Auction Topic
 
