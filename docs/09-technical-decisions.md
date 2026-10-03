@@ -30,6 +30,10 @@
 - 애플리케이션 내부 시간 표현은 `Instant`/UTC 기준, 사용자 화면에서 지역시간으로 변환
 - Scheduler 지연은 허용하되 정합성은 endAt 검증으로 보장
 - 낙찰 응답기한은 실제 Scheduler 처리시각이 아닌 `endAt + 24h`로 계산
+- 부작용이 있는 HTTP 명령은 `Idempotency-Key + requestHash + DB UNIQUE`로 중복 실행 방지
+- 동일 key 재전송은 기존 결과를 재사용하고, 같은 key에 다른 요청 내용은 409 Conflict
+- Scheduler/내부 이벤트는 상태 조건, row lock, 도메인 UNIQUE 제약으로 멱등성 보장
+- Trade는 `UNIQUE(auctionId)`, TrustHistory는 `UNIQUE(tradeId,userId,reason)`, Notification은 `dedupeKey UNIQUE` 활용
 - Product 1:N Auction
 - Bid / AutoBid 분리
 - Auction / Trade 분리
@@ -79,4 +83,4 @@ Kafka, Kubernetes, MSA, Redis 등을 근거 없이 추가하지 않습니다. �
 - 추가 차별 기능
 - Auction Lock 세부 전략
 - AutoBid 경쟁 결과 계산 및 Bid 이력 압축 규칙
-- Idempotency 적용 범위
+
