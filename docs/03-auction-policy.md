@@ -199,7 +199,7 @@ BEGIN
   → 수동 Bid 또는 AutoBid 설정 반영
   → AutoBid 경쟁 계산
   → 필요한 Bid 저장
-  → Auction.currentPrice / leadingBidder 갱신
+  → Auction.currentPrice / leadingBid 갱신
 COMMIT
   → AFTER_COMMIT WebSocket / Push
 ```
