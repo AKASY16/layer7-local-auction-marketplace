@@ -20,7 +20,8 @@
 - 이미지 저장: Object Storage
 - 배포 단위: Docker
 - 수동입찰 + 자동입찰
-- 입찰 상승폭은 서비스 공통 가격구간별 `BidIncrementPolicy`로 결정
+- 입찰 금액은 서비스 공통 가격구간별 `BidIncrementPolicy`의 유효 가격 격자를 사용
+- 시작가, 수동입찰, AutoBid maxAmount 모두 같은 가격 격자를 공유
 - AutoBid 사용자는 `maxAmount`만 설정하며 별도 incrementAmount를 두지 않음
 - 자동입찰은 상시 실행 프로세스가 아니라 수동입찰/AutoBid 설정·변경 이벤트가 발생했을 때만 계산
 - 동일 Auction의 입찰, AutoBid 설정 변경, 종료 Scheduler는 Auction row 기준으로 직렬화
