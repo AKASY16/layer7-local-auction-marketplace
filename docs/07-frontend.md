@@ -17,7 +17,9 @@
 - 상품 상태 등급 / 상세설명
 - 이미지 업로드
 - 예약 경매 생성
-- READY / OPEN / ENDED 상태 표시
+- READY / OPEN / ENDED 상태 표시 (서버가 내려주는 논리 상태 기준, 입찰 버튼은 `status == OPEN`일 때만)
+- `ENDED + finalized=false`는 "집계 중", `ENDED + finalized=true + winningBid=null`은 유찰로 표시
+- 거래 상태도 논리 상태로 표시하고 finalized가 false면 반영 대기 중으로 표시
 - 수동입찰 / 자동입찰 설정
 - 자동입찰 설정/변경 확인 UI: maxAmount 표시
 - 현재 가격구간의 유효 입찰단위와 다음 최소 입찰가 표시

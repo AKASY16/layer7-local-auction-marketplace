@@ -114,6 +114,15 @@ endAt 경계에서 입찰 worker와 종료 worker를 동시에 실행.
 - Trade는 Auction당 최대 1개
 - winningBid/currentPrice/leadingBidder 간 모순 없음
 
+### C08-1. 시작 경계와 Scheduler 지연
+저장 status가 READY로 남은 채 startAt이 지난 경매에 입찰 worker와 시작 Scheduler를 동시에 실행.
+
+기대:
+- now >= startAt이면 입찰 성공, 저장 status는 OPEN
+- 시작 Scheduler가 나중에 실행돼도 중복 전이·중복 상태 이벤트 없음
+- now < startAt이면 `409 AUCTION_NOT_OPEN`
+- API 응답 status는 저장값과 관계없이 논리 상태
+
 ### C09. 동일 Idempotency-Key 동시 재요청
 동일 사용자가 동일 key와 동일 요청으로 여러 번 동시 호출.
 
@@ -185,6 +194,7 @@ startAt 경계에서 상품 수정 worker와 입찰 worker를 동시에 실행.
 - ACTIVE AutoBid는 경매당 최대 1개이며 있다면 leader의 것
 - Bid 금액은 id 순으로 엄격히 증가하고 leadingBid는 최고 금액 Bid
 - ENDED Auction에는 종료 이후 생성된 Bid가 없음
+- finalized가 아닌 Auction에는 Trade와 winningBid가 없음
 - winningBid가 존재하면 해당 Bid.auctionId가 동일 Auction
 - Trade는 Auction당 최대 1개
 - Bid의 (auctionId, amount) UNIQUE 위반 없음

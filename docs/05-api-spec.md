@@ -30,6 +30,20 @@ MVP는 JWT Access Token 방식으로 구현합니다. Login 응답은 token과 `
 - 경매 입찰 가능 시간: `startAt <= serverNow < endAt`
 - 브라우저 카운트다운은 표시용이며 서버시간이 최종 권위
 
+### 상태와 finalized
+Auction과 Trade의 `status`는 DB에 저장된 값이 아니라 서버시간 기준 **논리 상태**로 반환합니다. 저장 상태는 Scheduler가 뒤따라 맞추는 값이고, 시간 경계의 기준은 startAt/endAt과 각 기한입니다.
+
+`finalized`는 저장 상태가 최종 상태에 도달해 후처리(낙찰 확정·Trade 생성·신뢰점수·정지·알림 등)가 끝났는지를 나타냅니다.
+- Auction: 저장 status가 ENDED 또는 CANCELED면 true
+- Trade: 저장 status가 COMPLETED / DECLINED / NO_RESPONSE / CANCELED / EXPIRED면 true
+
+예:
+- `status = ENDED, finalized = false`: 종료됐지만 낙찰 확정 전(집계 중)
+- `status = ENDED, finalized = true, winningBid = null`: 유찰
+- `status = NO_RESPONSE, finalized = false`: 응답기한이 지났고 페널티 반영 전
+
+상세 규칙: [Auction / Trade 상태 모델](backend/auction-state.md)
+
 ### 금액
 - KRW 원 단위 정수
 - JSON에서는 number

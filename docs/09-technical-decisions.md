@@ -33,7 +33,9 @@
 - 경매 시간 판정은 Auction 락 획득 후 서버 `Clock` 기준으로 수행
 - 입찰 가능 범위는 `startAt <= now < endAt`
 - 애플리케이션 내부 시간 표현은 `Instant`/UTC 기준, 사용자 화면에서 지역시간으로 변환
-- Scheduler 지연은 허용하되 정합성은 endAt 검증으로 보장
+- Scheduler 지연은 허용하되 정합성은 startAt/endAt과 각 기한의 논리 시간 판정으로 보장
+- API의 Auction/Trade status는 서버시간 기준 논리 상태, 후처리 완료 여부는 `finalized`로 제공
+- READY → OPEN은 쓰기 경로에서 즉시 전이, 종료·거래 기한 전이는 Scheduler만 수행
 - 낙찰 응답기한은 실제 Scheduler 처리시각이 아닌 `endAt + 24h`로 계산
 - 거래 기한은 `endAt + 7d`, 완료 요청을 받은 상대방에게는 요청 시점부터 최소 24시간 보장
 - 거래 일방 취소는 취소한 쪽 -5, 기한 만료(EXPIRED)는 페널티 없음

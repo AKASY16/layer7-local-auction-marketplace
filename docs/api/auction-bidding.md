@@ -31,7 +31,7 @@ Response `201`:
   "id": 40,
   "productId": 30,
   "status": "OPEN",
-  "biddingOpen": true,
+  "finalized": false,
   "startPrice": 9000,
   "currentPrice": 9000,
   "bidCount": 0,
@@ -51,8 +51,13 @@ Query:
 - `regionId` optional
 - `category` optional
 - `keyword` optional
-- `status=READY|OPEN|ENDED` optional
+- `status=READY|OPEN|ENDED` optional. 논리 상태 기준
 - page / size
+
+논리 상태 조회 조건:
+- READY: `status = READY AND startAt > now`
+- OPEN: `status IN (READY, OPEN) AND startAt <= now AND endAt > now`
+- ENDED: `status = ENDED OR (status IN (READY, OPEN) AND endAt <= now)`
 
 기본 정렬: 최신 등록순. Frontend 요구에 따라 종료임박순을 추가할 수 있음.
 
@@ -61,6 +66,7 @@ Item:
 {
   "auctionId": 40,
   "status": "OPEN",
+  "finalized": false,
   "currentPrice": 9000,
   "startAt": "2026-10-03T04:30:00Z",
   "endAt": "2026-10-04T04:30:00Z",
@@ -86,7 +92,7 @@ Response `200` 주요 필드:
 {
   "id": 40,
   "status": "OPEN",
-  "biddingOpen": true,
+  "finalized": false,
   "startPrice": 9000,
   "currentPrice": 10000,
   "nextBidAmount": 10500,
@@ -111,11 +117,14 @@ Response `200` 주요 필드:
 
 다른 사용자의 AutoBid.maxAmount는 절대 노출하지 않습니다.
 
-`biddingOpen`은 `status == OPEN && serverTime < endAt`으로 계산한 논리적 입찰 가능 여부입니다.
-Scheduler 반영이 늦어 DB status가 잠시 OPEN이어도 endAt이 지났다면 `biddingOpen=false`, `nextBidAmount=null`로 반환합니다.
+`status`는 서버시간 기준 논리 상태입니다 ([상태와 finalized](../05-api-spec.md#상태와-finalized)).
+- Scheduler 반영이 늦어 저장 status가 잠시 OPEN이어도 endAt이 지났다면 `status=ENDED`, `finalized=false`, `nextBidAmount=null`로 반환
+- startAt이 지났는데 저장 status가 READY로 남아 있으면 `status=OPEN`으로 반환하고 입찰을 받음
+- 입찰 가능 여부는 `status == OPEN`으로 판단하며 별도 `biddingOpen` 필드는 두지 않음
+- `ENDED + finalized=false`는 집계 중이며 winningBid는 아직 null. 낙찰 예정자는 leadingBid로 표시 가능
 
 ### POST /auctions/{auctionId}/cancel
-판매자 전용.
+판매자 전용. 판정은 논리 상태 기준.
 - READY: 가능
 - OPEN: Bid 0건일 때만 가능
 - 이미 CANCELED이면 현재 상태를 그대로 반환하여 자연스럽게 멱등 처리
@@ -128,10 +137,10 @@ Header: `Idempotency-Key`
 기존 Auction은 변경하지 않고 동일 Product에 새 Auction 생성.
 
 허용 조건:
-- 원 Auction.status = ENDED
+- 원 Auction이 finalized ENDED (정산 전에는 Trade가 아직 없으므로 유찰로 판단하지 않음)
 - Product.status = ACTIVE
 - Trade가 없으면(유찰) 허용
-- Trade가 있으면 status가 DECLINED / NO_RESPONSE / CANCELED / EXPIRED일 때만 허용
+- Trade가 있으면 finalized 상태가 DECLINED / NO_RESPONSE / CANCELED / EXPIRED일 때만 허용
 - AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED / COMPLETED이면 불가
 
 불가 시 `409 AUCTION_RELIST_NOT_ALLOWED`. 판매자가 거래 참여 정지 중이면 `403 USER_RESTRICTED`.
@@ -185,8 +194,7 @@ Request:
 ```
 
 검증:
-- OPEN
-- `serverNow < endAt`
+- 논리 상태 OPEN: 저장 status가 READY/OPEN이고 `startAt <= serverNow < endAt`. 저장값이 READY면 이 트랜잭션에서 OPEN으로 전이
 - 판매자 본인 아님
 - 현재 선두 아님 (`409 ALREADY_LEADING`)
 - 입찰자가 거래 참여 정지 상태가 아님 (`403 USER_RESTRICTED`)
@@ -281,7 +289,7 @@ Request:
 ```
 
 검증:
-- OPEN / endAt 이전
+- 논리 상태 OPEN (수동입찰과 동일)
 - 판매자 본인 금지
 - 요청자가 거래 참여 정지 상태가 아님 (`403 USER_RESTRICTED`)
 - maxAmount 유효 가격단위
@@ -351,7 +359,7 @@ Response `200`: AutoBid 상태.
 ### POST /auctions/{auctionId}/appends
 판매자 전용.
 Header: `Idempotency-Key`
-- OPEN
+- 논리 상태 OPEN
 - Bid 1건 이상
 - content 1~200자
 

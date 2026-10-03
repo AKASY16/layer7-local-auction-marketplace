@@ -146,6 +146,8 @@ Status:
 - 낙찰자가 필요하면 Bid.bidder로 추적하며 별도 winnerId/leadingBidderId를 중복 저장하지 않음
 - ENDED 유찰이면 winningBidId = null
 - 낙찰 종료 시 일반적으로 `winningBidId = leadingBidId`
+- status는 저장 상태이며 API는 서버시간 기준 논리 상태와 finalized를 반환 ([상태 모델](auction-state.md))
+- 종료 Scheduler는 `(status, endAt)` 인덱스로 `status IN (READY, OPEN) AND endAt <= now`를 조회
 
 Checks:
 - startPrice >= 100

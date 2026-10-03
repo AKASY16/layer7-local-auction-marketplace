@@ -19,6 +19,10 @@ TradeStatus:
 - 모든 기한은 Scheduler 처리 시각이 아니라 위 기준으로 계산하며, 기한 이후 명령은 서버시간 기준으로 거절
 - 가장 긴 거래 기간은 endAt + 8일
 
+상태 표시:
+- `status`는 서버시간 기준 논리 상태입니다 ([상태와 finalized](../05-api-spec.md#상태와-finalized)). 예를 들어 저장 상태가 AWAITING_RESPONSE여도 responseDeadline이 지났으면 `NO_RESPONSE`로 반환합니다.
+- `finalized`는 저장 상태가 COMPLETED / DECLINED / NO_RESPONSE / CANCELED / EXPIRED에 도달했는지 여부입니다. 논리 상태가 바뀌었어도 finalized가 false면 신뢰점수·정지·상품 상태가 아직 반영되지 않은 상태입니다.
+
 ### GET /trades/{tradeId}
 판매자/구매자 당사자만 조회 가능.
 
@@ -38,6 +42,7 @@ Response:
     "trustScore": 2
   },
   "status": "AWAITING_RESPONSE",
+  "finalized": false,
   "responseDeadline": "2026-10-05T04:30:00Z",
   "tradeDeadline": "2026-10-11T04:30:00Z",
   "completionRequestedBy": null,

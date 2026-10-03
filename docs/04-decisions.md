@@ -79,3 +79,11 @@
 - 상품 수정은 경매가 논리적으로 시작되기 전이고 과거 Bid가 0건일 때만. OPEN 경매는 취소 후 수정
 - 상품 삭제는 ACTIVE 상품이면서 진행 중 경매·거래가 없을 때만
 - 신뢰점수는 원자 UPDATE로 갱신
+
+## 2026-10-03 — 설계 리뷰 반영 — 논리 상태
+
+- 저장 status는 Scheduler가 뒤따라 맞추는 값, 시간 경계의 기준은 startAt/endAt과 각 기한
+- API의 Auction/Trade status는 서버시간 기준 논리 상태로 반환
+- 후처리 완료 여부는 `finalized` 필드로 제공, `biddingOpen` 필드는 제거
+- READY → OPEN은 쓰기 경로에서 즉시 전이, 종료·거래 기한 전이는 Scheduler만
+- 의무 검사와 재경매 조건은 저장 상태(finalized) 기준

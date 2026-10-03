@@ -54,13 +54,12 @@ MVP 기본 정책:
 ## 수동입찰
 
 수동입찰 금액은 다음 조건을 모두 만족해야 함:
-1. Auction이 OPEN
-2. 서버 현재시각이 endAt 이전
-3. 판매자 본인 입찰이 아님
-4. 현재 선두가 아님
-5. `isValidAmount(amount) == true`
-6. 아직 Bid가 없다면 `amount >= startPrice`
-7. Bid가 하나 이상이면 `amount >= nextValidAmount(currentPrice)`
+1. Auction이 논리적으로 OPEN: 저장 status가 READY/OPEN이고 `startAt <= now < endAt`
+2. 판매자 본인 입찰이 아님
+3. 현재 선두가 아님
+4. `isValidAmount(amount) == true`
+5. 아직 Bid가 없다면 `amount >= startPrice`
+6. Bid가 하나 이상이면 `amount >= nextValidAmount(currentPrice)`
 
 따라서 **첫 실제 Bid는 startPrice 자체로 입찰 가능**합니다. 첫 Bid 이후에는 현재가보다 다음 유효 금액 이상이어야 하며, 사용자는 유효한 단위에 맞는 더 높은 금액으로 건너뛸 수 있습니다.
 
@@ -275,10 +274,12 @@ Scheduler나 내부 이벤트에는 HTTP용 Idempotency-Key를 사용하지 않�
 - 경매 종료를 위해 Auction별 Thread/Timer를 점유하지 않음
 - Scheduler가 `status + startAt/endAt` 인덱스를 기준으로 전이 대상 Auction을 조회
 - 입찰과 종료 Scheduler는 동일 Auction에 대해 같은 쓰기 락 규칙을 사용
+- 저장된 status는 Scheduler가 뒤따라 맞추는 값이고, 시간 경계의 기준은 startAt/endAt. 판정과 API 응답은 서버시간 기준 논리 상태를 사용 ([Auction / Trade 상태 모델](backend/auction-state.md))
 - 입찰 가능 시간은 서버 기준 `startAt <= now < endAt`
 - 클라이언트가 버튼을 누른 시각이나 브라우저 카운트다운은 판정 근거로 사용하지 않음
-- 입찰 처리 시 Auction 쓰기 락을 획득한 뒤 서버 현재시각을 다시 읽어 마감 여부를 검증
-- DB status가 아직 OPEN이어도 `now >= endAt`이면 입찰 거절
+- 입찰 처리 시 Auction 쓰기 락을 획득한 뒤 서버 현재시각을 다시 읽어 판정
+- 저장 status가 아직 READY여도 `now >= startAt`이면 입찰 가능. 부작용이 없는 전이이므로 그 트랜잭션에서 OPEN으로 바꿈
+- 저장 status가 아직 OPEN이어도 `now >= endAt`이면 입찰 거절. 종료 전이는 winningBid·Trade·알림이 따라붙으므로 종료 Scheduler만 수행
 - Scheduler가 실제로 ENDED 상태를 기록하는 시점은 endAt보다 조금 늦을 수 있으나, 논리적 종료시점은 항상 endAt
 - 애플리케이션 시간 조회는 직접 `now()`를 흩어 쓰지 않고 주입된 `Clock`을 사용
 - 애플리케이션 내부 시간 기준은 `Instant`/UTC로 통일하고 화면에서 사용자 지역시간으로 변환
@@ -336,7 +337,7 @@ Scheduler나 내부 이벤트에는 HTTP용 Idempotency-Key를 사용하지 않�
 - 판매자가 새 Auction 생성
 - `relistedFromAuctionId`로 이전 경매 참조
 - 기존 Bid / AutoBid / Trade 이력은 변경하지 않음
-- 원 Auction이 ENDED이고 Product가 ACTIVE일 때만 가능
+- 원 Auction이 finalized ENDED이고 Product가 ACTIVE일 때만 가능 (정산 전에는 Trade가 아직 없으므로 유찰로 판단하지 않음)
 - Trade가 없으면 유찰로 재경매 가능
 - Trade가 있으면 DECLINED / NO_RESPONSE / CANCELED / EXPIRED일 때만 가능
 - AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED / COMPLETED 상태에서는 재경매 불가
