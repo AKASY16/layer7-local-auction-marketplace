@@ -48,3 +48,18 @@
 ## Realtime
 - WebSocket 경매 현재가 변경
 - 경매 상태 변경
+
+
+## Idempotency
+부작용이 있는 명령형 API는 `Idempotency-Key` 헤더를 사용합니다.
+
+적용 대상:
+- 수동입찰
+- AutoBid 설정 / maxAmount 변경 / 중지
+- 거래 진행 / 포기
+- 거래 완료 요청 / 확인
+- 재경매 생성
+
+규칙:
+- 동일 사용자 + 동일 scope + 동일 key + 동일 요청 → 기존 결과 반환
+- 동일 key + 다른 요청 본문 → 409 Conflict
