@@ -207,6 +207,13 @@ COMMIT
 - 경매 종료를 위해 Auction별 Thread/Timer를 점유하지 않음
 - Scheduler가 `status + startAt/endAt` 인덱스를 기준으로 전이 대상 Auction을 조회
 - 입찰과 종료 Scheduler는 동일 Auction에 대해 같은 쓰기 락 규칙을 사용
+- 입찰 가능 시간은 서버 기준 `startAt <= now < endAt`
+- 클라이언트가 버튼을 누른 시각이나 브라우저 카운트다운은 판정 근거로 사용하지 않음
+- 입찰 처리 시 Auction 쓰기 락을 획득한 뒤 서버 현재시각을 다시 읽어 마감 여부를 검증
+- DB status가 아직 OPEN이어도 `now >= endAt`이면 입찰 거절
+- Scheduler가 실제로 ENDED 상태를 기록하는 시점은 endAt보다 조금 늦을 수 있으나, 논리적 종료시점은 항상 endAt
+- 애플리케이션 시간 조회는 직접 `now()`를 흩어 쓰지 않고 주입된 `Clock`을 사용
+- 애플리케이션 내부 시간 기준은 `Instant`/UTC로 통일하고 화면에서 사용자 지역시간으로 변환
 
 ## 상품 내용
 
@@ -220,6 +227,7 @@ COMMIT
 - 입찰자가 없으면 유찰, Trade 생성 안 함
 - 낙찰자가 있으면 Trade 생성
 - 낙찰자 응답 기한 24시간
+- Trade.responseDeadline은 Scheduler 실제 처리시각이 아니라 `Auction.endAt + 24시간`으로 계산
 
 ## 재경매
 
