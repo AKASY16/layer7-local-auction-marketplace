@@ -28,6 +28,8 @@
 - Bid는 패자가 버틴 금액과 승자 최종가만 저장 (이벤트당 최대 2건)
 - 동일 Auction의 입찰, AutoBid 설정 변경, 종료 Scheduler는 Auction row 기준으로 직렬화
 - 트랜잭션 격리 수준은 READ COMMITTED, 직렬화는 비관적 락으로 보장
+- 락 대기 시간은 3초(`innodb_lock_wait_timeout`), 초과 시 503 RESOURCE_BUSY로 빠르게 실패
+- Scheduler는 대상 하나당 하나의 트랜잭션, 경매 시작·종료 1초 / 거래 기한 1분 주기
 - 전역 락 순서는 Product → Auction → Trade → User(id 오름차순). 락 전 조회는 ID 탐색용이며 판단은 락 후 재검증한 값으로 함
 - 상품 핵심정보는 경매가 논리적으로 시작되기 전이고 과거 Bid가 0건일 때만 수정
 - 경매 시간 판정은 Auction 락 획득 후 서버 `Clock` 기준으로 수행

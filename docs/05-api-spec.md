@@ -157,6 +157,7 @@ Validation 오류 예:
 | 403 | 인증은 됐으나 해당 행위 권한 없음 |
 | 404 | Resource 없음 |
 | 409 | 현재 상태/동시성/중복키 때문에 명령 수행 불가 |
+| 503 | 락 대기 시간 초과 등 일시적으로 처리 불가. 같은 Idempotency-Key로 재시도 가능 |
 
 ## 주요 Error Code
 
@@ -195,6 +196,7 @@ Validation 오류 예:
 | TRADE_RESPONSE_EXPIRED | 409 | 응답기한 종료 |
 | TRADE_DEADLINE_PASSED | 409 | 거래 기한 또는 완료 응답 기한 종료 |
 | IDEMPOTENCY_KEY_REUSED | 409 | 동일 key를 다른 요청에 재사용 |
+| RESOURCE_BUSY | 503 | 락 대기 시간 초과. 재시도 가능 |
 
 ## 공통 User Summary
 

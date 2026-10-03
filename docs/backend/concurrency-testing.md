@@ -69,7 +69,7 @@ ExecutorService + CountDownLatch로 여러 작업을 실제로 동시에 시작�
 
 검증:
 - 정합성 위반 0건
-- deadlock/lock timeout 관찰
+- deadlock/lock timeout 관찰. 락 대기 초과는 `503 RESOURCE_BUSY`로 끝나고 효과를 남기지 않음
 - 모든 작업이 유한 시간 내 종료
 - 최종 currentPrice / leadingBidder / Bid 이력 일치
 
