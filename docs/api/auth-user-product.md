@@ -109,8 +109,24 @@ Query:
 - `status=ACTIVE|SOLD|DELETED` optional
 - page / size
 
+### GET /users/me/auctions
+내가 판매자로 생성한 Auction 목록.
+
+Query:
+- `status` optional
+- page / size
+
 ### GET /users/me/bids
 내 실제 Bid 이력.
+
+### GET /users/me/auto-bids
+내 AutoBid 설정 목록.
+
+Query:
+- `status=ACTIVE|STOPPED|EXHAUSTED` optional
+- page / size
+
+다른 사용자의 maxAmount는 어떤 경우에도 반환하지 않습니다.
 
 ### GET /users/me/trades
 내 거래 목록.
