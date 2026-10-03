@@ -13,6 +13,7 @@
 | 완료 자동 확정 | `status = COMPLETION_REQUESTED AND completionDeadline <= now` | 1분 | COMPLETED, 신뢰점수, 상품 SOLD |
 | 기한 임박 알림 | 아래 "기한 임박 알림" 참고 | 10분 | TRADE_DEADLINE_SOON |
 | 정리 배치 | 24시간 지난 Idempotency 기록, 만료된 Refresh Token | 1시간 | 삭제 |
+| 업로드 정리 | 발급 후 24시간 지난 PENDING 업로드, DETACHED 업로드 | 1시간 | Object Storage 객체 삭제 후 기록 삭제 |
 
 ## 실행 규칙
 

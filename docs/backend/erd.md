@@ -135,8 +135,35 @@ JPA:
 
 Constraints:
 - UNIQUE(productId, sortOrder)
+- UNIQUE(objectKey): 같은 업로드 객체를 두 상품에 붙이지 않음
 - sortOrder >= 0
 - ProductImage는 Product에 강하게 종속되므로 물리삭제 시 CASCADE 허용
+
+## image_uploads
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| userId | BIGINT | NOT NULL, FK → users |
+| objectKey | VARCHAR(512) | NOT NULL, UNIQUE |
+| contentType | VARCHAR(50) | NOT NULL |
+| size | BIGINT | NOT NULL |
+| status | VARCHAR(20) | NOT NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+| updatedAt | DATETIME(6) | NOT NULL |
+
+Status:
+- PENDING: URL 발급 후 상품에 아직 붙지 않음
+- ATTACHED: ProductImage로 등록됨
+- DETACHED: 이미지가 삭제되어 객체 정리 대상
+
+Index:
+- (status, createdAt): 정리 배치용
+
+정책:
+- objectKey는 서버가 생성 (`uploads/{uuid}`)
+- PENDING → ATTACHED는 `WHERE status = 'PENDING'` 조건의 UPDATE로 한 번만 성공
+- 발급 후 24시간 지난 PENDING과 DETACHED는 정리 배치가 객체와 기록을 삭제
 
 ## auctions
 

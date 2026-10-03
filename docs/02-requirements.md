@@ -15,6 +15,7 @@
 - 일상·생활용품 중심 상품 등록
 - Category code: DIGITAL / HOME_APPLIANCE / FURNITURE / LIVING_KITCHEN / FASHION / BEAUTY / SPORTS_LEISURE / HOBBY_GAME / BOOK_MEDIA / ETC
 - 이미지 업로드: MVP 1~10장, JPEG/PNG/WebP, 파일당 최대 10MB
+- 이미지는 Presigned URL로 클라이언트가 Object Storage에 직접 업로드하고, 상품 등록 시 objectKey만 전달
 - 상품 지역은 등록 당시 판매자의 현재 지역을 snapshot으로 저장하며, 이후 사용자가 지역을 변경해도 기존 상품 지역은 유지
 - 지역별 조회 / 검색
 - 상품 상태 등급

@@ -18,7 +18,7 @@
 - 입찰 처리: REST + Transaction/Lock
 - 실시간 전달: WebSocket(STOMP). 경매 이벤트에 `version`을 넣어 순서를 판단하고, 발송은 AFTER_COMMIT 이후 별도 executor에서 수행
 - Scheduler: 예약 시작 / 종료 / 응답 마감
-- 이미지 저장: Object Storage
+- 이미지 저장: Object Storage. 클라이언트가 Presigned URL로 직접 업로드하고 백엔드는 objectKey만 등록
 - 배포 단위: Docker
 - 수동입찰 + 자동입찰
 - 입찰 금액은 서비스 공통 가격구간별 `BidIncrementPolicy`의 유효 가격 격자를 사용

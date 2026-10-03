@@ -88,6 +88,7 @@ Idempotency-Key: <UUID>
 
 적용 scope:
 - PRODUCT_CREATE
+- PRODUCT_IMAGE_ADD
 - AUCTION_CREATE
 - PRODUCT_APPEND_CREATE
 - MANUAL_BID
@@ -118,7 +119,7 @@ Idempotency-Key: <UUID>
 - 실패한 요청(4xx/5xx)은 롤백과 함께 기록도 사라지므로 같은 key로 재시도하면 다시 실행됨. 비즈니스 효과가 두 번 생기는 일은 없으며, 클라이언트는 4xx를 받으면 다음 사용자 액션에서 새 key를 만듦
 - 멱등 기록 INSERT는 모든 도메인 락보다 먼저이므로 중복 요청은 도메인 락을 잡지 않은 채 대기함 ([락 규칙](backend/locking.md))
 
-키가 필요 없는 API(같은 요청을 반복해도 결과가 같음): 경매 취소, 관심상품 PUT/DELETE, 알림 읽음 처리, PushSubscription 등록/삭제
+키가 필요 없는 API(같은 요청을 반복해도 결과가 같음): 경매 취소, 관심상품 PUT/DELETE, 알림 읽음 처리, PushSubscription 등록/삭제. 업로드 URL 발급도 키를 쓰지 않으며, 중복 발급으로 남은 PENDING 업로드는 정리 배치가 삭제합니다.
 
 ### 공통 Error Response
 
@@ -174,6 +175,7 @@ Validation 오류 예:
 | VALIDATION_ERROR | 400 | 일반 필드 검증 실패 |
 | INVALID_PRICE_UNIT | 400 | 가격단위표에 맞지 않는 금액 |
 | AMOUNT_LIMIT_EXCEEDED | 400 | 금액 상한(10,000,000원) 초과 |
+| INVALID_UPLOAD | 400 | imageKey가 본인 업로드가 아니거나 만료·미업로드·조건 불일치 |
 | AUCTION_PERIOD_INVALID | 400 | 경매 기간 1시간~7일, 예약 시작 7일 이내 조건 위반 |
 | IDEMPOTENCY_KEY_REQUIRED | 400 | 필수 Idempotency-Key 없음 |
 | UNAUTHORIZED | 401 | 로그인 필요 |

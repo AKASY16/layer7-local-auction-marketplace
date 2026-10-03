@@ -87,10 +87,35 @@ CREATE TABLE product_images (
     created_at DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT uq_product_images_order UNIQUE (product_id, sort_order),
+    CONSTRAINT uq_product_images_object_key UNIQUE (object_key),
     CONSTRAINT ck_product_images_sort_order CHECK (sort_order >= 0),
     CONSTRAINT fk_product_images_product
         FOREIGN KEY (product_id) REFERENCES products(id)
         ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE image_uploads (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    object_key VARCHAR(512) NOT NULL,
+    content_type VARCHAR(50) NOT NULL,
+    size BIGINT NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uq_image_uploads_object_key UNIQUE (object_key),
+    CONSTRAINT ck_image_uploads_status CHECK (
+        status IN ('PENDING', 'ATTACHED', 'DETACHED')
+    ),
+    CONSTRAINT ck_image_uploads_content_type CHECK (
+        content_type IN ('image/jpeg', 'image/png', 'image/webp')
+    ),
+    CONSTRAINT ck_image_uploads_size CHECK (size > 0),
+    CONSTRAINT fk_image_uploads_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE RESTRICT,
+    INDEX idx_image_uploads_status_created (status, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE auctions (

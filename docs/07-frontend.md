@@ -17,7 +17,7 @@
 - Access Token을 갱신하면 WebSocket을 새 토큰으로 다시 연결
 - 상품 목록 / 상세 / 등록
 - 상품 상태 등급 / 상세설명
-- 이미지 업로드
+- 이미지 업로드 (업로드 URL 발급 → Object Storage에 직접 PUT → 상품 등록 시 objectKey 전달)
 - 예약 경매 생성
 - READY / OPEN / ENDED 상태 표시 (서버가 내려주는 논리 상태 기준, 입찰 버튼은 `status == OPEN`일 때만)
 - `ENDED + finalized=false`는 "집계 중", `ENDED + finalized=true + winningBid=null`은 유찰로 표시
