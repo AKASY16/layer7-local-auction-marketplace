@@ -1,5 +1,14 @@
 # 기술 의사결정
 
+## 프로젝트 기술 목표
+이 프로젝트는 캡스톤 결과물인 동시에 신입 Backend 포트폴리오를 주요 목표로 합니다.
+
+따라서 기능 수를 무리하게 늘리기보다 **실시간 경매 도메인에서 발생하는 경쟁 상태와 데이터 정합성 문제를 설계·구현·검증하는 것**을 기술 중심축으로 둡니다.
+
+핵심 설명 문장:
+
+> 실시간 경매라는 경쟁 상태가 발생하는 도메인에서 Transaction, Lock, 자동입찰, 상태 전이, Scheduler를 이용해 데이터 정합성을 설계하고 테스트한다.
+
 ## 확정
 - 서비스 형태: 웹 애플리케이션
 - Frontend: React / JavaScript / Styled Components / React Router
@@ -20,6 +29,37 @@
 - 예약경매
 - 양측 거래 완료 확인
 - 재경매는 새 Auction + relistedFromAuctionId
+- Auction에 winningBidId를 두어 최종 낙찰의 실제 Bid를 추적
+- JPA는 대부분 ManyToOne LAZY 단방향
+- Product ↔ ProductImage만 생명주기 결합을 이유로 양방향 + cascade/orphanRemoval 허용
+- Favorite는 별도 Entity, @ManyToMany 미사용
+
+## 포트폴리오 우선순위
+
+### 최우선
+- 동시입찰 정합성
+- 자동입찰 경합
+- 경매 종료와 입찰의 race condition
+- 중복 요청 / 멱등성
+- Scheduler 중복 실행 방지
+- WebSocket / Push의 AFTER_COMMIT 처리
+- Testcontainers 기반 실제 MySQL 동시성 테스트
+- 부하 테스트 및 병목 수치 기록
+
+### 일반 서비스 기능
+- 회원 / 상품 / 지역
+- Trade 상태 관리
+- 신뢰점수
+- 관심상품 / 알림
+
+### 후순위
+- 자체 채팅
+- 안심결제 / 에스크로
+- 복잡한 관리자 기능
+- 불필요한 소셜 기능
+
+### 지양
+포트폴리오를 화려하게 보이게 하려는 목적으로 Kafka, Kubernetes, MSA, Redis 등을 근거 없이 추가하지 않습니다. 실제 병목이나 요구가 확인될 때 도입 여부를 검토합니다.
 
 ## 미결
 - 최종 서비스명
@@ -27,5 +67,6 @@
 - Object Storage 제공자
 - 대표 AI 기능 2~3개
 - 추가 차별 기능
-- 구체 Lock 전략
-- JPA 연관관계 방향
+- Auction Lock 세부 전략
+- 자동입찰 계산 알고리즘
+- Idempotency 적용 범위
