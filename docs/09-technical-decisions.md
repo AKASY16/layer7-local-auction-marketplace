@@ -20,6 +20,10 @@
 - 이미지 저장: Object Storage
 - 배포 단위: Docker
 - 수동입찰 + 자동입찰
+- 입찰 상승폭은 서비스 공통 가격구간별 `BidIncrementPolicy`로 결정
+- AutoBid 사용자는 `maxAmount`만 설정하며 별도 incrementAmount를 두지 않음
+- 자동입찰은 상시 실행 프로세스가 아니라 수동입찰/AutoBid 설정·변경 이벤트가 발생했을 때만 계산
+- 동일 Auction의 입찰, AutoBid 설정 변경, 종료 Scheduler는 Auction row 기준으로 직렬화
 - Product 1:N Auction
 - Bid / AutoBid 분리
 - Auction / Trade 분리
@@ -68,5 +72,5 @@ Kafka, Kubernetes, MSA, Redis 등을 근거 없이 추가하지 않습니다. �
 - 대표 AI 기능 2~3개
 - 추가 차별 기능
 - Auction Lock 세부 전략
-- 자동입찰 계산 알고리즘
+- AutoBid 경쟁 결과 계산 및 Bid 이력 압축 규칙
 - Idempotency 적용 범위
