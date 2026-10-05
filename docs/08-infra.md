@@ -1,7 +1,7 @@
 # Infra / Deployment
 
 ## 현재 방향
-- Docker
+- Docker (로컬 개발 DB는 루트 docker-compose.yml의 MySQL 8.4)
 - MySQL 8.4
 - Object Storage
 - Frontend / Backend 분리 배포 검토

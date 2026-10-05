@@ -6,7 +6,7 @@
 - 금액: `BIGINT`, 원 단위 정수
 - 시간: `DATETIME(6)`, 애플리케이션에서는 `Instant`/UTC 기준
 - Enum: Java `EnumType.STRING` + DB `VARCHAR`
-- 이 문서의 컬럼명은 Java 필드 기준 camelCase이고, 실제 DB 컬럼은 snake_case ([V1 스키마 초안](V1__init_schema_draft.sql) 기준)
+- 이 문서의 컬럼명은 Java 필드 기준 camelCase이고, 실제 DB 컬럼은 snake_case ([V1 마이그레이션](../../backend/src/main/resources/db/migration/V1__init_schema.sql) 기준)
 - 핵심 거래 이력은 물리 삭제보다 상태 전환/이력 보존 우선
 - 구조적으로 변하지 않는 불변조건은 DB 제약으로도 보장
 - 가격구간 규칙처럼 변경 가능한 서비스 정책은 도메인 코드에서 검증

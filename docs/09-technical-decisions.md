@@ -11,8 +11,8 @@
 
 ## 확정
 - 서비스 형태: 웹 애플리케이션
-- Frontend: React / JavaScript / Styled Components / React Router
-- Backend: Java 21 / Spring Boot 3.5 / Spring Data JPA / Spring Security + JWT
+- Frontend: React 19 / Vite / JavaScript / Styled Components / React Router / oxlint / Prettier
+- Backend: Java 25 / Spring Boot 4.1 / Spring Data JPA / Spring Security + JWT / Flyway / Gradle
 - 인증: Access Token(JWT, 30분) + Refresh Token(14일, HttpOnly 쿠키, 해시 저장, rotation과 재사용 감지)
 - Database: MySQL 8.4
 - 입찰 처리: REST + Transaction/Lock

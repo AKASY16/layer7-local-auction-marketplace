@@ -99,3 +99,12 @@
 - 인증: Access Token 30분 + Refresh Token 14일(HttpOnly 쿠키, 해시 저장, rotation, 재사용 시 family 폐기, 10초 동시 갱신 유예), 쓰기 API는 요청마다 사용자 상태 확인
 - 이미지: Presigned URL 직접 업로드, image_uploads로 발급·연결·정리 상태 관리, 상품 등록은 JSON + imageKeys
 - 탐색: auctions에 regionId/category 복사와 탐색 인덱스 추가, keyword LIKE는 측정 후 개선 대상으로 명시
+
+## 2026-10-06 — 프로젝트 기반
+
+- 저장소를 backend / frontend / docs로 나눈 단일 저장소로 운영
+- Spring Boot 3.5 → 4.1: 3.5의 오픈소스 지원이 2026-06-30에 종료되어, 2027-07까지 지원되는 4.1로 변경
+- Java 21 → 25: 최신 LTS로 변경
+- Frontend는 Vite + React 19, 린터는 oxlint, 포맷은 Prettier
+- 로컬 MySQL은 docker-compose(호스트 포트 3307), 테스트는 Testcontainers MySQL 8.4
+- PR마다 GitHub Actions로 백엔드 빌드·테스트와 프론트 lint·format·build 실행

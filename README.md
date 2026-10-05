@@ -30,8 +30,8 @@ TEAM LAYER7의 캡스톤 프로젝트입니다.
 
 ## Tech Stack
 
-- Frontend: React, JavaScript, Styled Components, React Router
-- Backend: Java 21, Spring Boot 3.5, Spring Data JPA, Spring Security + JWT
+- Frontend: React 19, Vite, JavaScript, Styled Components, React Router
+- Backend: Java 25, Spring Boot 4.1, Spring Data JPA, Spring Security + JWT, Flyway
 - Database: MySQL 8.4
 - Realtime: WebSocket(STOMP)
 - Auction consistency: Transaction / Lock
@@ -44,6 +44,42 @@ TEAM LAYER7의 캡스톤 프로젝트입니다.
 
 회원/지역 → 상품 등록 → 예약 또는 즉시 경매 → 수동/자동 입찰 → 경매 종료 → 낙찰 → 거래 응답 → 거래 진행 → 양측 완료 확인
 
+## Project Structure
+
+```text
+backend/             Spring Boot API (Gradle, Java 25)
+  src/main/resources/db/migration/   Flyway 마이그레이션
+frontend/            React 웹 클라이언트 (Vite)
+docs/                기획·정책·API 명세·설계 문서
+docker-compose.yml   로컬 개발용 MySQL 8.4
+.github/             CI, PR/Issue 템플릿
+```
+
+## Local Development
+
+필요한 도구: JDK 25, Node.js 24, Docker
+
+```bash
+# 1. 로컬 MySQL 실행 (호스트 포트 3307)
+docker compose up -d
+
+# 2. 백엔드 실행 (http://localhost:8080, 시작 시 Flyway가 스키마 생성)
+cd backend
+./gradlew bootRun
+
+# 3. 프론트엔드 실행 (http://localhost:5173, /api와 /ws는 백엔드로 프록시)
+cd frontend
+npm install
+npm run dev
+```
+
+백엔드 테스트는 Testcontainers로 MySQL 8.4를 띄우므로 Docker가 실행 중이어야 합니다.
+
+```bash
+cd backend
+./gradlew test
+```
+
 ## Documents
 
 - [팀 역할 및 협업 규칙](docs/00-team-and-collaboration.md)
@@ -54,7 +90,7 @@ TEAM LAYER7의 캡스톤 프로젝트입니다.
 - [API 명세](docs/05-api-spec.md)
 - [Backend Domain](docs/backend/domain.md)
 - [ERD / DB Schema](docs/backend/erd.md)
-- [Flyway V1 Schema 초안](docs/backend/V1__init_schema_draft.sql)
+- [Flyway V1 Schema](backend/src/main/resources/db/migration/V1__init_schema.sql)
 - [Auction / Trade 상태 모델](docs/backend/auction-state.md)
 - [경매 동시성 테스트 계획](docs/backend/concurrency-testing.md)
 - [락 순서와 트랜잭션 규칙](docs/backend/locking.md)
