@@ -48,6 +48,13 @@ DB Commit 이후 발행.
 
 ### AUCTION_STATUS_CHANGED
 
+저장 상태를 바꾼 쪽이 DB Commit 이후 발행합니다.
+- OPEN: 시작 Scheduler 또는 startAt 이후 첫 쓰기 요청(입찰 등)이 READY → OPEN으로 바꿀 때
+- ENDED: 종료 Scheduler가 낙찰 확정·Trade 생성을 마쳤을 때 (`finalized: true`)
+- CANCELED: 판매자 취소 시 (`finalized: true`)
+
+논리적으로 종료되는 endAt 순간에는 이벤트가 없습니다. 클라이언트는 `endAt`과 `serverTime`으로 종료를 표시하고, 정산 완료는 ENDED 이벤트의 `finalized: true`로 확인합니다.
+
 ```json
 {
   "type": "AUCTION_STATUS_CHANGED",
@@ -55,6 +62,7 @@ DB Commit 이후 발행.
   "auctionId": 40,
   "data": {
     "status": "ENDED",
+    "finalized": true,
     "winningBidId": 305,
     "endAt": "2026-10-04T04:30:00Z"
   }

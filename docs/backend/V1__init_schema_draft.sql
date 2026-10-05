@@ -1,6 +1,7 @@
 -- V1__init_schema.sql
 -- MySQL 8.4 / InnoDB / utf8mb4
 -- Application time convention: UTC, mapped from Java Instant.
+-- Transaction isolation: READ COMMITTED (see docs/backend/locking.md).
 
 CREATE TABLE regions (
     id BIGINT NOT NULL AUTO_INCREMENT,
@@ -117,7 +118,6 @@ CREATE TABLE auto_bids (
     bidder_id BIGINT NOT NULL,
     max_amount BIGINT NOT NULL,
     status VARCHAR(20) NOT NULL,
-    priority_at DATETIME(6) NOT NULL,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
@@ -131,10 +131,7 @@ CREATE TABLE auto_bids (
         ON DELETE RESTRICT,
     CONSTRAINT fk_auto_bids_bidder
         FOREIGN KEY (bidder_id) REFERENCES users(id)
-        ON DELETE RESTRICT,
-    INDEX idx_auto_bids_competition (
-        auction_id, status, max_amount, priority_at
-    )
+        ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE bids (
@@ -194,9 +191,13 @@ CREATE TABLE trades (
     buyer_id BIGINT NOT NULL,
     status VARCHAR(30) NOT NULL,
     response_deadline DATETIME(6) NOT NULL,
+    trade_deadline DATETIME(6) NOT NULL,
     completion_requested_by BIGINT NULL,
     completion_requested_at DATETIME(6) NULL,
+    completion_deadline DATETIME(6) NULL,
     completed_at DATETIME(6) NULL,
+    canceled_by BIGINT NULL,
+    canceled_at DATETIME(6) NULL,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
@@ -208,14 +209,26 @@ CREATE TABLE trades (
             'COMPLETION_REQUESTED',
             'COMPLETED',
             'DECLINED',
-            'NO_RESPONSE'
+            'NO_RESPONSE',
+            'CANCELED',
+            'EXPIRED'
         )
     ),
     CONSTRAINT ck_trades_parties CHECK (seller_id <> buyer_id),
-    CONSTRAINT ck_trades_completion_request_pair CHECK (
-        (completion_requested_by IS NULL AND completion_requested_at IS NULL)
+    CONSTRAINT ck_trades_deadlines CHECK (response_deadline < trade_deadline),
+    CONSTRAINT ck_trades_completion_request CHECK (
+        (completion_requested_by IS NULL
+            AND completion_requested_at IS NULL
+            AND completion_deadline IS NULL)
         OR
-        (completion_requested_by IS NOT NULL AND completion_requested_at IS NOT NULL)
+        (completion_requested_by IS NOT NULL
+            AND completion_requested_at IS NOT NULL
+            AND completion_deadline IS NOT NULL)
+    ),
+    CONSTRAINT ck_trades_cancel_pair CHECK (
+        (canceled_by IS NULL AND canceled_at IS NULL)
+        OR
+        (canceled_by IS NOT NULL AND canceled_at IS NOT NULL)
     ),
     CONSTRAINT fk_trades_auction
         FOREIGN KEY (auction_id) REFERENCES auctions(id)
@@ -229,7 +242,12 @@ CREATE TABLE trades (
     CONSTRAINT fk_trades_completion_requester
         FOREIGN KEY (completion_requested_by) REFERENCES users(id)
         ON DELETE RESTRICT,
+    CONSTRAINT fk_trades_canceled_by
+        FOREIGN KEY (canceled_by) REFERENCES users(id)
+        ON DELETE RESTRICT,
     INDEX idx_trades_status_deadline (status, response_deadline),
+    INDEX idx_trades_status_trade_deadline (status, trade_deadline),
+    INDEX idx_trades_status_completion_deadline (status, completion_deadline),
     INDEX idx_trades_seller_created (seller_id, created_at),
     INDEX idx_trades_buyer_created (buyer_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -246,7 +264,12 @@ CREATE TABLE trust_histories (
     CONSTRAINT uq_trust_histories_effect UNIQUE (trade_id, user_id, reason),
     CONSTRAINT ck_trust_histories_delta CHECK (delta <> 0),
     CONSTRAINT ck_trust_histories_reason CHECK (
-        reason IN ('TRADE_COMPLETED', 'WINNER_DECLINED', 'WINNER_NO_RESPONSE')
+        reason IN (
+            'TRADE_COMPLETED',
+            'WINNER_DECLINED',
+            'WINNER_NO_RESPONSE',
+            'TRADE_CANCELED'
+        )
     ),
     CONSTRAINT fk_trust_histories_user
         FOREIGN KEY (user_id) REFERENCES users(id)
@@ -255,6 +278,40 @@ CREATE TABLE trust_histories (
         FOREIGN KEY (trade_id) REFERENCES trades(id)
         ON DELETE RESTRICT,
     INDEX idx_trust_histories_user_created (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE user_restrictions (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    type VARCHAR(30) NOT NULL,
+    reason VARCHAR(50) NOT NULL,
+    source VARCHAR(20) NOT NULL,
+    trigger_trade_id BIGINT NULL,
+    starts_at DATETIME(6) NOT NULL,
+    ends_at DATETIME(6) NULL,
+    lifted_at DATETIME(6) NULL,
+    created_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uq_user_restrictions_trigger_trade UNIQUE (trigger_trade_id),
+    CONSTRAINT ck_user_restrictions_type CHECK (type IN ('TRADING')),
+    CONSTRAINT ck_user_restrictions_reason CHECK (
+        reason IN ('CONSECUTIVE_FAILURES', 'ADMIN_ACTION')
+    ),
+    CONSTRAINT ck_user_restrictions_source CHECK (source IN ('SYSTEM', 'ADMIN')),
+    CONSTRAINT ck_user_restrictions_period CHECK (
+        ends_at IS NULL OR starts_at < ends_at
+    ),
+    CONSTRAINT ck_user_restrictions_system CHECK (
+        source <> 'SYSTEM'
+        OR (trigger_trade_id IS NOT NULL AND ends_at IS NOT NULL)
+    ),
+    CONSTRAINT fk_user_restrictions_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_user_restrictions_trigger_trade
+        FOREIGN KEY (trigger_trade_id) REFERENCES trades(id)
+        ON DELETE RESTRICT,
+    INDEX idx_user_restrictions_user_created (user_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE notifications (

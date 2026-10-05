@@ -30,6 +30,20 @@ MVP는 JWT Access Token 방식으로 구현합니다. Login 응답은 token과 `
 - 경매 입찰 가능 시간: `startAt <= serverNow < endAt`
 - 브라우저 카운트다운은 표시용이며 서버시간이 최종 권위
 
+### 상태와 finalized
+Auction과 Trade의 `status`는 DB에 저장된 값이 아니라 서버시간 기준 **논리 상태**로 반환합니다. 저장 상태는 Scheduler가 뒤따라 맞추는 값이고, 시간 경계의 기준은 startAt/endAt과 각 기한입니다.
+
+`finalized`는 저장 상태가 최종 상태에 도달해 후처리(낙찰 확정·Trade 생성·신뢰점수·정지·알림 등)가 끝났는지를 나타냅니다.
+- Auction: 저장 status가 ENDED 또는 CANCELED면 true
+- Trade: 저장 status가 COMPLETED / DECLINED / NO_RESPONSE / CANCELED / EXPIRED면 true
+
+예:
+- `status = ENDED, finalized = false`: 종료됐지만 낙찰 확정 전(집계 중)
+- `status = ENDED, finalized = true, winningBid = null`: 유찰
+- `status = NO_RESPONSE, finalized = false`: 응답기한이 지났고 페널티 반영 전
+
+상세 규칙: [Auction / Trade 상태 모델](backend/auction-state.md)
+
 ### 금액
 - KRW 원 단위 정수
 - JSON에서는 number
@@ -72,6 +86,7 @@ Idempotency-Key: <UUID>
 - AUTO_BID_STOP
 - TRADE_PROCEED
 - TRADE_DECLINE
+- TRADE_CANCEL
 - COMPLETION_REQUEST
 - COMPLETION_CONFIRM
 - COMPLETION_REJECT
@@ -143,15 +158,19 @@ Validation 오류 예:
 | USER_WITHDRAWAL_BLOCKED | 409 | 진행 중 상품/경매/입찰/거래 의무로 탈퇴 불가 |
 | FORBIDDEN | 403 | 권한 없음 |
 | SELF_BID_FORBIDDEN | 403 | 판매자 본인 입찰 |
+| USER_RESTRICTED | 403 | 거래 참여 정지 중 입찰·AutoBid 설정·경매 생성 시도 |
 | COMPLETION_SELF_CONFIRM_FORBIDDEN | 403 | 본인이 요청한 거래완료를 본인이 승인 |
 | RESOURCE_NOT_FOUND | 404 | 대상 없음 |
 | DUPLICATE_EMAIL | 409 | 이메일 중복 |
 | DUPLICATE_NICKNAME | 409 | 닉네임 중복 |
 | PRODUCT_LOCKED_AFTER_BID | 409 | 입찰 후 핵심 상품 수정 시도 |
+| PRODUCT_LOCKED_AUCTION_STARTED | 409 | 논리적으로 시작된 경매가 있는 상품 수정 시도 |
+| PRODUCT_DELETE_NOT_ALLOWED | 409 | SOLD 상품, 진행 중 경매·거래가 있는 상품 삭제 시도 |
 | ACTIVE_AUCTION_ALREADY_EXISTS | 409 | 동일 상품 READY/OPEN 경매 존재 |
 | AUCTION_NOT_OPEN | 409 | READY/CANCELED/ENDED 경매에 입찰 |
 | AUCTION_ENDED | 409 | serverNow >= endAt |
 | BID_AMOUNT_TOO_LOW | 409 | 최소 입찰가 미달 |
+| ALREADY_LEADING | 409 | 현재 선두가 수동입찰로 자기 가격을 올리려 함 |
 | DUPLICATE_BID_AMOUNT | 409 | 동일 경매 동일 가격 Bid 충돌 |
 | AUTO_BID_MAX_TOO_LOW | 409 | 현재 상태에서 의미 있는 maxAmount 미달 |
 | PRODUCT_IMAGE_LIMIT | 409 | 상품 이미지 최대 개수 초과 |
@@ -160,6 +179,7 @@ Validation 오류 예:
 | AUCTION_CANNOT_CANCEL | 409 | 입찰 발생 후 판매자 취소 시도 |
 | TRADE_INVALID_STATE | 409 | 허용되지 않은 Trade 상태전이 |
 | TRADE_RESPONSE_EXPIRED | 409 | 응답기한 종료 |
+| TRADE_DEADLINE_PASSED | 409 | 거래 기한 또는 완료 응답 기한 종료 |
 | IDEMPOTENCY_KEY_REUSED | 409 | 동일 key를 다른 요청에 재사용 |
 
 ## 공통 User Summary

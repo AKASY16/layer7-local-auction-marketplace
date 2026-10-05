@@ -20,6 +20,7 @@ Request:
 - endAt > effective startAt
 - startPrice는 유효 가격단위
 - Product 소유자이며 Product.status = ACTIVE
+- 판매자가 거래 참여 정지 상태가 아님 (`403 USER_RESTRICTED`)
 - 동일 Product에 READY/OPEN Auction이 이미 있으면 409
 - `startAt = null`이면 즉시 시작
 - `startAt`을 명시했다면 serverNow보다 미래여야 함
@@ -30,7 +31,7 @@ Response `201`:
   "id": 40,
   "productId": 30,
   "status": "OPEN",
-  "biddingOpen": true,
+  "finalized": false,
   "startPrice": 9000,
   "currentPrice": 9000,
   "bidCount": 0,
@@ -50,8 +51,13 @@ Query:
 - `regionId` optional
 - `category` optional
 - `keyword` optional
-- `status=READY|OPEN|ENDED` optional
+- `status=READY|OPEN|ENDED` optional. 논리 상태 기준
 - page / size
+
+논리 상태 조회 조건:
+- READY: `status = READY AND startAt > now`
+- OPEN: `status IN (READY, OPEN) AND startAt <= now AND endAt > now`
+- ENDED: `status = ENDED OR (status IN (READY, OPEN) AND endAt <= now)`
 
 기본 정렬: 최신 등록순. Frontend 요구에 따라 종료임박순을 추가할 수 있음.
 
@@ -60,6 +66,7 @@ Item:
 {
   "auctionId": 40,
   "status": "OPEN",
+  "finalized": false,
   "currentPrice": 9000,
   "startAt": "2026-10-03T04:30:00Z",
   "endAt": "2026-10-04T04:30:00Z",
@@ -85,7 +92,7 @@ Response `200` 주요 필드:
 {
   "id": 40,
   "status": "OPEN",
-  "biddingOpen": true,
+  "finalized": false,
   "startPrice": 9000,
   "currentPrice": 10000,
   "nextBidAmount": 10500,
@@ -110,11 +117,14 @@ Response `200` 주요 필드:
 
 다른 사용자의 AutoBid.maxAmount는 절대 노출하지 않습니다.
 
-`biddingOpen`은 `status == OPEN && serverTime < endAt`으로 계산한 논리적 입찰 가능 여부입니다.
-Scheduler 반영이 늦어 DB status가 잠시 OPEN이어도 endAt이 지났다면 `biddingOpen=false`, `nextBidAmount=null`로 반환합니다.
+`status`는 서버시간 기준 논리 상태입니다 ([상태와 finalized](../05-api-spec.md#상태와-finalized)).
+- Scheduler 반영이 늦어 저장 status가 잠시 OPEN이어도 endAt이 지났다면 `status=ENDED`, `finalized=false`, `nextBidAmount=null`로 반환
+- startAt이 지났는데 저장 status가 READY로 남아 있으면 `status=OPEN`으로 반환하고 입찰을 받음
+- 입찰 가능 여부는 `status == OPEN`으로 판단하며 별도 `biddingOpen` 필드는 두지 않음
+- `ENDED + finalized=false`는 집계 중이며 winningBid는 아직 null. 낙찰 예정자는 leadingBid로 표시 가능
 
 ### POST /auctions/{auctionId}/cancel
-판매자 전용.
+판매자 전용. 판정은 논리 상태 기준.
 - READY: 가능
 - OPEN: Bid 0건일 때만 가능
 - 이미 CANCELED이면 현재 상태를 그대로 반환하여 자연스럽게 멱등 처리
@@ -127,13 +137,13 @@ Header: `Idempotency-Key`
 기존 Auction은 변경하지 않고 동일 Product에 새 Auction 생성.
 
 허용 조건:
-- 원 Auction.status = ENDED
+- 원 Auction이 finalized ENDED (정산 전에는 Trade가 아직 없으므로 유찰로 판단하지 않음)
 - Product.status = ACTIVE
 - Trade가 없으면(유찰) 허용
-- Trade가 있으면 status가 DECLINED 또는 NO_RESPONSE일 때만 허용
+- Trade가 있으면 finalized 상태가 DECLINED / NO_RESPONSE / CANCELED / EXPIRED일 때만 허용
 - AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED / COMPLETED이면 불가
 
-불가 시 `409 AUCTION_RELIST_NOT_ALLOWED`.
+불가 시 `409 AUCTION_RELIST_NOT_ALLOWED`. 판매자가 거래 참여 정지 중이면 `403 USER_RESTRICTED`.
 
 Request:
 ```json
@@ -184,9 +194,10 @@ Request:
 ```
 
 검증:
-- OPEN
-- `serverNow < endAt`
+- 논리 상태 OPEN: 저장 status가 READY/OPEN이고 `startAt <= serverNow < endAt`. 저장값이 READY면 이 트랜잭션에서 OPEN으로 전이
 - 판매자 본인 아님
+- 현재 선두 아님 (`409 ALREADY_LEADING`)
+- 입찰자가 거래 참여 정지 상태가 아님 (`403 USER_RESTRICTED`)
 - 유효 가격단위
 - Bid 0건: amount >= startPrice
 - Bid 존재: amount >= nextValidAmount(currentPrice)
@@ -224,12 +235,16 @@ Response `201`:
 
 수동 Bid가 정상 성립한 뒤 기존 AutoBid가 즉시 반응한 경우에도 HTTP 요청 자체는 성공입니다. 최종 선두 여부를 resolution으로 전달합니다.
 
+경쟁 판정과 저장되는 Bid는 [경매 정책의 AutoBid 경쟁 처리](../03-auction-policy.md#autobid-경쟁-처리)를 따릅니다.
+
+입찰 금액이 현재 선두의 AutoBid 상한과 정확히 같으면 동액 선두 우선 규칙에 따라 선두가 그 금액으로 응답하고, 요청자의 Bid는 저장되지 않습니다. 생성된 resource가 없으므로 이 경우는 `200`과 함께 `acceptedBid: null`, `resolution: OUTBID_BY_AUTO_BID`를 반환합니다.
+
 ### GET /auctions/{auctionId}/bids
 공개 Bid 이력.
 
 Query:
 - page / size
-- 기본 정렬: createdAt DESC
+- 기본 정렬: id DESC (같은 트랜잭션에서 저장된 패자·승자 Bid의 순서를 보존)
 
 다른 사용자의 AutoBid 설정 상한은 노출하지 않고 실제 성립한 Bid만 반환.
 `bidCount`는 이 API에 나타나는 **실제 Bid row 개수**이며 AutoBid 내부의 가상 중간 상승단계는 포함하지 않습니다.
@@ -250,7 +265,6 @@ Response:
   "auctionId": 40,
   "maxAmount": 100000,
   "status": "ACTIVE",
-  "priorityAt": "2026-10-03T05:00:00Z",
   "currentUserLeading": true
 }
 ```
@@ -275,26 +289,21 @@ Request:
 ```
 
 검증:
-- OPEN / endAt 이전
+- 논리 상태 OPEN (수동입찰과 동일)
 - 판매자 본인 금지
+- 요청자가 거래 참여 정지 상태가 아님 (`403 USER_RESTRICTED`)
 - maxAmount 유효 가격단위
 - Bid 0건이면 maxAmount >= startPrice
 - 현재 사용자가 leader라면 maxAmount >= currentPrice
 - leader가 아니라면 maxAmount >= nextValidAmount(currentPrice)
 
-priorityAt:
-- 최초 생성: now
-- 실제 maxAmount 변경: now
-- STOPPED/EXHAUSTED → ACTIVE 재활성화: now
-- ACTIVE 상태에서 동일 maxAmount 재요청: 기존 priorityAt 유지
-
 경쟁 계산:
-- 현재 accepted leadingBid도 하나의 실제 경쟁 기준으로 포함
-- 현재 선두 사용자가 ACTIVE AutoBid를 가지고 있으면 그 사용자의 경쟁 상한은 currentPrice가 아니라 maxAmount
-- 수동 최고입찰자에게 AutoBid가 없으면 그 사용자의 경쟁 상한은 현재 accepted Bid.amount
-- 다른 ACTIVE AutoBid들의 maxAmount와 함께 가장 강한 두 경쟁 상한을 계산
-- 승자의 최소 필요가격은 strongest competitor가 버틸 수 있는 금액 다음의 `nextValidAmount()`
-- 최고 AutoBid가 하나뿐이고 기존 실제 Bid가 있으면 그 기존 Bid 금액을 strongest competitor로 사용
+- leader 본인의 설정·변경·재활성화는 경쟁 없이 maxAmount만 갱신
+- leader가 아니면 요청한 maxAmount와 현재 leader의 상한(ACTIVE AutoBid의 maxAmount, 없으면 currentPrice)을 비교
+- 요청 maxAmount가 더 크면 요청자가 선두, 같거나 작으면 기존 leader 유지 (동액 선두 우선)
+- STOPPED/EXHAUSTED → ACTIVE 재활성화도 같은 규칙으로 경쟁
+- 현재 leader가 거래 참여 정지 상태면 그 leader의 AutoBid를 이 트랜잭션에서 STOPPED로 바꾸고, leader 상한을 currentPrice로 취급 (수동입찰도 동일)
+- 저장되는 Bid는 [경매 정책의 Bid 저장 규칙](../03-auction-policy.md#bid-저장-규칙)을 따름
 
 Response `200`:
 ```json
@@ -302,8 +311,7 @@ Response `200`:
   "autoBid": {
     "id": 501,
     "maxAmount": 100000,
-    "status": "ACTIVE",
-    "priorityAt": "2026-10-03T05:00:00Z"
+    "status": "ACTIVE"
   },
   "auction": {
     "id": 40,
@@ -315,14 +323,21 @@ Response `200`:
     },
     "currentUserLeading": true,
     "serverTime": "2026-10-03T05:00:00Z"
-  }
+  },
+  "resolution": "LEADING"
 }
 ```
+
+`resolution`:
+- LEADING: 처리 후 요청자가 선두
+- OUTBID_BY_AUTO_BID: 기존 leader가 이겨 요청자의 AutoBid는 `EXHAUSTED`로 저장됨
+
+설정 직후 바로 지는 경우에도 HTTP 요청 자체는 성공이며, 결과를 resolution과 `autoBid.status`로 전달합니다.
 
 ### DELETE /auctions/{auctionId}/auto-bid
 Header: `Idempotency-Key`
 
-AutoBid를 삭제하지 않고 `STOPPED`로 전환. 이미 성립한 Bid에는 영향 없음.
+AutoBid를 삭제하지 않고 `STOPPED`로 전환. 이미 성립한 Bid에는 영향 없음. 거래 참여 정지 중에도 중지는 가능합니다.
 현재 선두 사용자가 AutoBid를 중지해도 이미 성립한 leadingBid는 그대로 유지되며 가격은 내려가지 않습니다.
 
 ### AutoBid EXHAUSTED 의미
@@ -344,7 +359,7 @@ Response `200`: AutoBid 상태.
 ### POST /auctions/{auctionId}/appends
 판매자 전용.
 Header: `Idempotency-Key`
-- OPEN
+- 논리 상태 OPEN
 - Bid 1건 이상
 - content 1~200자
 
