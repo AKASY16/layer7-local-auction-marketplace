@@ -212,7 +212,7 @@ Checks:
 - startPrice >= 100
 - currentPrice >= startPrice
 - startAt < endAt
-- relistedFromAuctionId IS NULL OR relistedFromAuctionId <> id
+- `relistedFromAuctionId <> id`는 DB CHECK로 두지 않음. MySQL은 AUTO_INCREMENT 컬럼을 참조하는 CHECK를 거부하며(에러 3818), 재경매는 항상 이미 존재하는 이전 경매를 참조하므로 자기 참조가 생기지 않음
 
 Indexes:
 - (status, startAt)

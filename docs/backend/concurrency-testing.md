@@ -176,7 +176,8 @@ startAt 경계에서 상품 수정 worker와 입찰 worker를 동시에 실행.
 
 기대:
 - WITHDRAWN 사용자가 선두이거나 ACTIVE AutoBid를 가진 상태는 존재하지 않음
-- 둘 중 하나만 성공하고 나머지는 `403 ACCOUNT_WITHDRAWN` 또는 `409 USER_WITHDRAWAL_BLOCKED`
+- 탈퇴가 먼저면 입찰은 `403 ACCOUNT_WITHDRAWN`
+- 입찰이 먼저 커밋되어 선두가 되면 탈퇴는 `409 USER_WITHDRAWAL_BLOCKED`. 입찰 직후 AutoBid에 밀려 선두가 아니라면 탈퇴는 성공할 수 있음
 
 ### C15. 같은 사용자 신뢰점수 동시 반영
 사용자 X가 판매자인 거래의 완료 확인과, X가 구매자인 다른 거래의 미응답 처리를 동시에 실행.

@@ -143,9 +143,8 @@ CREATE TABLE auctions (
     CONSTRAINT ck_auctions_start_price CHECK (start_price >= 100),
     CONSTRAINT ck_auctions_current_price CHECK (current_price >= start_price),
     CONSTRAINT ck_auctions_period CHECK (start_at < end_at),
-    CONSTRAINT ck_auctions_relist_not_self CHECK (
-        relisted_from_auction_id IS NULL OR relisted_from_auction_id <> id
-    ),
+    -- relisted_from_auction_id <> id 는 CHECK로 둘 수 없음 (MySQL은 AUTO_INCREMENT 컬럼을 참조하는 CHECK를 거부, 에러 3818).
+    -- 재경매는 항상 이미 존재하는 이전 경매를 참조하므로 자기 참조는 도메인에서 생기지 않음.
     CONSTRAINT fk_auctions_product
         FOREIGN KEY (product_id) REFERENCES products(id)
         ON DELETE RESTRICT,

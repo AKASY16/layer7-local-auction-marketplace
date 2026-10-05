@@ -17,6 +17,8 @@ TradeStatus:
 - `tradeDeadline = Auction.endAt + 7일`: 완료 요청과 취소 기한
 - `completionDeadline = max(tradeDeadline, completionRequestedAt + 24시간)`: 완료 요청을 받은 상대방의 확인/거절 기한. 기한 직전에 요청해도 상대방은 최소 24시간을 보장받음
 - 모든 기한은 Scheduler 처리 시각이 아니라 위 기준으로 계산하며, 기한 이후 명령은 서버시간 기준으로 거절
+  - responseDeadline이 지난 진행/포기/판매자 취소: `409 TRADE_RESPONSE_EXPIRED`
+  - tradeDeadline 또는 completionDeadline이 지난 완료 요청/확인/거절/취소: `409 TRADE_DEADLINE_PASSED`
 - 가장 긴 거래 기간은 endAt + 8일
 
 상태 표시:

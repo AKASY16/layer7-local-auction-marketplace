@@ -32,6 +32,7 @@ Response `201`:
   "productId": 30,
   "status": "OPEN",
   "finalized": false,
+  "version": 0,
   "startPrice": 9000,
   "currentPrice": 9000,
   "bidCount": 0,
