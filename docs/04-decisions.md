@@ -87,3 +87,15 @@
 - 후처리 완료 여부는 `finalized` 필드로 제공, `biddingOpen` 필드는 제거
 - READY → OPEN은 쓰기 경로에서 즉시 전이, 종료·거래 기한 전이는 Scheduler만
 - 의무 검사와 재경매 조건은 저장 상태(finalized) 기준
+
+## 2026-10-03 — 설계 리뷰 반영 — 명세 보강
+
+- Idempotency: 기록은 비즈니스 트랜잭션의 첫 쓰기로 INSERT, 성공 결과만 24시간 보관, requestHash에 경로 포함, 상품 등록에도 적용, 상태 컬럼 제거
+- 실시간: 경매 이벤트에 version 추가(오래된 이벤트 무시), 발송은 별도 executor, Web Push 404/410 구독 삭제, 단일 서버 Simple Broker 전제
+- 락 대기 3초 후 503 RESOURCE_BUSY, Scheduler 주기·배치 크기·기한 임박 알림 시점을 scheduler.md로 정리
+- 금액 상한 10,000,000원, 경매 기간 1시간~7일, 예약 시작 7일 이내
+- 내용 추가: READY/OPEN 경매에 입찰 여부 무관 등록, 경매당 10건, 상세에 이전 경매 고지 포함, 알림 대상 정의
+- 가격단위표 전체를 GET /bid-increment-policy로 제공, bid-policy의 currentUnit을 minimumBidUnit으로 변경
+- 인증: Access Token 30분 + Refresh Token 14일(HttpOnly 쿠키, 해시 저장, rotation, 재사용 시 family 폐기, 10초 동시 갱신 유예), 쓰기 API는 요청마다 사용자 상태 확인
+- 이미지: Presigned URL 직접 업로드, image_uploads로 발급·연결·정리 상태 관리, 상품 등록은 JSON + imageKeys
+- 탐색: auctions에 regionId/category 복사와 탐색 인덱스 추가, keyword LIKE는 측정 후 개선 대상으로 명시

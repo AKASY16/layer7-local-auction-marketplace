@@ -69,7 +69,7 @@ ExecutorService + CountDownLatch로 여러 작업을 실제로 동시에 시작�
 
 검증:
 - 정합성 위반 0건
-- deadlock/lock timeout 관찰
+- deadlock/lock timeout 관찰. 락 대기 초과는 `503 RESOURCE_BUSY`로 끝나고 효과를 남기지 않음
 - 모든 작업이 유한 시간 내 종료
 - 최종 currentPrice / leadingBidder / Bid 이력 일치
 
@@ -129,9 +129,10 @@ endAt 경계에서 입찰 worker와 종료 worker를 동시에 실행.
 기대:
 - 실제 명령 수행 1회
 - IdempotencyRequest 1건
-- 동일 요청 재전송은 기존 성공 결과 재사용
+- 동일 요청 재전송은 기존 성공 결과 재사용 (`Idempotency-Replayed: true`)
+- 앞선 요청이 실패해 롤백되면 대기하던 요청이 그대로 실행되고 기록은 그 결과로 1건
 
-같은 key에 다른 requestHash를 보내면 409 Conflict.
+같은 key에 다른 requestHash를 보내면 409 Conflict. 같은 key와 같은 body로 다른 경매에 입찰해도 경로가 달라 409.
 
 ### C10. Scheduler / 신뢰점수 중복 실행
 동일 Auction 종료 및 동일 Trade NO_RESPONSE 처리를 여러 worker가 동시에 시도.
@@ -175,7 +176,8 @@ startAt 경계에서 상품 수정 worker와 입찰 worker를 동시에 실행.
 
 기대:
 - WITHDRAWN 사용자가 선두이거나 ACTIVE AutoBid를 가진 상태는 존재하지 않음
-- 둘 중 하나만 성공하고 나머지는 `403 ACCOUNT_WITHDRAWN` 또는 `409 USER_WITHDRAWAL_BLOCKED`
+- 탈퇴가 먼저면 입찰은 `403 ACCOUNT_WITHDRAWN`
+- 입찰이 먼저 커밋되어 선두가 되면 탈퇴는 `409 USER_WITHDRAWAL_BLOCKED`. 입찰 직후 AutoBid에 밀려 선두가 아니라면 탈퇴는 성공할 수 있음
 
 ### C15. 같은 사용자 신뢰점수 동시 반영
 사용자 X가 판매자인 거래의 완료 확인과, X가 구매자인 다른 거래의 미응답 처리를 동시에 실행.

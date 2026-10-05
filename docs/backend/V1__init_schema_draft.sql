@@ -31,6 +31,25 @@ CREATE TABLE users (
         ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE refresh_tokens (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    family_id CHAR(36) NOT NULL,
+    token_hash CHAR(64) NOT NULL,
+    expires_at DATETIME(6) NOT NULL,
+    rotated_at DATETIME(6) NULL,
+    revoked_at DATETIME(6) NULL,
+    created_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uq_refresh_tokens_token_hash UNIQUE (token_hash),
+    CONSTRAINT fk_refresh_tokens_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE RESTRICT,
+    INDEX idx_refresh_tokens_user (user_id),
+    INDEX idx_refresh_tokens_family (family_id),
+    INDEX idx_refresh_tokens_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE products (
     id BIGINT NOT NULL AUTO_INCREMENT,
     seller_id BIGINT NOT NULL,
@@ -68,15 +87,42 @@ CREATE TABLE product_images (
     created_at DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
     CONSTRAINT uq_product_images_order UNIQUE (product_id, sort_order),
+    CONSTRAINT uq_product_images_object_key UNIQUE (object_key),
     CONSTRAINT ck_product_images_sort_order CHECK (sort_order >= 0),
     CONSTRAINT fk_product_images_product
         FOREIGN KEY (product_id) REFERENCES products(id)
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE TABLE image_uploads (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    object_key VARCHAR(512) NOT NULL,
+    content_type VARCHAR(50) NOT NULL,
+    size BIGINT NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uq_image_uploads_object_key UNIQUE (object_key),
+    CONSTRAINT ck_image_uploads_status CHECK (
+        status IN ('PENDING', 'ATTACHED', 'DETACHED')
+    ),
+    CONSTRAINT ck_image_uploads_content_type CHECK (
+        content_type IN ('image/jpeg', 'image/png', 'image/webp')
+    ),
+    CONSTRAINT ck_image_uploads_size CHECK (size > 0),
+    CONSTRAINT fk_image_uploads_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE RESTRICT,
+    INDEX idx_image_uploads_status_created (status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
 CREATE TABLE auctions (
     id BIGINT NOT NULL AUTO_INCREMENT,
     product_id BIGINT NOT NULL,
+    region_id BIGINT NOT NULL,
+    category VARCHAR(50) NOT NULL,
     status VARCHAR(20) NOT NULL,
     start_price BIGINT NOT NULL,
     current_price BIGINT NOT NULL,
@@ -85,6 +131,7 @@ CREATE TABLE auctions (
     start_at DATETIME(6) NOT NULL,
     end_at DATETIME(6) NOT NULL,
     relisted_from_auction_id BIGINT NULL,
+    version BIGINT NOT NULL DEFAULT 0,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
@@ -96,17 +143,21 @@ CREATE TABLE auctions (
     CONSTRAINT ck_auctions_start_price CHECK (start_price >= 100),
     CONSTRAINT ck_auctions_current_price CHECK (current_price >= start_price),
     CONSTRAINT ck_auctions_period CHECK (start_at < end_at),
-    CONSTRAINT ck_auctions_relist_not_self CHECK (
-        relisted_from_auction_id IS NULL OR relisted_from_auction_id <> id
-    ),
+    -- relisted_from_auction_id <> id 는 CHECK로 둘 수 없음 (MySQL은 AUTO_INCREMENT 컬럼을 참조하는 CHECK를 거부, 에러 3818).
+    -- 재경매는 항상 이미 존재하는 이전 경매를 참조하므로 자기 참조는 도메인에서 생기지 않음.
     CONSTRAINT fk_auctions_product
         FOREIGN KEY (product_id) REFERENCES products(id)
+        ON DELETE RESTRICT,
+    CONSTRAINT fk_auctions_region
+        FOREIGN KEY (region_id) REFERENCES regions(id)
         ON DELETE RESTRICT,
     CONSTRAINT fk_auctions_relisted_from
         FOREIGN KEY (relisted_from_auction_id) REFERENCES auctions(id)
         ON DELETE RESTRICT,
     INDEX idx_auctions_status_start (status, start_at),
     INDEX idx_auctions_status_end (status, end_at),
+    INDEX idx_auctions_region_status_end (region_id, status, end_at),
+    INDEX idx_auctions_category_status_end (category, status, end_at),
     INDEX idx_auctions_product_status (product_id, status),
     INDEX idx_auctions_product_created (product_id, created_at),
     INDEX idx_auctions_relisted_from (relisted_from_auction_id)
@@ -381,7 +432,6 @@ CREATE TABLE idempotency_requests (
     scope VARCHAR(50) NOT NULL,
     idempotency_key VARCHAR(100) NOT NULL,
     request_hash CHAR(64) NOT NULL,
-    status VARCHAR(20) NOT NULL,
     resource_type VARCHAR(40) NULL,
     resource_id BIGINT NULL,
     response_status SMALLINT NULL,
@@ -391,9 +441,6 @@ CREATE TABLE idempotency_requests (
     PRIMARY KEY (id),
     CONSTRAINT uq_idempotency_user_scope_key
         UNIQUE (user_id, scope, idempotency_key),
-    CONSTRAINT ck_idempotency_status CHECK (
-        status IN ('PROCESSING', 'COMPLETED', 'FAILED')
-    ),
     CONSTRAINT ck_idempotency_resource_pair CHECK (
         (resource_type IS NULL AND resource_id IS NULL)
         OR

@@ -15,6 +15,7 @@
 - 일상·생활용품 중심 상품 등록
 - Category code: DIGITAL / HOME_APPLIANCE / FURNITURE / LIVING_KITCHEN / FASHION / BEAUTY / SPORTS_LEISURE / HOBBY_GAME / BOOK_MEDIA / ETC
 - 이미지 업로드: MVP 1~10장, JPEG/PNG/WebP, 파일당 최대 10MB
+- 이미지는 Presigned URL로 클라이언트가 Object Storage에 직접 업로드하고, 상품 등록 시 objectKey만 전달
 - 상품 지역은 등록 당시 판매자의 현재 지역을 snapshot으로 저장하며, 이후 사용자가 지역을 변경해도 기존 상품 지역은 유지
 - 지역별 조회 / 검색
 - 상품 상태 등급
@@ -28,13 +29,16 @@
 - 경매 시작 전(경매 없음 또는 READY이고 startAt 전)이면서 과거 입찰이 없을 때만 상품 정보 수정 가능
 - OPEN 경매는 입찰이 없어도 수정 불가, 경매 취소 후 수정
 - 한 번이라도 입찰이 발생한 Product는 과거 경매 의미 보존을 위해 이후에도 기존 핵심정보와 상태정보 잠금
-- 이후 판매자는 1회 200자 이내의 `내용 추가`만 append 방식으로 등록
+- 판매자는 READY/OPEN 경매에 1회 200자 이내의 `내용 추가`를 append 방식으로 등록 (입찰 여부 무관, 경매당 최대 10건)
+- 경매 상세에는 같은 상품의 이전 경매에서 추가한 내용도 함께 표시
 
 ## 경매
 
 - 시작 가격
 - 예약 시작 시간
 - 종료 시간
+- 금액(시작가·입찰가·자동입찰 상한)은 10,000,000원 이하
+- 경매 기간은 1시간 이상 7일 이하, 예약 시작은 7일 이내
 - 상태: `READY / OPEN / ENDED / CANCELED`
 - 수동 입찰
 - 자동 입찰

@@ -58,6 +58,7 @@ TEAM LAYER7의 캡스톤 프로젝트입니다.
 - [Auction / Trade 상태 모델](docs/backend/auction-state.md)
 - [경매 동시성 테스트 계획](docs/backend/concurrency-testing.md)
 - [락 순서와 트랜잭션 규칙](docs/backend/locking.md)
+- [Scheduler](docs/backend/scheduler.md)
 - [Frontend](docs/07-frontend.md)
 - [Infra / Deployment](docs/08-infra.md)
 - [기술 의사결정](docs/09-technical-decisions.md)

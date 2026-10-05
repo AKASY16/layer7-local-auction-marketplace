@@ -17,6 +17,8 @@ TradeStatus:
 - `tradeDeadline = Auction.endAt + 7일`: 완료 요청과 취소 기한
 - `completionDeadline = max(tradeDeadline, completionRequestedAt + 24시간)`: 완료 요청을 받은 상대방의 확인/거절 기한. 기한 직전에 요청해도 상대방은 최소 24시간을 보장받음
 - 모든 기한은 Scheduler 처리 시각이 아니라 위 기준으로 계산하며, 기한 이후 명령은 서버시간 기준으로 거절
+  - responseDeadline이 지난 진행/포기/판매자 취소: `409 TRADE_RESPONSE_EXPIRED`
+  - tradeDeadline 또는 completionDeadline이 지난 완료 요청/확인/거절/취소: `409 TRADE_DEADLINE_PASSED`
 - 가장 긴 거래 기간은 endAt + 8일
 
 상태 표시:
@@ -306,6 +308,8 @@ Backend:
 - 공유 브라우저에서 이전 계정의 알림이 새 로그인 사용자에게 섞이지 않도록 함
 
 로그아웃 UI에서는 현재 브라우저의 subscriptionId를 DELETE한 뒤 토큰을 제거하는 것을 권장합니다.
+
+발송 시 Push 서비스가 404/410을 반환하면 만료된 구독으로 보고 서버가 삭제합니다 ([발송 방식](realtime.md#발송-방식)).
 
 Response `200`:
 ```json

@@ -21,7 +21,15 @@ Base URL: `/api/v1`
 Authorization: Bearer <access-token>
 ```
 
-MVP는 JWT Access Token 방식으로 구현합니다. Login 응답은 token과 `expiresAt`을 반환합니다. Refresh Token 흐름은 MVP 범위에서 제외하며 토큰 만료 시 재로그인합니다.
+Access Token과 Refresh Token을 함께 사용합니다. 경매는 마감 직전에 참여가 몰리는데, 그 순간 토큰이 만료되어 재로그인하느라 마감을 놓치는 일이 없도록 하기 위함입니다.
+
+- Access Token: JWT, 유효기간 30분. Login/Refresh 응답 본문으로 전달하며 Frontend는 메모리에만 보관 (localStorage 저장 금지)
+- Refresh Token: 서버가 생성한 256bit 임의 문자열, 유효기간 14일. `HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth` 쿠키로만 전달하며 서버는 SHA-256 해시만 저장
+- `POST /auth/refresh`를 호출할 때마다 Refresh Token을 새로 발급(rotation)하고 이전 토큰은 교체 처리
+- 이미 교체된 Refresh Token이 다시 오면 탈취로 보고, 같은 로그인에서 이어진 토큰 묶음(family)을 모두 폐기한 뒤 401. 단, 교체 후 10초 이내라면 여러 탭이 동시에 갱신한 경우로 보고 새 Access Token만 발급
+- 로그아웃은 현재 family 폐기, 회원탈퇴는 그 사용자의 모든 Refresh Token 폐기
+- Access Token은 만료 전에 폐기할 수 없으므로 쓰기 API는 요청마다 사용자 상태(ACTIVE)를 확인. 조회 API는 탈퇴 전에 발급된 토큰을 최대 30분까지 허용
+- 쿠키를 사용하므로 Frontend와 API는 같은 사이트(등록 도메인)에 배포 ([Infra](08-infra.md))
 
 ### 시간
 - JSON 시간은 ISO-8601 UTC 문자열 사용
@@ -79,6 +87,8 @@ Idempotency-Key: <UUID>
 ```
 
 적용 scope:
+- PRODUCT_CREATE
+- PRODUCT_IMAGE_ADD
 - AUCTION_CREATE
 - PRODUCT_APPEND_CREATE
 - MANUAL_BID
@@ -93,10 +103,23 @@ Idempotency-Key: <UUID>
 - AUCTION_RELIST
 
 규칙:
-- 동일 user + scope + key + 동일 요청: 최초 처리 결과 재사용
+- 동일 user + scope + key + 동일 요청: 최초 성공 결과 재사용
 - replay 응답에는 `Idempotency-Replayed: true`
 - 동일 key를 다른 요청 내용에 재사용: `409 IDEMPOTENCY_KEY_REUSED`
-- 서버는 requestHash와 최초 HTTP status/body snapshot을 저장
+- Idempotency-Key는 UUID 형식. 형식이 아니면 `400 VALIDATION_ERROR`
+- requestHash = SHA-256(HTTP method + path variable이 포함된 경로 + 정규화한 JSON body). 같은 key로 다른 경매에 입찰하면 경로가 달라 `IDEMPOTENCY_KEY_REUSED`
+- 서버는 성공한 요청의 requestHash와 HTTP status/body snapshot을 저장하고, replay 시 snapshot을 그대로 반환 (serverTime 등도 최초 응답 값)
+- 기록 보관 기간은 24시간이며 이후 정리 배치가 삭제
+
+처리 방식:
+- 멱등 기록은 비즈니스 트랜잭션 안에서 **가장 먼저** INSERT하고, 비즈니스 처리가 끝나면 같은 트랜잭션에서 응답 snapshot을 채움
+- 같은 key의 동시 요청은 UNIQUE index에서 앞선 트랜잭션이 끝날 때까지 대기
+  - 앞선 요청이 커밋되면 duplicate key 오류가 나고, 새 트랜잭션에서 snapshot을 조회해 replay
+  - 앞선 요청이 롤백되면 기록도 사라지므로 대기하던 요청이 그대로 실행
+- 실패한 요청(4xx/5xx)은 롤백과 함께 기록도 사라지므로 같은 key로 재시도하면 다시 실행됨. 비즈니스 효과가 두 번 생기는 일은 없으며, 클라이언트는 4xx를 받으면 다음 사용자 액션에서 새 key를 만듦
+- 멱등 기록 INSERT는 모든 도메인 락보다 먼저이므로 중복 요청은 도메인 락을 잡지 않은 채 대기함 ([락 규칙](backend/locking.md))
+
+키가 필요 없는 API(같은 요청을 반복해도 결과가 같음): 경매 취소, 관심상품 PUT/DELETE, 알림 읽음 처리, PushSubscription 등록/삭제. 업로드 URL 발급도 키를 쓰지 않으며, 중복 발급으로 남은 PENDING 업로드는 정리 배치가 삭제합니다.
 
 ### 공통 Error Response
 
@@ -143,6 +166,7 @@ Validation 오류 예:
 | 403 | 인증은 됐으나 해당 행위 권한 없음 |
 | 404 | Resource 없음 |
 | 409 | 현재 상태/동시성/중복키 때문에 명령 수행 불가 |
+| 503 | 락 대기 시간 초과 등 일시적으로 처리 불가. 같은 Idempotency-Key로 재시도 가능 |
 
 ## 주요 Error Code
 
@@ -150,10 +174,14 @@ Validation 오류 예:
 |---|---:|---|
 | VALIDATION_ERROR | 400 | 일반 필드 검증 실패 |
 | INVALID_PRICE_UNIT | 400 | 가격단위표에 맞지 않는 금액 |
+| AMOUNT_LIMIT_EXCEEDED | 400 | 금액 상한(10,000,000원) 초과 |
+| INVALID_UPLOAD | 400 | imageKey가 본인 업로드가 아니거나 만료·미업로드·조건 불일치 |
+| AUCTION_PERIOD_INVALID | 400 | 경매 기간 1시간~7일, 예약 시작 7일 이내 조건 위반 |
 | IDEMPOTENCY_KEY_REQUIRED | 400 | 필수 Idempotency-Key 없음 |
 | UNAUTHORIZED | 401 | 로그인 필요 |
 | INVALID_TOKEN | 401 | JWT 오류/만료 |
 | INVALID_CREDENTIALS | 401 | 로그인 정보 불일치 |
+| INVALID_REFRESH_TOKEN | 401 | Refresh Token 없음/만료/폐기/재사용 감지. 재로그인 필요 |
 | ACCOUNT_WITHDRAWN | 403 | 탈퇴 처리된 계정 |
 | USER_WITHDRAWAL_BLOCKED | 409 | 진행 중 상품/경매/입찰/거래 의무로 탈퇴 불가 |
 | FORBIDDEN | 403 | 권한 없음 |
@@ -175,12 +203,14 @@ Validation 오류 예:
 | AUTO_BID_MAX_TOO_LOW | 409 | 현재 상태에서 의미 있는 maxAmount 미달 |
 | PRODUCT_IMAGE_LIMIT | 409 | 상품 이미지 최대 개수 초과 |
 | PRODUCT_IMAGE_REQUIRED | 409 | 최소 1장의 상품 이미지가 필요 |
+| PRODUCT_APPEND_LIMIT | 409 | 경매당 내용 추가 최대 개수(10건) 초과 |
 | AUCTION_RELIST_NOT_ALLOWED | 409 | 현재 경매/거래 상태에서 재경매 불가 |
 | AUCTION_CANNOT_CANCEL | 409 | 입찰 발생 후 판매자 취소 시도 |
 | TRADE_INVALID_STATE | 409 | 허용되지 않은 Trade 상태전이 |
 | TRADE_RESPONSE_EXPIRED | 409 | 응답기한 종료 |
 | TRADE_DEADLINE_PASSED | 409 | 거래 기한 또는 완료 응답 기한 종료 |
 | IDEMPOTENCY_KEY_REUSED | 409 | 동일 key를 다른 요청에 재사용 |
+| RESOURCE_BUSY | 503 | 락 대기 시간 초과. 재시도 가능 |
 
 ## 공통 User Summary
 

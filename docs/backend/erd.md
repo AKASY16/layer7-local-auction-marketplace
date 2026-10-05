@@ -61,6 +61,30 @@ Status:
 JPA:
 - User → Region: ManyToOne LAZY
 
+## refresh_tokens
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| userId | BIGINT | NOT NULL, FK → users |
+| familyId | CHAR(36) | NOT NULL |
+| tokenHash | CHAR(64) | NOT NULL, UNIQUE |
+| expiresAt | DATETIME(6) | NOT NULL |
+| rotatedAt | DATETIME(6) | NULL |
+| revokedAt | DATETIME(6) | NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+
+Index:
+- (userId): 탈퇴 시 전체 폐기
+- (familyId): 재사용 감지 시 family 폐기
+- expiresAt: 만료 토큰 정리 배치
+
+정책:
+- 토큰 원문은 저장하지 않고 SHA-256 해시만 저장
+- 로그인마다 새 familyId(UUID), refresh 시 같은 familyId로 새 row 발급
+- 교체는 `UPDATE ... SET rotatedAt = now WHERE id = ? AND rotatedAt IS NULL AND revokedAt IS NULL`로 한 번만 성공
+- 사용 가능 = `rotatedAt IS NULL AND revokedAt IS NULL AND expiresAt > now`
+
 ## products
 
 | 컬럼 | 타입 | 제약 |
@@ -111,8 +135,35 @@ JPA:
 
 Constraints:
 - UNIQUE(productId, sortOrder)
+- UNIQUE(objectKey): 같은 업로드 객체를 두 상품에 붙이지 않음
 - sortOrder >= 0
 - ProductImage는 Product에 강하게 종속되므로 물리삭제 시 CASCADE 허용
+
+## image_uploads
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | BIGINT | PK |
+| userId | BIGINT | NOT NULL, FK → users |
+| objectKey | VARCHAR(512) | NOT NULL, UNIQUE |
+| contentType | VARCHAR(50) | NOT NULL |
+| size | BIGINT | NOT NULL |
+| status | VARCHAR(20) | NOT NULL |
+| createdAt | DATETIME(6) | NOT NULL |
+| updatedAt | DATETIME(6) | NOT NULL |
+
+Status:
+- PENDING: URL 발급 후 상품에 아직 붙지 않음
+- ATTACHED: ProductImage로 등록됨
+- DETACHED: 이미지가 삭제되어 객체 정리 대상
+
+Index:
+- (status, createdAt): 정리 배치용
+
+정책:
+- objectKey는 서버가 생성 (`uploads/{uuid}`)
+- PENDING → ATTACHED는 `WHERE status = 'PENDING'` 조건의 UPDATE로 한 번만 성공
+- 발급 후 24시간 지난 PENDING과 DETACHED는 정리 배치가 객체와 기록을 삭제
 
 ## auctions
 
@@ -120,6 +171,8 @@ Constraints:
 |---|---|---|
 | id | BIGINT | PK |
 | productId | BIGINT | NOT NULL, FK → products |
+| regionId | BIGINT | NOT NULL, FK → regions |
+| category | VARCHAR(50) | NOT NULL |
 | status | VARCHAR(20) | NOT NULL |
 | startPrice | BIGINT | NOT NULL |
 | currentPrice | BIGINT | NOT NULL |
@@ -128,6 +181,7 @@ Constraints:
 | startAt | DATETIME(6) | NOT NULL |
 | endAt | DATETIME(6) | NOT NULL |
 | relistedFromAuctionId | BIGINT | NULL, self FK |
+| version | BIGINT | NOT NULL, DEFAULT 0 |
 | createdAt | DATETIME(6) | NOT NULL |
 | updatedAt | DATETIME(6) | NOT NULL |
 
@@ -136,6 +190,10 @@ Status:
 - OPEN
 - ENDED
 - CANCELED
+
+version:
+- Auction row가 바뀔 때마다 1씩 증가 (JPA `@Version`)
+- 동시성 제어는 비관적 락이 담당하고, version은 실시간 이벤트와 REST 응답의 순서 판단용
 
 핵심 의미:
 - 생성 시 `currentPrice = startPrice`
@@ -154,14 +212,22 @@ Checks:
 - startPrice >= 100
 - currentPrice >= startPrice
 - startAt < endAt
-- relistedFromAuctionId IS NULL OR relistedFromAuctionId <> id
+- `relistedFromAuctionId <> id`는 DB CHECK로 두지 않음. MySQL은 AUTO_INCREMENT 컬럼을 참조하는 CHECK를 거부하며(에러 3818), 재경매는 항상 이미 존재하는 이전 경매를 참조하므로 자기 참조가 생기지 않음
 
 Indexes:
 - (status, startAt)
 - (status, endAt)
+- (regionId, status, endAt): 지역별 탐색
+- (category, status, endAt): 카테고리별 탐색
 - (productId, status)
 - (productId, createdAt)
 - relistedFromAuctionId
+
+regionId / category:
+- 탐색(`GET /auctions`)이 products 조인 없이 auctions만으로 필터링하도록 경매 생성 시 Product 값을 복사
+- Product.region은 생성 후 바뀌지 않으므로 regionId는 그대로 유지
+- category는 경매가 논리적으로 시작되기 전에만 바뀔 수 있으므로, 상품 수정 트랜잭션이 잠근 READY Auction의 category를 같은 트랜잭션에서 갱신
+- keyword 검색은 MVP에서 `products.title LIKE '%keyword%'`로 처리하며 전체 스캔임을 인정. 부하 테스트 결과에 따라 FULLTEXT(ngram parser) 도입을 검토하는 측정 후 개선 대상
 
 동일 Product에 READY/OPEN Auction이 동시에 둘 이상 존재하지 않도록:
 1. Product row를 PESSIMISTIC_WRITE로 잠금
@@ -258,6 +324,10 @@ Indexes:
 
 Index:
 - (auctionId, createdAt)
+
+정책:
+- 경매당 최대 10건, 개수 확인은 Auction 락 안에서 수행
+- 상세 조회는 `auctions.productId`로 같은 Product의 경매를 찾은 뒤 그 경매들의 append를 시간순으로 조회
 
 ## trades
 
@@ -440,7 +510,6 @@ Index:
 | scope | VARCHAR(50) | NOT NULL |
 | idempotencyKey | VARCHAR(100) | NOT NULL |
 | requestHash | CHAR(64) | NOT NULL |
-| status | VARCHAR(20) | NOT NULL |
 | resourceType | VARCHAR(40) | NULL |
 | resourceId | BIGINT | NULL |
 | responseStatus | SMALLINT | NULL |
@@ -448,23 +517,22 @@ Index:
 | createdAt | DATETIME(6) | NOT NULL |
 | updatedAt | DATETIME(6) | NOT NULL |
 
-Status:
-- PROCESSING
-- COMPLETED
-- FAILED
+상태 컬럼을 두지 않습니다. 기록은 비즈니스 트랜잭션 안에서 INSERT되고 같은 트랜잭션에서 응답 snapshot이 채워지므로, 커밋되어 다른 트랜잭션에 보이는 기록은 항상 성공한 요청입니다. responseStatus/responseBody가 NULL인 상태는 트랜잭션 내부에서만 존재합니다.
 
 Constraints:
 - UNIQUE(userId, scope, idempotencyKey)
 - resourceType/resourceId는 둘 다 NULL 또는 둘 다 NOT NULL
 
 Index:
-- createdAt
+- createdAt: 24시간 지난 기록 정리 배치용
 
 정책:
 - 동일 key + 동일 requestHash는 기존 결과 재사용
-- COMPLETED 요청의 HTTP status/body snapshot을 저장해 재요청에 동일한 논리적 결과 반환
+- 성공한 요청의 HTTP status/body snapshot을 저장해 재요청에 동일한 논리적 결과 반환
+- 실패한 요청은 롤백과 함께 기록도 사라지므로 같은 key로 재시도하면 다시 실행
 - 재전송 응답에는 `Idempotency-Replayed: true` 헤더 사용
 - 동일 key + 다른 requestHash는 409 Conflict
+- 처리 방식 상세: [API 명세 공통 규칙](../05-api-spec.md#idempotency)
 
 ---
 
@@ -488,6 +556,7 @@ DB CHECK:
 
 Domain:
 - 가격구간별 유효 금액
+- 금액 상한(10,000,000원)과 경매 기간(1시간~7일), 예약 시작 범위(7일 이내)
 - 첫 Bid = startPrice 규칙
 - seller self-bid 금지
 - Auction 상태 전이

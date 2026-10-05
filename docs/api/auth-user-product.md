@@ -49,11 +49,14 @@ Request:
 ```
 
 Response `200`:
+```http
+Set-Cookie: refresh_token=<opaque>; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth; Max-Age=1209600
+```
 ```json
 {
   "accessToken": "<jwt>",
   "tokenType": "Bearer",
-  "expiresAt": "2026-10-03T06:30:00Z",
+  "expiresAt": "2026-10-03T05:00:00Z",
   "user": {
     "id": 15,
     "nickname": "layer7",
@@ -62,9 +65,32 @@ Response `200`:
 }
 ```
 
+- `expiresAt`은 Access Token 만료 시각 (발급 후 30분)
+- 로그인할 때마다 새 Refresh Token family를 시작
+
 Errors:
 - 401 INVALID_CREDENTIALS
 - 403 ACCOUNT_WITHDRAWN
+
+### POST /auth/refresh
+Refresh Token 쿠키로 새 Access Token을 발급합니다. 요청 본문은 없습니다.
+
+- 정상: 이전 Refresh Token을 교체 처리하고 새 Refresh Token 쿠키와 Access Token을 반환
+- 교체된 지 10초 이내의 토큰: 여러 탭의 동시 갱신으로 보고 Access Token만 반환 (쿠키는 이미 먼저 응답한 요청이 갱신함)
+- 그보다 오래전에 교체된 토큰: 탈취로 보고 family 전체 폐기 후 `401 INVALID_REFRESH_TOKEN`
+- 교체 처리는 `rotatedAt IS NULL` 조건의 UPDATE로 한 번만 성공하므로, 같은 토큰의 동시 요청 중 하나만 새 Refresh Token을 받음
+
+Response `200`: Login 응답과 같은 형태
+
+Errors:
+- 401 INVALID_REFRESH_TOKEN (없음, 만료, 폐기, 재사용, 탈퇴한 사용자)
+
+### POST /auth/logout
+현재 Refresh Token의 family를 폐기하고 쿠키를 삭제합니다. 쿠키가 없거나 이미 폐기됐어도 `204`.
+
+로그아웃 UI는 PushSubscription을 먼저 삭제한 뒤 이 API를 호출합니다.
+
+Response: `204`
 
 ---
 
@@ -112,6 +138,8 @@ Response `200`: 갱신된 User.
 단순 과거 Bid 이력만 있고 현재 선두/AutoBid/Trade 의무가 없다면 탈퇴 가능.
 
 검사는 User 락을 잡은 뒤 수행해 같은 사용자의 동시 입찰과 직렬화합니다 ([락 규칙](../backend/locking.md#입찰과-회원탈퇴)).
+
+탈퇴 시 그 사용자의 모든 Refresh Token을 폐기하고 쿠키를 삭제합니다. 이미 발급된 Access Token은 최대 30분 남을 수 있지만 쓰기 API는 요청마다 사용자 상태를 확인하므로 사용할 수 없습니다.
 
 Response: `204`
 
@@ -175,28 +203,73 @@ Category code/label 목록.
 - SOLD
 - DELETED
 
+### 이미지 업로드
+
+상품 이미지는 Presigned URL로 클라이언트가 Object Storage에 직접 업로드합니다. 백엔드는 파일 본문을 받지 않고 objectKey만 등록합니다.
+
+```text
+1. POST /uploads/product-images 로 업로드 URL 발급
+2. 클라이언트가 각 uploadUrl에 파일을 PUT
+3. POST /products 또는 POST /products/{productId}/images 에 imageKeys를 담아 등록
+```
+
+### POST /uploads/product-images
+인증 필요. 업로드 URL 발급.
+
+Request:
+```json
+{
+  "files": [
+    { "contentType": "image/jpeg", "size": 2450000 }
+  ]
+}
+```
+
+- 1~10개
+- contentType: `image/jpeg` / `image/png` / `image/webp`
+- size: 파일당 10MB 이하
+- 서버가 objectKey(`uploads/{uuid}`)를 생성하고 PENDING 업로드 기록을 남김. 클라이언트가 key를 정하지 않음
+- URL 유효기간 10분, 서명에 Content-Type 포함
+
+Response `201`:
+```json
+{
+  "uploads": [
+    {
+      "objectKey": "uploads/6f1c2a9e-...",
+      "uploadUrl": "https://...",
+      "expiresAt": "2026-10-03T04:40:00Z",
+      "headers": { "Content-Type": "image/jpeg" }
+    }
+  ]
+}
+```
+
+등록 시 검증:
+- 각 imageKey가 요청자 본인의 PENDING 업로드이고 발급 후 24시간 이내
+- Object Storage에 객체가 실제로 있고 크기와 Content-Type이 발급 조건과 일치 (HEAD 요청으로 확인)
+- 하나라도 맞지 않으면 전체 거절 `400 INVALID_UPLOAD`
+- 업로드 기록은 `status = PENDING` 조건의 UPDATE로 ATTACHED 처리하므로 같은 key를 두 상품에 붙일 수 없음. `product_images.objectKey` UNIQUE가 최종 방어선
+- 파일 내용이 실제 이미지인지는 검증하지 않음. 썸네일 생성을 도입할 때 함께 검증
+
 ### POST /products
 인증 필요. 상품과 초기 이미지를 함께 등록.
+Header: `Idempotency-Key`
 
-`multipart/form-data`
-
-Part `product`:
+Request:
 ```json
 {
   "category": "DIGITAL",
   "title": "중고 키보드",
   "description": "사용하던 키보드 판매합니다.",
   "condition": "GOOD",
-  "conditionDescription": "키캡에 약간의 사용감이 있고 정상 작동합니다."
+  "conditionDescription": "키캡에 약간의 사용감이 있고 정상 작동합니다.",
+  "imageKeys": ["uploads/6f1c2a9e-...", "uploads/0b7d41c3-..."]
 }
 ```
 
-Part `images`:
-- 1~10개
-- JPEG / PNG / WebP
-- 파일당 최대 10MB
-
-Product.region은 현재 User.region을 생성 시점에 snapshot으로 저장합니다.
+- imageKeys 1~10개, 배열 순서가 sortOrder
+- Product.region은 현재 User.region을 생성 시점에 snapshot으로 저장합니다.
 
 Response `201`:
 ```json
@@ -263,15 +336,23 @@ Errors:
 
 ### POST /products/{productId}/images
 판매자 전용. 핵심정보 수정과 같은 조건에서만 이미지 추가.
+Header: `Idempotency-Key`
 
-multipart `images`.
+Request:
+```json
+{
+  "imageKeys": ["uploads/9a2e..."]
+}
+```
 
 규칙:
 - 기존 이미지 포함 총 10장 초과 불가
 - 초과 시 `409 PRODUCT_IMAGE_LIMIT`
+- imageKey 검증은 [이미지 업로드](#이미지-업로드)와 동일
 
 ### DELETE /products/{productId}/images/{imageId}
 판매자 전용. 핵심정보 수정과 같은 조건에서만 이미지 제거.
+ProductImage row를 삭제하고 업로드 기록을 DETACHED로 바꾸며, 실제 객체는 정리 배치가 삭제합니다.
 삭제 후 최소 1장 이상 남아야 하며, 마지막 이미지를 삭제하려 하면 `409 PRODUCT_IMAGE_REQUIRED`.
 
 ### PATCH /products/{productId}/images/order
