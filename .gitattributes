@@ -1,0 +1,7 @@
+# Windows/macOS 팀원이 섞여 있어도 저장소에는 LF로 저장한다
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.jar binary
+*.png binary
+*.svg text
