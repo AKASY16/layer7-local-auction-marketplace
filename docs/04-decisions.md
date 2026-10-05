@@ -12,7 +12,7 @@
 
 ## 2026-10-03 — 경매 세부 정책
 
-- 자동입찰: maxAmount + incrementAmount
+- ~~자동입찰: maxAmount + incrementAmount~~ → 이후 서비스 공통 가격단위표를 채택하면서 incrementAmount 폐기. AutoBid는 maxAmount만 설정
 - Bid 철회 없음
 - 상품 핵심정보 입찰 후 잠금
 - ProductAppend 1회 200자
@@ -30,7 +30,7 @@
 
 - 같은 maxAmount면 현재 maxAmount를 먼저 설정한 사용자가 우선
 - maxAmount 변경 시 priorityAt 갱신
-- incrementAmount만 변경하면 priorityAt 유지
+- ~~incrementAmount만 변경하면 priorityAt 유지~~ → incrementAmount 폐기로 해당 없음
 
 ## 2026-10-03 — Auction / Trade 상태 모델
 

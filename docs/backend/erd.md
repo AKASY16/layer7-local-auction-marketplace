@@ -6,6 +6,7 @@
 - 금액: `BIGINT`, 원 단위 정수
 - 시간: `DATETIME(6)`, 애플리케이션에서는 `Instant`/UTC 기준
 - Enum: Java `EnumType.STRING` + DB `VARCHAR`
+- 이 문서의 컬럼명은 Java 필드 기준 camelCase이고, 실제 DB 컬럼은 snake_case ([V1 스키마 초안](V1__init_schema_draft.sql) 기준)
 - 핵심 거래 이력은 물리 삭제보다 상태 전환/이력 보존 우선
 - 구조적으로 변하지 않는 불변조건은 DB 제약으로도 보장
 - 가격구간 규칙처럼 변경 가능한 서비스 정책은 도메인 코드에서 검증
@@ -70,7 +71,7 @@ JPA:
 | category | VARCHAR(50) | NOT NULL |
 | title | VARCHAR(120) | NOT NULL |
 | description | TEXT | NOT NULL |
-| condition | VARCHAR(30) | NOT NULL |
+| condition | VARCHAR(30) | NOT NULL, DB 컬럼명 `condition_code` (`CONDITION`은 MySQL 예약어) |
 | conditionDescription | VARCHAR(500) | NOT NULL |
 | status | VARCHAR(20) | NOT NULL |
 | createdAt | DATETIME(6) | NOT NULL |
