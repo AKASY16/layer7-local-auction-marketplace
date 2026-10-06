@@ -4,6 +4,21 @@ Base URL: `/api/v1`
 
 이 문서는 Frontend/Backend 간 계약의 기준입니다. 실제 구현 시 DTO/Controller 이름은 달라질 수 있지만 HTTP method, path, payload 의미, 상태코드와 비즈니스 규칙은 이 명세를 기준으로 합니다.
 
+## API 문서 운영
+
+마크다운 명세와 코드에서 자동 생성하는 Swagger 문서(springdoc-openapi)를 역할을 나눠 함께 씁니다.
+
+| 문서 | 담는 것 | 기준이 되는 때 |
+|---|---|---|
+| 마크다운 (`docs/05-api-spec.md`, `docs/api/`) | 정책, 흐름, 상태 전이, 기한, 오류 코드의 의미 | 항상 |
+| Swagger UI (`/swagger-ui`) | 엔드포인트별 요청·응답 필드, 상태 코드 | 구현된 API부터 |
+
+- 구현 전에는 마크다운이 Frontend/Backend의 약속입니다. 프론트는 마크다운의 예시로 화면을 먼저 만들 수 있습니다.
+- 구현된 API의 필드는 Swagger가 기준입니다. 마크다운 예시와 다르면 둘 중 맞는 쪽으로 같은 PR에서 맞춥니다.
+- API를 추가·변경하는 PR은 마크다운 명세도 함께 고칩니다 (PR 템플릿 체크 항목).
+- Swagger UI는 로컬·개발 환경에서만 열고 운영에서는 끕니다.
+- springdoc-openapi는 첫 API를 구현하는 PR에서 의존성과 보안 예외 경로를 함께 추가합니다. Spring Boot 4에 맞는 3.x를 쓰고, 추가할 때 4.1과 호환되는 버전인지 확인합니다.
+
 ## 상세 문서
 - [Auth / User / Product](api/auth-user-product.md)
 - [Auction / Bid / AutoBid](api/auction-bidding.md)

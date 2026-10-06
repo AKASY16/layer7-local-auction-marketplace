@@ -111,3 +111,9 @@
 - Backend 기본 패키지는 com.layer7.marketplace, 그 아래를 도메인별 패키지로 나눔 (docs/backend/package-structure.md)
 - 로컬 이미지 저장소는 SeaweedFS(S3 호환). MinIO는 Docker Hub 공식 이미지 제공이 중단되어 제외. 업로드는 Presigned URL로만, 읽기는 공개
 - 지역 단위는 시·군·구(자치구). 일반구는 상위 시로 통합 (예: 수원시)
+
+## 2026-10-07 — 개발 규칙
+
+- 코드 컨벤션을 docs/backend/conventions.md로 정리 (DTO는 record, 엔티티에 @Setter·@Data·@Builder 금지, 오류는 BusinessException 하나, 시간은 Instant + Clock, 테스트 이름은 한글 @DisplayName)
+- 브랜치·커밋·PR·리뷰 규칙을 docs/00-team-and-collaboration.md에 정리 (브랜치 종류/이슈번호-요약, 커밋 종류: 요약, PR 400줄 안팎, 리뷰 24시간 안, Squash 병합)
+- API 문서는 혼합 방식: 정책·흐름은 마크다운, 엔드포인트별 필드는 springdoc-openapi로 코드에서 생성. 구현 전에는 마크다운이 기준이고, springdoc은 첫 API PR에서 추가
