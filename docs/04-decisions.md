@@ -108,3 +108,4 @@
 - Frontend는 Vite + React 19, 린터는 oxlint, 포맷은 Prettier
 - 로컬 MySQL은 docker-compose(호스트 포트 3307), 테스트는 Testcontainers MySQL 8.4
 - PR마다 GitHub Actions로 백엔드 빌드·테스트와 프론트 lint·format·build 실행
+- Backend 기본 패키지는 com.layer7.marketplace, 그 아래를 도메인별 패키지로 나눔 (docs/backend/package-structure.md)

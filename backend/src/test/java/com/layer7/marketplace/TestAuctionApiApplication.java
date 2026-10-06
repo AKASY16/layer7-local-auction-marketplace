@@ -1,4 +1,4 @@
-package com.layer7.auction;
+package com.layer7.marketplace;
 
 import org.springframework.boot.SpringApplication;
 

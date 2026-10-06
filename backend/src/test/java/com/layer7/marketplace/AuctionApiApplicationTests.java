@@ -1,4 +1,4 @@
-package com.layer7.auction;
+package com.layer7.marketplace;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

@@ -47,7 +47,7 @@ TEAM LAYER7의 캡스톤 프로젝트입니다.
 ## Project Structure
 
 ```text
-backend/             Spring Boot API (Gradle, Java 25)
+backend/             Spring Boot API (Gradle, Java 25, 패키지 com.layer7.marketplace)
   src/main/resources/db/migration/   Flyway 마이그레이션
 frontend/            React 웹 클라이언트 (Vite)
 docs/                기획·정책·API 명세·설계 문서
@@ -89,6 +89,7 @@ cd backend
 - [회의 및 결정사항](docs/04-decisions.md)
 - [API 명세](docs/05-api-spec.md)
 - [Backend Domain](docs/backend/domain.md)
+- [Backend 패키지 구조](docs/backend/package-structure.md)
 - [ERD / DB Schema](docs/backend/erd.md)
 - [Flyway V1 Schema](backend/src/main/resources/db/migration/V1__init_schema.sql)
 - [Auction / Trade 상태 모델](docs/backend/auction-state.md)
