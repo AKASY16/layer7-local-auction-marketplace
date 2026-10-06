@@ -1,7 +1,7 @@
 # Infra / Deployment
 
 ## 현재 방향
-- Docker
+- Docker (로컬 개발용 MySQL 8.4와 이미지 저장소 SeaweedFS는 루트 docker-compose.yml)
 - MySQL 8.4
 - Object Storage
 - Frontend / Backend 분리 배포 검토

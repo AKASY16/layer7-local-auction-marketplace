@@ -18,8 +18,8 @@
 
 ## 기술 스택
 
-- Frontend: React · JavaScript · Styled Components · React Router
-- Backend: Java 21 · Spring Boot 3.5 · Spring Data JPA · Spring Security + JWT
+- Frontend: React 19 · Vite · JavaScript · Styled Components · React Router
+- Backend: Java 25 · Spring Boot 4.1 · Spring Data JPA · Spring Security + JWT · Flyway
 - Database: MySQL 8.4
 - Auction: WebSocket(STOMP) · Transaction/Lock · Scheduler
 - File / Deploy: Object Storage · Docker

@@ -30,8 +30,8 @@ TEAM LAYER7의 캡스톤 프로젝트입니다.
 
 ## Tech Stack
 
-- Frontend: React, JavaScript, Styled Components, React Router
-- Backend: Java 21, Spring Boot 3.5, Spring Data JPA, Spring Security + JWT
+- Frontend: React 19, Vite, JavaScript, Styled Components, React Router
+- Backend: Java 25, Spring Boot 4.1, Spring Data JPA, Spring Security + JWT, Flyway
 - Database: MySQL 8.4
 - Realtime: WebSocket(STOMP)
 - Auction consistency: Transaction / Lock
@@ -44,6 +44,56 @@ TEAM LAYER7의 캡스톤 프로젝트입니다.
 
 회원/지역 → 상품 등록 → 예약 또는 즉시 경매 → 수동/자동 입찰 → 경매 종료 → 낙찰 → 거래 응답 → 거래 진행 → 양측 완료 확인
 
+## Project Structure
+
+```text
+backend/             Spring Boot API (Gradle, Java 25, 패키지 com.layer7.marketplace)
+  src/main/resources/db/migration/   Flyway 마이그레이션
+frontend/            React 웹 클라이언트 (Vite)
+docs/                기획·정책·API 명세·설계 문서
+infra/               로컬 인프라 설정 (SeaweedFS S3 계정)
+docker-compose.yml   로컬 개발용 MySQL 8.4, 이미지 저장소(SeaweedFS)
+.github/             CI, PR/Issue 템플릿
+```
+
+## Local Development
+
+필요한 도구: JDK 25, Node.js 24, Docker
+
+```bash
+# 1. 로컬 MySQL(호스트 포트 3307)과 이미지 저장소(8333) 실행
+docker compose up -d
+
+# 2. 백엔드 실행 (http://localhost:8080, 시작 시 Flyway가 스키마 생성)
+cd backend
+./gradlew bootRun
+
+# 3. 프론트엔드 실행 (http://localhost:5173, /api와 /ws는 백엔드로 프록시)
+cd frontend
+npm install
+npm run dev
+```
+
+백엔드는 기본으로 `127.0.0.1:3307`의 `auction` / `auction` 계정에 접속합니다. 다른 값을 쓰려면 환경 변수 `AUCTION_DB_USERNAME`, `AUCTION_DB_PASSWORD`를 지정하세요. `DB_PASSWORD` 같은 흔한 이름은 다른 프로젝트용 환경 변수와 겹칠 수 있어 쓰지 않습니다.
+
+이미지 저장소는 S3 API를 그대로 제공하는 SeaweedFS입니다. 운영에서 S3 호환 저장소로 바꿀 때 접속 주소와 키만 바꾸면 됩니다.
+
+| 항목 | 로컬 값 |
+|---|---|
+| S3 endpoint | `http://localhost:8333` (path-style) |
+| 버킷 | `product-images` (`docker compose up` 때 자동 생성) |
+| Access Key / Secret Key | `local` / `localsecret` (로컬 전용) |
+| 이미지 공개 URL | `http://localhost:8333/product-images/{objectKey}` |
+
+업로드는 서명된 URL로만 가능하고, 읽기는 누구나 가능합니다.
+
+백엔드 테스트는 Testcontainers로 MySQL 8.4를 띄우므로 Docker가 실행 중이어야 합니다.
+
+```bash
+cd backend
+./gradlew test
+```
+
 ## Documents
 
 - [팀 역할 및 협업 규칙](docs/00-team-and-collaboration.md)
@@ -53,8 +103,9 @@ TEAM LAYER7의 캡스톤 프로젝트입니다.
 - [회의 및 결정사항](docs/04-decisions.md)
 - [API 명세](docs/05-api-spec.md)
 - [Backend Domain](docs/backend/domain.md)
+- [Backend 패키지 구조](docs/backend/package-structure.md)
 - [ERD / DB Schema](docs/backend/erd.md)
-- [Flyway V1 Schema 초안](docs/backend/V1__init_schema_draft.sql)
+- [Flyway V1 Schema](backend/src/main/resources/db/migration/V1__init_schema.sql)
 - [Auction / Trade 상태 모델](docs/backend/auction-state.md)
 - [경매 동시성 테스트 계획](docs/backend/concurrency-testing.md)
 - [락 순서와 트랜잭션 규칙](docs/backend/locking.md)

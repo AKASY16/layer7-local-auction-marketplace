@@ -6,7 +6,7 @@
 - 금액: `BIGINT`, 원 단위 정수
 - 시간: `DATETIME(6)`, 애플리케이션에서는 `Instant`/UTC 기준
 - Enum: Java `EnumType.STRING` + DB `VARCHAR`
-- 이 문서의 컬럼명은 Java 필드 기준 camelCase이고, 실제 DB 컬럼은 snake_case ([V1 스키마 초안](V1__init_schema_draft.sql) 기준)
+- 이 문서의 컬럼명은 Java 필드 기준 camelCase이고, 실제 DB 컬럼은 snake_case ([V1 마이그레이션](../../backend/src/main/resources/db/migration/V1__init_schema.sql) 기준)
 - 핵심 거래 이력은 물리 삭제보다 상태 전환/이력 보존 우선
 - 구조적으로 변하지 않는 불변조건은 DB 제약으로도 보장
 - 가격구간 규칙처럼 변경 가능한 서비스 정책은 도메인 코드에서 검증
@@ -31,7 +31,8 @@
 | sidoName | VARCHAR(50) | NOT NULL |
 | sigunguName | VARCHAR(50) | NOT NULL |
 
-- MVP 지역 단위는 시·군·구
+- MVP 지역 단위는 시·군·구(자치구). 일반구가 있는 시는 시 하나로 묶음 (예: 수원시 장안구·권선구 → 수원시 41110)
+- 데이터는 행정표준코드관리시스템 법정동코드 앞 5자리 기준, 폐지 코드 제외, 최신 시도 코드(강원 51, 전북 52) 사용
 - 공식 행정구역 코드 사용
 
 ## users

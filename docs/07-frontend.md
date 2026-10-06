@@ -3,7 +3,7 @@
 주 담당: 박지우
 
 ## 기술
-- React
+- React 19 + Vite
 - JavaScript
 - Styled Components
 - React Router

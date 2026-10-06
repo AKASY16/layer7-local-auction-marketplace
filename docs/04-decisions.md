@@ -99,3 +99,15 @@
 - 인증: Access Token 30분 + Refresh Token 14일(HttpOnly 쿠키, 해시 저장, rotation, 재사용 시 family 폐기, 10초 동시 갱신 유예), 쓰기 API는 요청마다 사용자 상태 확인
 - 이미지: Presigned URL 직접 업로드, image_uploads로 발급·연결·정리 상태 관리, 상품 등록은 JSON + imageKeys
 - 탐색: auctions에 regionId/category 복사와 탐색 인덱스 추가, keyword LIKE는 측정 후 개선 대상으로 명시
+
+## 2026-10-06 — 프로젝트 기반
+
+- 저장소를 backend / frontend / docs로 나눈 단일 저장소로 운영
+- Spring Boot 3.5 → 4.1: 3.5의 오픈소스 지원이 2026-06-30에 종료되어, 2027-07까지 지원되는 4.1로 변경
+- Java 21 → 25: 최신 LTS로 변경
+- Frontend는 Vite + React 19, 린터는 oxlint, 포맷은 Prettier
+- 로컬 MySQL은 docker-compose(호스트 포트 3307), 테스트는 Testcontainers MySQL 8.4
+- PR마다 GitHub Actions로 백엔드 빌드·테스트와 프론트 lint·format·build 실행
+- Backend 기본 패키지는 com.layer7.marketplace, 그 아래를 도메인별 패키지로 나눔 (docs/backend/package-structure.md)
+- 로컬 이미지 저장소는 SeaweedFS(S3 호환). MinIO는 Docker Hub 공식 이미지 제공이 중단되어 제외. 업로드는 Presigned URL로만, 읽기는 공개
+- 지역 단위는 시·군·구(자치구). 일반구는 상위 시로 통합 (예: 수원시)

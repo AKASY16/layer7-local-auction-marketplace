@@ -1,0 +1,55 @@
+# 로컬 개발용 인프라. 운영 설정이 아니며 계정 정보도 로컬 전용이다.
+services:
+  # 다른 프로젝트의 MySQL과 겹치지 않도록 호스트 포트는 3307을 쓴다.
+  mysql:
+    image: mysql:8.4
+    container_name: layer7-auction-mysql
+    environment:
+      MYSQL_DATABASE: auction
+      MYSQL_USER: auction
+      MYSQL_PASSWORD: auction
+      MYSQL_ROOT_PASSWORD: root
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  # 이미지 저장소. S3 API를 그대로 제공하므로 운영 S3 호환 저장소로 바꿀 때 접속 주소와 키만 바꾸면 된다.
+  # 업로드는 서명된(Presigned) URL로만, 읽기는 누구나 가능하다 (infra/seaweedfs/s3.json).
+  storage:
+    image: chrislusf/seaweedfs:4.48
+    container_name: layer7-auction-storage
+    command: server -dir=/data -s3 -s3.config=/etc/seaweedfs/s3.json -master.volumeSizeLimitMB=1024
+    ports:
+      - "8333:8333"
+    volumes:
+      - storage-data:/data
+      - ./infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+
+  # product-images 버킷을 만들고 끝나는 일회성 작업. 이미 있으면 그대로 둔다.
+  storage-init:
+    image: chrislusf/seaweedfs:4.48
+    depends_on:
+      - storage
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        for i in $$(seq 1 30); do
+          out=$$(echo "s3.bucket.create -name product-images" | weed shell -master=storage:9333 2>&1)
+          if echo "$$out" | grep -q -E "created bucket|already exists"; then
+            echo "bucket ready: product-images"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "$$out"
+        exit 1
+
+volumes:
+  mysql-data:
+  storage-data:
