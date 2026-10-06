@@ -74,6 +74,8 @@ npm install
 npm run dev
 ```
 
+백엔드는 기본으로 `127.0.0.1:3307`의 `auction` / `auction` 계정에 접속합니다. 다른 값을 쓰려면 환경 변수 `AUCTION_DB_USERNAME`, `AUCTION_DB_PASSWORD`를 지정하세요. `DB_PASSWORD` 같은 흔한 이름은 다른 프로젝트용 환경 변수와 겹칠 수 있어 쓰지 않습니다.
+
 이미지 저장소는 S3 API를 그대로 제공하는 SeaweedFS입니다. 운영에서 S3 호환 저장소로 바꿀 때 접속 주소와 키만 바꾸면 됩니다.
 
 | 항목 | 로컬 값 |

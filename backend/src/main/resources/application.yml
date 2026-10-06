@@ -2,9 +2,11 @@ spring:
   application:
     name: auction-api
   datasource:
-    url: jdbc:mysql://localhost:3307/auction?serverTimezone=UTC&characterEncoding=UTF-8
-    username: ${DB_USERNAME:auction}
-    password: ${DB_PASSWORD:auction}
+    # localhost는 IPv6(::1)로 먼저 풀릴 수 있어, Docker가 연 IPv4 포트로 확실히 가도록 127.0.0.1을 쓴다
+    url: jdbc:mysql://127.0.0.1:3307/auction?serverTimezone=UTC&characterEncoding=UTF-8
+    # DB_PASSWORD처럼 흔한 이름은 다른 프로젝트용 환경 변수와 겹쳐 엉뚱한 값이 들어오므로 프로젝트 접두사를 붙인다
+    username: ${AUCTION_DB_USERNAME:auction}
+    password: ${AUCTION_DB_PASSWORD:auction}
     hikari:
       # 정합성은 비관적 락이 보장하고, 락 후 재검증이 최신 커밋을 읽도록 READ COMMITTED를 쓴다 (docs/backend/locking.md)
       transaction-isolation: TRANSACTION_READ_COMMITTED
