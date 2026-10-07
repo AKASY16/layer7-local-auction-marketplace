@@ -1,5 +1,8 @@
 package com.layer7.marketplace.bid.domain;
 
+import org.springframework.stereotype.Component;
+
+@Component
 public class BidIncrementPolicy {
 
 	private static final long MIN_AMOUNT = 100;
@@ -7,11 +10,16 @@ public class BidIncrementPolicy {
 
 	// 허용 범위와 가격 단위에 맞으면 true
 	public boolean isValidAmount(long amount) {
-		if (amount < MIN_AMOUNT || amount > MAX_AMOUNT) {
+		if (amount < MIN_AMOUNT || isAmountLimitExceeded(amount)) {
 			return false;
 		}
 
 		return amount % getUnit(amount) == 0;
+	}
+
+	// 서비스에서 상한 초과와 가격 단위 오류를 구분할 때 사용한다.
+	public boolean isAmountLimitExceeded(long amount) {
+		return amount > MAX_AMOUNT;
 	}
 
 	// 유효한 현재가보다 큰 가장 가까운 유효 금액
