@@ -104,6 +104,7 @@ cd backend
 - [API 명세](docs/05-api-spec.md)
 - [Backend Domain](docs/backend/domain.md)
 - [Backend 패키지 구조](docs/backend/package-structure.md)
+- [Backend 코드 컨벤션](docs/backend/conventions.md)
 - [ERD / DB Schema](docs/backend/erd.md)
 - [Flyway V1 Schema](backend/src/main/resources/db/migration/V1__init_schema.sql)
 - [Auction / Trade 상태 모델](docs/backend/auction-state.md)

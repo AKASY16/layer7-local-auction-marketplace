@@ -9,7 +9,8 @@
 ## 확인한 것
 
 - [ ] 로컬에서 빌드·테스트 통과
-- [ ] API 명세(docs/05-api-spec.md, docs/api/)와 다른 부분이 있다면 명세도 함께 수정
+- [ ] API를 추가·변경했다면 마크다운 명세(docs/05-api-spec.md, docs/api/)도 함께 수정
+- [ ] 코드 컨벤션(docs/backend/conventions.md)과 협업 규칙(docs/00-team-and-collaboration.md)을 따름
 - [ ] 리뷰어가 특히 봐야 할 부분을 아래에 적음
 
 ## 리뷰 포인트

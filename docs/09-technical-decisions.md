@@ -16,6 +16,7 @@
 - 인증: Access Token(JWT, 30분) + Refresh Token(14일, HttpOnly 쿠키, 해시 저장, rotation과 재사용 감지)
 - Database: MySQL 8.4
 - 입찰 처리: REST + Transaction/Lock
+- API 문서: 정책·흐름은 마크다운, 엔드포인트별 필드는 코드에서 생성하는 Swagger(springdoc-openapi). 구현 전에는 마크다운이 기준
 - 실시간 전달: WebSocket(STOMP). 경매 이벤트에 `version`을 넣어 순서를 판단하고, 발송은 AFTER_COMMIT 이후 별도 executor에서 수행
 - Scheduler: 예약 시작 / 종료 / 응답 마감
 - 이미지 저장: Object Storage. 클라이언트가 Presigned URL로 직접 업로드하고 백엔드는 objectKey만 등록
