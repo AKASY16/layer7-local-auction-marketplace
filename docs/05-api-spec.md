@@ -145,10 +145,15 @@ Idempotency-Key: <UUID>
   "code": "AUCTION_ENDED",
   "message": "종료된 경매에는 입찰할 수 없습니다.",
   "path": "/api/v1/auctions/10/bids",
-  "traceId": "optional",
+  "traceId": null,
   "fieldErrors": []
 }
 ```
+
+- 프론트는 `message`가 아니라 `code`로 분기합니다. `message`는 사용자에게 보여줄 한국어 문장이며 상황에 따라 더 구체적으로 바뀔 수 있습니다.
+- `traceId`는 요청 추적을 도입하기 전까지 `null`입니다.
+- `fieldErrors`는 오류가 없으면 빈 배열입니다.
+- 인증 실패(401)·권한 없음(403)도 같은 형식으로 응답합니다.
 
 Validation 오류 예:
 
@@ -169,6 +174,10 @@ Validation 오류 예:
 }
 ```
 
+- `fieldErrors[].code`는 검증 애노테이션 이름을 대문자 스네이크로 바꾼 값입니다. 예: `@NotBlank` → `NOT_BLANK`, `@Size` → `SIZE`, `@Positive` → `POSITIVE`
+- 요청 본문(JSON)의 `field`는 필드 경로, 쿼리·경로 값의 `field`는 파라미터 이름입니다.
+- JSON 문법이 틀리거나 값의 타입이 맞지 않아 본문을 읽지 못하면 `fieldErrors` 없이 `VALIDATION_ERROR`로 응답합니다.
+
 ## HTTP Status 기준
 
 | Status | 의미 |
@@ -180,10 +189,15 @@ Validation 오류 예:
 | 401 | 인증 필요 또는 토큰 오류 |
 | 403 | 인증은 됐으나 해당 행위 권한 없음 |
 | 404 | Resource 없음 |
+| 405 | 지원하지 않는 HTTP 메서드 |
 | 409 | 현재 상태/동시성/중복키 때문에 명령 수행 불가 |
+| 415 | 지원하지 않는 Content-Type |
+| 500 | 예상하지 못한 서버 오류. 내부 메시지는 응답에 담지 않음 |
 | 503 | 락 대기 시간 초과 등 일시적으로 처리 불가. 같은 Idempotency-Key로 재시도 가능 |
 
 ## 주요 Error Code
+
+백엔드의 `ErrorCode` enum과 1:1로 대응합니다. 코드를 추가·변경할 때는 이 표와 enum을 같은 PR에서 함께 고칩니다. 둘이 어긋나면 백엔드 테스트(`ErrorCodeSpecTest`)가 실패합니다.
 
 | Code | HTTP | 의미 |
 |---|---:|---|
@@ -204,6 +218,7 @@ Validation 오류 예:
 | USER_RESTRICTED | 403 | 거래 참여 정지 중 입찰·AutoBid 설정·경매 생성 시도 |
 | COMPLETION_SELF_CONFIRM_FORBIDDEN | 403 | 본인이 요청한 거래완료를 본인이 승인 |
 | RESOURCE_NOT_FOUND | 404 | 대상 없음 |
+| METHOD_NOT_ALLOWED | 405 | 지원하지 않는 HTTP 메서드 |
 | DUPLICATE_EMAIL | 409 | 이메일 중복 |
 | DUPLICATE_NICKNAME | 409 | 닉네임 중복 |
 | PRODUCT_LOCKED_AFTER_BID | 409 | 입찰 후 핵심 상품 수정 시도 |
@@ -225,6 +240,8 @@ Validation 오류 예:
 | TRADE_RESPONSE_EXPIRED | 409 | 응답기한 종료 |
 | TRADE_DEADLINE_PASSED | 409 | 거래 기한 또는 완료 응답 기한 종료 |
 | IDEMPOTENCY_KEY_REUSED | 409 | 동일 key를 다른 요청에 재사용 |
+| UNSUPPORTED_MEDIA_TYPE | 415 | 지원하지 않는 Content-Type |
+| INTERNAL_ERROR | 500 | 예상하지 못한 서버 오류 |
 | RESOURCE_BUSY | 503 | 락 대기 시간 초과. 재시도 가능 |
 
 ## 공통 User Summary
