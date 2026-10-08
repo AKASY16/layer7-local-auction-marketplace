@@ -1,12 +1,9 @@
 package com.layer7.marketplace;
 
+import com.layer7.marketplace.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest
-class AuctionApiApplicationTests {
+class AuctionApiApplicationTests extends IntegrationTest {
 
 	@Test
 	void contextLoads() {
