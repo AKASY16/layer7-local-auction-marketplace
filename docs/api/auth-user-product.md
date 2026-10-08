@@ -181,7 +181,42 @@ Query:
 내 신뢰점수 변경 이력.
 
 ### GET /regions?query=성동
-지역 검색.
+
+회원가입에서 선택할 지역 검색. 인증 없이 호출할 수 있습니다.
+
+Query:
+- `query`: 선택, 최대 100자
+  - 시도명 또는 시군구명에 대한 부분 검색
+  - 앞뒤 공백 제거
+  - 생략하거나 빈 문자열·공백이면 전체 지역 조회
+- `page`: 기본 0, 최소 0
+- `size`: 기본 20, 최소 1, 최대 50
+
+시도명 → 시군구명 → 지역 코드 오름차순으로 정렬합니다.
+검색 결과가 없으면 `200`과 빈 `content`를 반환합니다.
+
+Response `200` 예시:
+```json
+{
+  "content": [
+    {
+      "id": 4,
+      "regionCode": "11200",
+      "sidoName": "서울특별시",
+      "sigunguName": "성동구"
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+`id`는 DB가 생성한 식별자이며 공식 지역 코드와 별개입니다.
+
+Errors:
+- 400 VALIDATION_ERROR
 
 ### GET /categories
 Category code/label 목록.
