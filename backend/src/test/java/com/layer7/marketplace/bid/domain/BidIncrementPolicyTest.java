@@ -1,5 +1,7 @@
 package com.layer7.marketplace.bid.domain;
 
+import java.util.OptionalLong;
+
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -88,10 +90,10 @@ class BidIncrementPolicyTest {
 		BidIncrementPolicy policy = new BidIncrementPolicy();
 
 		// when
-		long nextAmount = policy.nextValidAmount(currentPrice);
+		OptionalLong nextAmount = policy.nextValidAmount(currentPrice);
 
 		// then
-		assertThat(nextAmount).isEqualTo(expected);
+		assertThat(nextAmount).hasValue(expected);
 	}
 
 	@ParameterizedTest
@@ -109,16 +111,16 @@ class BidIncrementPolicyTest {
 	}
 
 	@Test
-	@DisplayName("현재가가 천만 원이면 다음 입찰가가 없어 예외가 발생한다")
-	void rejectsNextAmountAtLimit() {
+	@DisplayName("현재가가 천만 원이면 다음 입찰가가 없어 빈 값을 반환한다")
+	void maximumPriceHasNoNextAmount() {
 		// given
 		BidIncrementPolicy policy = new BidIncrementPolicy();
 		long currentPrice = 10_000_000;
 
 		// when
-		ThrowingCallable action = () -> policy.nextValidAmount(currentPrice);
+		OptionalLong nextAmount = policy.nextValidAmount(currentPrice);
 
 		// then
-		assertThatThrownBy(action).isInstanceOf(IllegalStateException.class);
+		assertThat(nextAmount).isEmpty();
 	}
 }
