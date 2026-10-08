@@ -36,6 +36,11 @@ Base URL: `/api/v1`
 Authorization: Bearer <access-token>
 ```
 
+토큰 없이 호출할 수 있는 API는 다음과 같고, 그 밖의 API는 토큰이 없으면 `401 UNAUTHORIZED`입니다.
+- `/auth/**`: 회원가입, 로그인, 토큰 갱신, 로그아웃
+- `GET /regions`, `GET /categories`, `GET /bid-increment-policy`
+- WebSocket 연결(`/ws`). 인증은 연결 뒤 STOMP `CONNECT` 프레임에서 합니다 ([Realtime](api/realtime.md))
+
 Access Token과 Refresh Token을 함께 사용합니다. 경매는 마감 직전에 참여가 몰리는데, 그 순간 토큰이 만료되어 재로그인하느라 마감을 놓치는 일이 없도록 하기 위함입니다.
 
 - Access Token: JWT, 유효기간 30분. Login/Refresh 응답 본문으로 전달하며 Frontend는 메모리에만 보관 (localStorage 저장 금지)
