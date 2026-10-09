@@ -1,6 +1,7 @@
 package com.layer7.marketplace.user.dto;
 
 import com.layer7.marketplace.region.dto.RegionResponse;
+import com.layer7.marketplace.trust.dto.TradingRestrictionResponse;
 import com.layer7.marketplace.user.domain.User;
 import com.layer7.marketplace.user.domain.UserStatus;
 

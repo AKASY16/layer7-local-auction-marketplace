@@ -7,10 +7,14 @@ import com.layer7.marketplace.global.error.BusinessException;
 import com.layer7.marketplace.global.error.ErrorCode;
 import com.layer7.marketplace.global.security.JwtTokenProvider;
 import com.layer7.marketplace.region.domain.Region;
-import com.layer7.marketplace.region.repository.RegionRepository;
+import com.layer7.marketplace.region.service.RegionService;
 import com.layer7.marketplace.user.domain.User;
 import com.layer7.marketplace.user.dto.UserResponse;
 import com.layer7.marketplace.user.repository.UserRepository;
+import java.sql.SQLException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -20,19 +24,22 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AuthService {
 
+	private static final Pattern DUPLICATE_KEY_PATTERN =
+		Pattern.compile("for key ['`]([^'`]+)['`]\\s*$");
+
 	private final UserRepository userRepository;
-	private final RegionRepository regionRepository;
+	private final RegionService regionService;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtTokenProvider jwtTokenProvider;
 
 	public AuthService(
 		UserRepository userRepository,
-		RegionRepository regionRepository,
+		RegionService regionService,
 		PasswordEncoder passwordEncoder,
 		JwtTokenProvider jwtTokenProvider
 	) {
 		this.userRepository = userRepository;
-		this.regionRepository = regionRepository;
+		this.regionService = regionService;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtTokenProvider = jwtTokenProvider;
 	}
@@ -47,10 +54,7 @@ public class AuthService {
 			throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
 		}
 
-		Region region = regionRepository.findById(request.regionId())
-			.orElseThrow(() ->
-				new BusinessException(ErrorCode.RESOURCE_NOT_FOUND)
-			);
+		Region region = regionService.getRegion(request.regionId());
 
 		String passwordHash = passwordEncoder.encode(request.password());
 
@@ -61,7 +65,19 @@ public class AuthService {
 			region
 		);
 
-		User savedUser = userRepository.save(user);
+		User savedUser;
+
+		try {
+			savedUser = userRepository.save(user);
+		} catch (DataIntegrityViolationException exception) {
+			ErrorCode errorCode = findDuplicateUserError(exception);
+
+			if (errorCode == null) {
+				throw exception;
+			}
+
+			throw new BusinessException(errorCode);
+		}
 
 		return UserResponse.from(savedUser);
 	}
@@ -86,5 +102,51 @@ public class AuthService {
 		Jwt jwt = jwtTokenProvider.createAccessToken(user.getId());
 
 		return LoginResponse.from(user, jwt);
+	}
+
+	private static ErrorCode findDuplicateUserError(
+		DataIntegrityViolationException exception
+	) {
+		for (
+			Throwable cause = exception;
+			cause != null;
+			cause = cause.getCause()
+		) {
+			if (!(cause instanceof SQLException sqlException)) {
+				continue;
+			}
+
+			if (sqlException.getErrorCode() != 1062
+				|| !"23000".equals(sqlException.getSQLState())) {
+				continue;
+			}
+
+			String message = sqlException.getMessage();
+
+			if (message == null) {
+				continue;
+			}
+
+			Matcher matcher = DUPLICATE_KEY_PATTERN.matcher(message);
+
+			if (!matcher.find()) {
+				continue;
+			}
+
+			String constraintName = matcher.group(1);
+			int lastDot = constraintName.lastIndexOf('.');
+
+			if (lastDot >= 0) {
+				constraintName = constraintName.substring(lastDot + 1);
+			}
+
+			return switch (constraintName) {
+				case "uq_users_email" -> ErrorCode.DUPLICATE_EMAIL;
+				case "uq_users_nickname" -> ErrorCode.DUPLICATE_NICKNAME;
+				default -> null;
+			};
+		}
+
+		return null;
 	}
 }

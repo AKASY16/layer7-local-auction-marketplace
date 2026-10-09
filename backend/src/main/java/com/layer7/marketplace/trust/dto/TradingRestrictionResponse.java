@@ -1,4 +1,4 @@
-package com.layer7.marketplace.user.dto;
+package com.layer7.marketplace.trust.dto;
 
 import java.time.Instant;
 

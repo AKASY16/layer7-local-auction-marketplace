@@ -2,13 +2,11 @@ package com.layer7.marketplace.user.service;
 
 import com.layer7.marketplace.global.error.BusinessException;
 import com.layer7.marketplace.global.error.ErrorCode;
+import com.layer7.marketplace.trust.dto.TradingRestrictionResponse;
+import com.layer7.marketplace.trust.service.TrustService;
 import com.layer7.marketplace.user.domain.User;
-import com.layer7.marketplace.user.dto.TradingRestrictionResponse;
 import com.layer7.marketplace.user.dto.UserMeResponse;
 import com.layer7.marketplace.user.repository.UserRepository;
-import com.layer7.marketplace.user.repository.UserRestrictionRepository;
-import java.time.Clock;
-import java.time.Instant;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,17 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
 	private final UserRepository userRepository;
-	private final UserRestrictionRepository userRestrictionRepository;
-	private final Clock clock;
+	private final TrustService trustService;
 
 	public UserService(
 		UserRepository userRepository,
-		UserRestrictionRepository userRestrictionRepository,
-		Clock clock
+		TrustService trustService
 	) {
 		this.userRepository = userRepository;
-		this.userRestrictionRepository = userRestrictionRepository;
-		this.clock = clock;
+		this.trustService = trustService;
 	}
 
 	public UserMeResponse getMe(Long userId) {
@@ -37,10 +32,8 @@ public class UserService {
 			);
 
 		TradingRestrictionResponse restriction =
-			userRestrictionRepository.findActiveTradingRestriction(
-				userId,
-				Instant.now(clock)
-			).orElse(null);
+			trustService.getActiveTradingRestriction(userId)
+				.orElse(null);
 
 		return UserMeResponse.from(user, restriction);
 	}

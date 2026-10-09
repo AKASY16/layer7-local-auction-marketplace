@@ -1,6 +1,6 @@
-package com.layer7.marketplace.user.repository;
+package com.layer7.marketplace.trust.repository;
 
-import com.layer7.marketplace.user.dto.TradingRestrictionResponse;
+import com.layer7.marketplace.trust.dto.TradingRestrictionResponse;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Calendar;

@@ -1,11 +1,13 @@
 package com.layer7.marketplace.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import com.layer7.marketplace.global.security.JwtTokenProvider;
 import com.layer7.marketplace.support.IntegrationTest;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -14,8 +16,11 @@ import java.util.UUID;
 import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
@@ -34,6 +39,9 @@ class LoginApiTest extends IntegrationTest {
 
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
+
+	@Autowired
+	private JwtTokenProvider jwtTokenProvider;
 
 	@Value("${auction.jwt.secret}")
 	private String jwtSecret;
@@ -149,6 +157,86 @@ class LoginApiTest extends IntegrationTest {
 			.andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
 	}
 
+	@ParameterizedTest
+	@ValueSource(strings = {"INVALID", "EXPIRED"})
+	@DisplayName("공개 지역 조회는 잘못되거나 만료된 토큰이 있어도 허용한다")
+	void publicRegionsWithBadToken(String scenario) throws Exception {
+		// given
+		String token = invalidOrExpiredToken(scenario);
+
+		// when
+		ResultActions result = mockMvc.perform(
+			get("/api/v1/regions")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+		);
+
+		// then
+		result.andExpect(status().isOk());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"INVALID", "EXPIRED"})
+	@DisplayName("잘못되거나 만료된 토큰이 있어도 올바른 비밀번호로 로그인할 수 있다")
+	void loginWithBadToken(String scenario) throws Exception {
+		// given
+		String email = uniqueEmail();
+		createMember(email, uniqueNickname());
+
+		String token = invalidOrExpiredToken(scenario);
+
+		String body = """
+			{
+			  "email": "%s",
+			  "password": "test-password"
+			}
+			""".formatted(email);
+
+		// when
+		ResultActions result = mockMvc.perform(
+			post("/api/v1/auth/login")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body)
+		);
+
+		// then
+		result
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.tokenType").value("Bearer"))
+			.andExpect(jsonPath("$.accessToken").isNotEmpty());
+	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"INVALID", "EXPIRED"})
+	@DisplayName("잘못된 토큰을 무시해도 로그인 비밀번호 검사는 수행한다")
+	void wrongPasswordWithBadToken(String scenario) throws Exception {
+		// given
+		String email = uniqueEmail();
+		createMember(email, uniqueNickname());
+
+		String token = invalidOrExpiredToken(scenario);
+
+		String body = """
+			{
+			  "email": "%s",
+			  "password": "wrong-password"
+			}
+			""".formatted(email);
+
+		// when
+		ResultActions result = mockMvc.perform(
+			post("/api/v1/auth/login")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body)
+		);
+
+		// then
+		result
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
+	}
+
 	private Long createMember(
 		String email,
 		String nickname
@@ -222,6 +310,21 @@ class LoginApiTest extends IntegrationTest {
 		);
 
 		return decoder.decode(token);
+	}
+
+	private String invalidOrExpiredToken(String scenario) {
+		if (scenario.equals("INVALID")) {
+			return "not-a-jwt";
+		}
+
+		clock.fixAt(Instant.parse("2026-10-09T03:00:00Z"));
+
+		String token = jwtTokenProvider.createAccessToken(1L)
+			.getTokenValue();
+
+		clock.advance(Duration.ofMinutes(30));
+
+		return token;
 	}
 
 	private String uniqueEmail() {

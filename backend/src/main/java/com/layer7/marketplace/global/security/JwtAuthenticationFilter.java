@@ -13,19 +13,16 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.web.servlet.HandlerExceptionResolver;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-	private final JwtTokenProvider jwtTokenProvider;
-	private final HandlerExceptionResolver exceptionResolver;
+	public static final String INVALID_TOKEN_ATTRIBUTE =
+		JwtAuthenticationFilter.class.getName() + ".invalidToken";
 
-	public JwtAuthenticationFilter(
-		JwtTokenProvider jwtTokenProvider,
-		HandlerExceptionResolver exceptionResolver
-	) {
+	private final JwtTokenProvider jwtTokenProvider;
+
+	public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
 		this.jwtTokenProvider = jwtTokenProvider;
-		this.exceptionResolver = exceptionResolver;
 	}
 
 	@Override
@@ -73,12 +70,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			SecurityContextHolder.setContext(context);
 
 		} catch (BusinessException exception) {
-			SecurityContextHolder.clearContext();
+			if (exception.getErrorCode() != ErrorCode.INVALID_TOKEN) {
+				throw exception;
+			}
 
-			exceptionResolver.resolveException(
-				request, response, null, exception
-			);
-			return;
+			SecurityContextHolder.clearContext();
+			request.setAttribute(INVALID_TOKEN_ATTRIBUTE, Boolean.TRUE);
 		}
 
 		filterChain.doFilter(request, response);
