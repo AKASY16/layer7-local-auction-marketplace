@@ -1,6 +1,9 @@
 spring:
   application:
     name: auction-api
+  autoconfigure:
+    # 로그인은 JWT로만 하므로, Spring Boot가 시작 로그에 임시 비밀번호를 찍으며 만드는 기본 사용자는 쓰지 않는다
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
   datasource:
     # localhost는 IPv6(::1)로 먼저 풀릴 수 있어, Docker가 연 IPv4 포트로 확실히 가도록 127.0.0.1을 쓴다
     url: jdbc:mysql://127.0.0.1:3307/auction?serverTimezone=UTC&characterEncoding=UTF-8

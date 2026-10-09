@@ -55,7 +55,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	}
 
 	// 서비스 계층의 권한 검사에서 나온 보안 예외가 아래의 Exception 처리기에 잡혀 500이 되지 않게 한다.
-	// 필터 단계의 인증 실패·권한 없음은 컨트롤러에 오지 않으므로 SecurityConfig(#23)에서 같은 형식으로 응답한다.
+	// 필터 단계의 인증 실패·권한 없음도 SecurityConfig가 이 처리기로 넘겨 같은 형식으로 응답한다.
 	@ExceptionHandler(AccessDeniedException.class)
 	public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException e, HttpServletRequest request) {
 		log.info("[{}] {} {}", ErrorCode.FORBIDDEN, request.getMethod(), request.getRequestURI());
