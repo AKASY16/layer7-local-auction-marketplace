@@ -98,6 +98,31 @@ if (!now.isBefore(auction.getEndAt())) {
 }
 ```
 
+### DB 제약 위반 (UNIQUE 등)
+
+동시에 들어온 요청은 미리 확인(`existsBy...`)을 함께 통과할 수 있어서, 마지막에는 DB 제약이 막습니다. 이때 나는 `DataIntegrityViolationException`은 다음처럼 처리합니다.
+
+- 어떤 제약 위반을 어떤 `ErrorCode`로 바꿀지는 그 상황을 아는 서비스에서 판단합니다. 전역 예외 처리기는 테이블이나 제약 이름을 모르게 둡니다. 도메인별 규칙이 공통 코드 한 곳에 쌓이지 않게 하기 위함입니다.
+- 저장하는 줄을 try-catch로 감싸 잡고, 제약 이름으로 어느 규칙인지 확인해 `BusinessException`으로 바꿔 던집니다. 응답은 위 규칙대로 전역 처리기가 만듭니다.
+- 아는 제약이 아니면 잡은 예외를 그대로 던집니다. 전역 처리기가 500으로 응답해 문제가 묻히지 않습니다.
+- 잡은 뒤 같은 트랜잭션에서 DB를 다시 조회하지 않습니다. 저장에 실패한 영속성 컨텍스트를 다시 쓰면 Hibernate 오류로 500이 납니다.
+- 새로 저장(INSERT)은 id가 `IDENTITY`라 `save` 줄에서 바로 DB에 반영되어 그 자리에서 잡힙니다. 수정(UPDATE)은 커밋할 때 반영되므로, 그 자리에서 잡으려면 `saveAndFlush`나 `flush`를 씁니다.
+- 같은 판단이 여러 서비스에서 필요하면 그 도메인 패키지 한 곳에 모아 함께 씁니다.
+
+예: 회원가입의 이메일·닉네임 중복 (`AuthService.signup`)
+
+```java
+try {
+    savedUser = userRepository.save(user);
+} catch (DataIntegrityViolationException exception) {
+    ErrorCode errorCode = findDuplicateUserError(exception); // uq_users_email → DUPLICATE_EMAIL 등
+    if (errorCode == null) {
+        throw exception;
+    }
+    throw new BusinessException(errorCode);
+}
+```
+
 ## 7. 검증
 
 | 종류 | 위치 | 예 | 실패 시 |
