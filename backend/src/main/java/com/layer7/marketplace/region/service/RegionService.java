@@ -1,5 +1,7 @@
 package com.layer7.marketplace.region.service;
 
+import com.layer7.marketplace.global.error.BusinessException;
+import com.layer7.marketplace.global.error.ErrorCode;
 import com.layer7.marketplace.region.domain.Region;
 import com.layer7.marketplace.region.dto.RegionPageResponse;
 import com.layer7.marketplace.region.dto.RegionResponse;
@@ -19,6 +21,13 @@ public class RegionService {
 
 	public RegionService(RegionRepository regionRepository) {
 		this.regionRepository = regionRepository;
+	}
+
+	public Region getRegion(Long regionId) {
+		return regionRepository.findById(regionId)
+			.orElseThrow(() ->
+				new BusinessException(ErrorCode.RESOURCE_NOT_FOUND)
+			);
 	}
 
 	public RegionPageResponse searchRegions(String query, int page, int size) {
