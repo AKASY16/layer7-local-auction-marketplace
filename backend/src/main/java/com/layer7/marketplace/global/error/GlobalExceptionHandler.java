@@ -25,6 +25,10 @@ import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import java.sql.SQLException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.springframework.dao.DataIntegrityViolationException;
 
 /**
  * 컨트롤러에서 올라온 모든 예외를 공통 오류 응답({@link ErrorResponse})으로 바꾼다.
@@ -38,13 +42,83 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
 	private static final String UNREADABLE_BODY_MESSAGE = "요청 본문을 읽을 수 없습니다. JSON 형식과 값의 타입을 확인해주세요.";
-
+	private static final Pattern DUPLICATE_KEY_PATTERN =
+		Pattern.compile("for key ['`]([^'`]+)['`]\\s*$");
 	private final Clock clock;
 
 	@ExceptionHandler(BusinessException.class)
 	public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e, HttpServletRequest request) {
 		log.info("[{}] {} {} - {}", e.getErrorCode(), request.getMethod(), request.getRequestURI(), e.getMessage());
 		return respond(ErrorResponse.of(e.getErrorCode(), e.getMessage(), request.getRequestURI(), now()));
+	}
+
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+		DataIntegrityViolationException exception,
+		HttpServletRequest request
+	) {
+		ErrorCode errorCode = findDuplicateUserError(exception);
+
+		if (errorCode == null) {
+			return handleUnexpected(exception, request);
+		}
+
+		log.info(
+			"[{}] {} {}",
+			errorCode,
+			request.getMethod(),
+			request.getRequestURI()
+		);
+
+		return respond(
+			ErrorResponse.of(errorCode, request.getRequestURI(), now())
+		);
+	}
+
+	private static ErrorCode findDuplicateUserError(
+		DataIntegrityViolationException exception
+	) {
+		for (
+			Throwable cause = exception;
+			cause != null;
+			cause = cause.getCause()
+		) {
+			if (!(cause instanceof SQLException sqlException)) {
+				continue;
+			}
+
+			if (sqlException.getErrorCode() != 1062
+				|| !"23000".equals(sqlException.getSQLState())) {
+				continue;
+			}
+
+			String message = sqlException.getMessage();
+
+			if (message == null) {
+				continue;
+			}
+
+			Matcher matcher = DUPLICATE_KEY_PATTERN.matcher(message);
+
+			if (!matcher.find()) {
+				continue;
+			}
+
+			String constraintName = matcher.group(1);
+			int lastDot = constraintName.lastIndexOf('.');
+
+			if (lastDot >= 0) {
+				constraintName = constraintName.substring(lastDot + 1);
+			}
+
+			return switch (constraintName) {
+				case "uq_users_email" -> ErrorCode.DUPLICATE_EMAIL;
+				case "uq_users_nickname" -> ErrorCode.DUPLICATE_NICKNAME;
+				default -> null;
+			};
+		}
+
+		return null;
 	}
 
 	// docs/backend/locking.md: 락 대기 시간 초과는 같은 Idempotency-Key로 다시 시도할 수 있는 503
@@ -78,38 +152,38 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	// @Valid가 붙은 요청 본문의 검증 실패
 	@Override
 	protected ResponseEntity<Object> handleMethodArgumentNotValid(
-			MethodArgumentNotValidException ex,
-			HttpHeaders headers,
-			HttpStatusCode status,
-			WebRequest request
+		MethodArgumentNotValidException ex,
+		HttpHeaders headers,
+		HttpStatusCode status,
+		WebRequest request
 	) {
 		List<FieldErrorResponse> fieldErrors = ex.getBindingResult().getFieldErrors().stream()
-				.map(error -> new FieldErrorResponse(error.getField(), toCode(error.getCode()), error.getDefaultMessage()))
-				.toList();
+			.map(error -> new FieldErrorResponse(error.getField(), toCode(error.getCode()), error.getDefaultMessage()))
+			.toList();
 		return handleExceptionInternal(ex, validationError(fieldErrors, request), headers, status, request);
 	}
 
 	// 경로·쿼리 값(@RequestParam, @PathVariable 등)에 붙은 제약의 검증 실패
 	@Override
 	protected ResponseEntity<Object> handleHandlerMethodValidationException(
-			HandlerMethodValidationException ex,
-			HttpHeaders headers,
-			HttpStatusCode status,
-			WebRequest request
+		HandlerMethodValidationException ex,
+		HttpHeaders headers,
+		HttpStatusCode status,
+		WebRequest request
 	) {
 		List<FieldErrorResponse> fieldErrors = ex.getParameterValidationResults().stream()
-				.flatMap(GlobalExceptionHandler::toFieldErrors)
-				.toList();
+			.flatMap(GlobalExceptionHandler::toFieldErrors)
+			.toList();
 		return handleExceptionInternal(ex, validationError(fieldErrors, request), headers, status, request);
 	}
 
 	// JSON 문법 오류, 값 타입 불일치 등 본문을 읽지 못한 경우
 	@Override
 	protected ResponseEntity<Object> handleHttpMessageNotReadable(
-			HttpMessageNotReadableException ex,
-			HttpHeaders headers,
-			HttpStatusCode status,
-			WebRequest request
+		HttpMessageNotReadableException ex,
+		HttpHeaders headers,
+		HttpStatusCode status,
+		WebRequest request
 	) {
 		ErrorResponse body = ErrorResponse.of(ErrorCode.VALIDATION_ERROR, UNREADABLE_BODY_MESSAGE, path(request), now());
 		return handleExceptionInternal(ex, body, headers, status, request);
@@ -120,15 +194,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	 */
 	@Override
 	protected ResponseEntity<Object> handleExceptionInternal(
-			Exception ex,
-			Object body,
-			HttpHeaders headers,
-			HttpStatusCode statusCode,
-			WebRequest request
+		Exception ex,
+		Object body,
+		HttpHeaders headers,
+		HttpStatusCode statusCode,
+		WebRequest request
 	) {
 		ErrorResponse errorResponse = body instanceof ErrorResponse given
-				? given
-				: ErrorResponse.of(errorCodeFor(statusCode), path(request), now());
+			? given
+			: ErrorResponse.of(errorCodeFor(statusCode), path(request), now());
 
 		if (errorResponse.status() >= 500) {
 			log.error("[{}] {}", errorResponse.code(), errorResponse.path(), ex);
@@ -154,9 +228,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 	private static Stream<FieldErrorResponse> toFieldErrors(ParameterValidationResult result) {
 		String parameterName = result.getMethodParameter().getParameterName();
 		return result.getResolvableErrors().stream()
-				.map(error -> error instanceof FieldError fieldError
-						? new FieldErrorResponse(fieldError.getField(), toCode(fieldError.getCode()), fieldError.getDefaultMessage())
-						: new FieldErrorResponse(parameterName, toCode(lastCode(error)), error.getDefaultMessage()));
+			.map(error -> error instanceof FieldError fieldError
+				? new FieldErrorResponse(fieldError.getField(), toCode(fieldError.getCode()), fieldError.getDefaultMessage())
+				: new FieldErrorResponse(parameterName, toCode(lastCode(error)), error.getDefaultMessage()));
 	}
 
 	// 검증 코드 목록은 "NotBlank.객체.필드", ..., "NotBlank" 순서라 마지막이 애노테이션 이름이다

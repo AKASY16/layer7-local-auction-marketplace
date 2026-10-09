@@ -94,6 +94,25 @@ cd backend
 ./gradlew test
 ```
 
+### JWT 설정
+
+- 서버 실행에는 환경 변수 AUCTION_JWT_SECRET이 필요하다.
+- 키는 UTF-8 기준 최소 32바이트이며, 충분히 무작위인 값을 사용한다.
+- 실제 키는 소스 코드나 Git에 저장하지 않는다.
+- 테스트는 src/test/resources/application.properties의 테스트 전용 키를 사용한다.
+- 테스트 전용 키는 실제 서비스에 사용하지 않는다.
+
+### IntelliJ에서 실행·검증
+
+- Project SDK와 Gradle JVM을 JDK 25로 설정한다.
+- 서버 실행 설정의 Environment variables에 AUCTION_JWT_SECRET을 지정한다.
+- 개발용 MySQL이 실행된 상태에서 AuctionApiApplication의 실행 버튼으로 서버를 시작한다.
+- 서버 종료는 IntelliJ의 Stop 버튼을 사용한다.
+- 통합 테스트는 Docker Desktop 엔진이 실행 중이어야 한다.
+- 테스트용 MySQL은 Testcontainers가 자동으로 실행한다.
+- 전체 테스트: Gradle 창 → Tasks → verification → test.
+- 전체 빌드: Gradle 창 → Tasks → build → build.
+
 ## Documents
 
 - [팀 역할 및 협업 규칙](docs/00-team-and-collaboration.md)

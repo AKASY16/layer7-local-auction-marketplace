@@ -33,6 +33,9 @@ class SecurityConfigTest {
 	@MockitoBean
 	private RegionService regionService;
 
+	@MockitoBean
+	private JwtTokenProvider jwtTokenProvider;
+
 	@ParameterizedTest
 	@CsvSource({
 		"GET, /api/v1/regions",

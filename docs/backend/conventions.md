@@ -28,7 +28,25 @@
 - 경로는 [API 명세](../05-api-spec.md)를 그대로 따릅니다. 클래스에 `@RequestMapping("/api/v1/...")`을 붙이고, 자원 이름은 복수형입니다. 예: `/api/v1/auctions/{auctionId}/bids`
 - 컨트롤러는 요청을 받아 서비스를 호출하고 응답 DTO를 돌려주는 일만 합니다. 비즈니스 규칙은 서비스·도메인에 둡니다.
 - 응답 상태 코드는 명세의 HTTP Status 기준을 따릅니다. 생성은 `201`, 조회·수정·상태 전이는 `200`, 본문 없는 삭제는 `204`입니다.
-- 로그인 사용자를 받는 방법은 회원가입·로그인(#26)을 구현할 때 이 문서에 추가합니다.
+- 로그인 사용자는 `@AuthenticationPrincipal AuthenticatedUser`로 받는다.
+- `AuthenticatedUser.userId()`로 검증된 JWT의 회원 ID를 읽는다.
+- 본인 대상 API는 요청 본문·쿼리의 회원 ID 대신 인증 정보의 ID를 사용한다.
+- 인증 정보에는 비밀번호나 JPA 엔티티를 넣지 않는다.
+- JWT 필터는 토큰을 검증하며, 쓰기 API에서 필요한 ACTIVE 상태 검사는
+  해당 서비스에서 수행한다.
+
+```java
+@GetMapping("/me")
+public UserMeResponse getMe(
+    @AuthenticationPrincipal AuthenticatedUser user
+) {
+    if (user == null) {
+        throw new BusinessException(ErrorCode.UNAUTHORIZED);
+    }
+
+    return userService.getMe(user.userId());
+}
+```
 
 ## 4. DTO
 

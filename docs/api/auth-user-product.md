@@ -38,6 +38,26 @@ Errors:
 - 409 DUPLICATE_EMAIL
 - 409 DUPLICATE_NICKNAME
 
+### 현재 구현 범위 — Sprint 1 (#26)
+
+- 회원가입, 로그인, Access Token 인증, 현재 사용자 조회를 구현한다.
+- Access Token은 JWT이며 유효기간은 30분이다.
+- 이번 로그인 응답은 Access Token만 반환한다.
+- Refresh Token 쿠키 발급과 refresh/logout API는 후속 스프린트에서 구현한다.
+- 아래 Refresh Token 관련 설명은 후속 구현을 포함한 전체 명세이다.
+
+### 입력 검증
+
+- 이메일은 필수이며 이메일 형식, 최대 320자이다.
+- 닉네임은 필수이며 최대 50자이다.
+- 비밀번호는 필수이며 UTF-8 기준 최대 72바이트이다.
+- 로그인 요청에도 동일한 이메일·비밀번호 형식 검증을 적용한다.
+- regionId는 필수 양수이며 실제 regions 테이블에 존재해야 한다.
+- 형식 검증 실패는 400 VALIDATION_ERROR를 반환한다.
+- 존재하지 않는 지역은 404 RESOURCE_NOT_FOUND를 반환한다.
+- 이메일·닉네임 중복은 동시 가입 요청에서도 각각
+  409 DUPLICATE_EMAIL, 409 DUPLICATE_NICKNAME으로 반환한다.
+
 ### POST /auth/login
 
 Request:
@@ -109,6 +129,38 @@ Response: `204`
   }
 }
 ```
+
+Response `200` 예시:
+
+```json
+{
+  "id": 15,
+  "email": "user@example.com",
+  "nickname": "layer7",
+  "trustScore": 0,
+  "status": "ACTIVE",
+  "region": {
+    "id": 4,
+    "regionCode": "11200",
+    "sidoName": "서울특별시",
+    "sigunguName": "성동구"
+  },
+  "tradingRestriction": null
+}
+```
+
+- 회원 ID는 요청 입력이 아니라 검증된 JWT에서 가져온다.
+- 활성 거래 정지는 다음 조건으로 판정한다:
+  liftedAt이 없고, startsAt이 현재 시각 이하이며,
+  endsAt이 없거나 현재 시각보다 미래이다.
+- 활성 정지가 여러 개라면 종료 시각이 없는 기록을 우선하고,
+  기간제 기록은 가장 늦게 끝나는 기록을 반환한다.
+- 탈퇴 전에 발급한 유효한 토큰으로 조회하는 것은 만료까지 허용한다.
+
+Errors:
+- 401 UNAUTHORIZED: 인증 헤더 없음
+- 401 INVALID_TOKEN: 토큰 형식·서명·발급자·만료 검증 실패,
+  또는 토큰의 회원이 존재하지 않음
 
 ### PATCH /users/me/region
 지역 변경.
