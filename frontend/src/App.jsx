@@ -1,15 +1,15 @@
-import "./App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import './App.css'
+import { BrowserRouter, Routes, Route } from 'react-router'
 
-import Layout from "./components/Layout/Layout.jsx";
+import Layout from './components/Layout/Layout.jsx'
 
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import AuctionList from "./pages/AuctionList";
-import AuctionDetail from "./pages/AuctionDetail";
-import ProductRegister from "./pages/ProductRegister";
-import MyPage from "./pages/MyPage";
+import Home from './pages/Home'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import AuctionList from './pages/AuctionList'
+import AuctionDetail from './pages/AuctionDetail'
+import ProductRegister from './pages/ProductRegister'
+import MyPage from './pages/MyPage'
 
 function App() {
   return (
@@ -36,7 +36,7 @@ function App() {
         </Route>
       </Routes>
     </BrowserRouter>
-  );
+  )
 }
 
-export default App;
+export default App

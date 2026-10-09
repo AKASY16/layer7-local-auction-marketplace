@@ -3,7 +3,7 @@ function ProductRegister() {
     <div>
       <h2>상품 등록</h2>
     </div>
-  );
+  )
 }
 
-export default ProductRegister;
+export default ProductRegister
