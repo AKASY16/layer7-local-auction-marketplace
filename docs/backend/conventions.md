@@ -63,7 +63,7 @@ public record BidResponse(Long id, BidType type, long amount, Instant createdAt)
   - enum은 `@Enumerated(EnumType.STRING)`
   - 시간 컬럼은 `Instant`
   - 연관관계는 `@ManyToOne(fetch = FetchType.LAZY)` 단방향이 기본이며, 양방향은 Product ↔ ProductImage만 허용 ([ERD](erd.md)의 JPA 연관관계 원칙)
-- 생성·수정 시각(`createdAt`, `updatedAt`)은 공통 기반 클래스로 자동 기록합니다 (#20).
+- 생성·수정 시각(`createdAt`, `updatedAt`)이 있는 엔티티는 `BaseTimeEntity`(`global/time`)를 상속합니다. 저장·수정할 때 `Clock` 기준 시각이 자동으로 기록되므로 직접 넣지 않습니다.
 
 ## 6. 오류 처리
 
@@ -114,8 +114,14 @@ if (!now.isBefore(auction.getEndAt())) {
 - 테스트 메서드 이름은 영어로 짧게 쓰고, `@DisplayName`에 한글 문장으로 설명합니다. 예: `@DisplayName("Bid가 0건이면 시작가로 입찰할 수 있다")`
 - 본문은 `// given` / `// when` / `// then` 순서로 씁니다.
 - H2를 쓰지 않습니다. MySQL의 락·제약 동작을 검증하지 못합니다.
-- 시간이 필요한 테스트는 고정된 `Clock`을 씁니다.
+- 통합 테스트는 `IntegrationTest`(테스트 코드의 `support` 패키지)를 상속합니다. 모든 통합 테스트가 같은 Spring 컨텍스트를 함께 써서 MySQL 컨테이너가 한 번만 뜹니다.
+  - 테스트 클래스에서 `@MockitoBean`, `@TestPropertySource` 등으로 설정을 바꾸면 그 클래스만 컨텍스트와 컨테이너를 새로 띄워 느려지므로 꼭 필요할 때만 씁니다.
+  - repository 테스트도 `@DataJpaTest` 대신 `IntegrationTest`를 씁니다. `@DataJpaTest`에는 생성·수정 시각 자동 기록 설정이 빠져 있어 저장할 때 NOT NULL 오류가 납니다.
+- 시간이 필요한 테스트는 시각을 고정합니다.
+  - 통합 테스트: 상속받은 `clock`으로 `clock.fixAt(Instant.parse("2026-10-09T03:00:00Z"))`, `clock.advance(Duration.ofMinutes(10))`. 테스트가 끝나면 실제 시각으로 돌아갑니다.
+  - 단위 테스트: `Clock.fixed(...)`를 만들어 넘깁니다.
 - 테스트끼리 데이터를 공유하지 않습니다. 각 테스트가 필요한 데이터를 직접 만듭니다.
+  - 통합 테스트는 DB를 함께 쓰므로 다른 테스트가 만든 행이 남아 있을 수 있습니다. 전체 개수 대신 자기가 만든 id로 확인합니다.
 
 ```java
 @Test
