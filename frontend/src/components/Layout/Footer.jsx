@@ -3,7 +3,7 @@ function Footer({ message }) {
     <footer>
       <span>{message}</span>
     </footer>
-  );
+  )
 }
 
-export default Footer;
+export default Footer
