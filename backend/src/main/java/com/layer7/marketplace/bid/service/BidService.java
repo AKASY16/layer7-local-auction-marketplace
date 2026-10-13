@@ -5,10 +5,6 @@ import com.layer7.marketplace.auction.service.AuctionService;
 import com.layer7.marketplace.bid.domain.Bid;
 import com.layer7.marketplace.bid.domain.BidIncrementPolicy;
 import com.layer7.marketplace.bid.dto.BidCreateResponse;
-import com.layer7.marketplace.bid.dto.BidCreateResponse.AcceptedBid;
-import com.layer7.marketplace.bid.dto.BidCreateResponse.AuctionSummary;
-import com.layer7.marketplace.bid.dto.BidCreateResponse.LeadingBidder;
-import com.layer7.marketplace.bid.dto.BidResolution;
 import com.layer7.marketplace.bid.repository.BidRepository;
 import com.layer7.marketplace.global.error.BusinessException;
 import com.layer7.marketplace.global.error.ErrorCode;
@@ -76,7 +72,16 @@ public class BidService {
 		// 응답의 version이 이번 변경까지 반영된 값이 되도록 먼저 DB에 반영한다
 		bidRepository.flush();
 
-		return response(auction, bid, bidder, now);
+		OptionalLong nextBidAmount = bidIncrementPolicy.nextValidAmount(auction.getCurrentPrice());
+		long bidCount = bidRepository.countByAuctionId(auctionId);
+
+		return BidCreateResponse.leading(
+			bid,
+			auction,
+			nextBidAmount.isPresent() ? nextBidAmount.getAsLong() : null,
+			bidCount,
+			now
+		);
 	}
 
 	// 상한 → 가격 단위 → 최소 금액 순서로 확인한다. 상한을 넘는 금액은 가격 단위 검사에서도 false라서 상한을 먼저 본다
@@ -102,24 +107,5 @@ public class BidService {
 				"최소 입찰가는 %,d원입니다.".formatted(minimumAmount)
 			);
 		}
-	}
-
-	private BidCreateResponse response(Auction auction, Bid bid, User bidder, Instant now) {
-		OptionalLong nextBidAmount = bidIncrementPolicy.nextValidAmount(auction.getCurrentPrice());
-
-		AuctionSummary summary = new AuctionSummary(
-			auction.getId(),
-			auction.statusAt(now),
-			auction.getVersion(),
-			auction.getCurrentPrice(),
-			nextBidAmount.isPresent() ? nextBidAmount.getAsLong() : null,
-			bidRepository.countByAuctionId(auction.getId()),
-			new LeadingBidder(bidder.getId(), bidder.getNickname()),
-			true,
-			auction.getEndAt(),
-			now
-		);
-
-		return new BidCreateResponse(AcceptedBid.from(bid), summary, BidResolution.LEADING);
 	}
 }
