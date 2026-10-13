@@ -14,8 +14,7 @@ export function getApiErrorMessage(error) {
 
     case 'UNAUTHORIZED':
     case 'INVALID_TOKEN':
-    case 'INVALID_REFRESH_TOKEN':
-      return '로그인이 만료되었습니다. 다시 로그인해 주세요.'
+      return '로그인이 필요합니다. 다시 로그인해 주세요.'
 
     case 'ACCOUNT_WITHDRAWN':
       return '탈퇴 처리된 계정입니다.'
