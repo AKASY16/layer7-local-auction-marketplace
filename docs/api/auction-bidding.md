@@ -270,6 +270,26 @@ Response `201`:
 
 입찰 금액이 현재 선두의 AutoBid 상한과 정확히 같으면 동액 선두 우선 규칙에 따라 선두가 그 금액으로 응답하고, 요청자의 Bid는 저장되지 않습니다. 생성된 resource가 없으므로 이 경우는 `200`과 함께 `acceptedBid: null`, `resolution: OUTBID_BY_AUTO_BID`를 반환합니다.
 
+금액 상한에 도달해 다음 입찰가가 없으면(현재가 10,000,000원) `nextBidAmount`는 `null`이고, 이후 입찰은 `400 AMOUNT_LIMIT_EXCEEDED`로 거절합니다.
+
+Errors (위에서부터 먼저 확인):
+- 404 RESOURCE_NOT_FOUND: 없는 경매
+- 409 AUCTION_ENDED: 논리 상태가 ENDED (`now >= endAt`)
+- 409 AUCTION_NOT_OPEN: 시작 전이거나 취소된 경매
+- 403 SELF_BID_FORBIDDEN: 판매자 본인
+- 409 ALREADY_LEADING: 현재 선두
+- 403 ACCOUNT_WITHDRAWN: 탈퇴한 회원 (탈퇴 전에 발급한 토큰으로 요청한 경우)
+- 403 USER_RESTRICTED: 거래 참여 정지 중
+- 400 AMOUNT_LIMIT_EXCEEDED: 10,000,000원 초과, 또는 현재가가 상한이라 더 입찰할 수 없음
+- 400 INVALID_PRICE_UNIT: 가격단위표에 맞지 않는 금액
+- 409 BID_AMOUNT_TOO_LOW: 최소 입찰가 미만. `message`에 최소 입찰가를 담음 (예: "최소 입찰가는 10,500원입니다.")
+- 503 RESOURCE_BUSY: 경매 락 대기 시간 초과. 같은 요청을 다시 보내면 됨
+
+### 현재 구현 범위 — Sprint 1 (#27)
+
+- AutoBid가 아직 없어 `resolution`은 항상 `LEADING`이고, `acceptedBid: null`인 `200` 응답은 없습니다.
+- `Idempotency-Key` 헤더는 보내도 되지만 중복 요청 처리는 다음 스프린트에서 붙입니다.
+
 ### GET /auctions/{auctionId}/bids
 공개 Bid 이력.
 
