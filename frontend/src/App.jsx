@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router'
 import Layout from './components/Layout/Layout.jsx'
 
 import Home from './pages/Home'
-import Login from './pages/Login'
+import Login from './pages/Login.jsx'
 import Signup from './pages/Signup'
 import AuctionList from './pages/AuctionList'
 import AuctionDetail from './pages/AuctionDetail'
