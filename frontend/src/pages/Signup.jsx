@@ -157,9 +157,7 @@ function Signup() {
           </AuthField>
 
           {errorMessage && (
-            <AuthError role="alert">
-              {errorMessage}
-            </AuthError>
+            <AuthError role="alert">{errorMessage}</AuthError>
           )}
 
           <AuthButton type="submit" disabled={loading}>
