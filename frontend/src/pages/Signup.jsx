@@ -156,9 +156,7 @@ function Signup() {
             />
           </AuthField>
 
-          {errorMessage && (
-            <AuthError role="alert">{errorMessage}</AuthError>
-          )}
+          {errorMessage && <AuthError role="alert">{errorMessage}</AuthError>}
 
           <AuthButton type="submit" disabled={loading}>
             {loading ? '가입 중...' : '회원가입'}

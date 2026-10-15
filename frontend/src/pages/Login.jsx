@@ -92,9 +92,7 @@ function Login() {
             />
           </AuthField>
 
-          {errorMessage && (
-            <AuthError role="alert">{errorMessage}</AuthError>
-          )}
+          {errorMessage && <AuthError role="alert">{errorMessage}</AuthError>}
 
           <AuthButton type="submit" disabled={isLoading}>
             {isLoading ? '로그인 중...' : '로그인'}
