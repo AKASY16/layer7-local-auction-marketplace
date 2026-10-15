@@ -13,7 +13,6 @@ import {
   AuthError,
 } from '../components/AuthFormStyles'
 
-
 function Signup() {
   const navigate = useNavigate()
   const submitting = useRef(false)
@@ -91,86 +90,86 @@ function Signup() {
       <AuthPanel>
         <h2>회원가입</h2>
 
-      <AuthForm onSubmit={handleSubmit}>
-        <AuthField>
-          <AuthLabel htmlFor="email">이메일</AuthLabel>
-          <AuthInput
-            id="email"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            autoComplete="email"
-            required
-          />
-        </AuthField>
+        <AuthForm onSubmit={handleSubmit}>
+          <AuthField>
+            <AuthLabel htmlFor="email">이메일</AuthLabel>
+            <AuthInput
+              id="email"
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              autoComplete="email"
+              required
+            />
+          </AuthField>
 
-        <AuthField>
-          <AuthLabel htmlFor="password">비밀번호</AuthLabel>
-          <AuthInput
-            id="password"
-            name="password"
-            type="password"
-            value={form.password}
-            onChange={handleChange}
-            autoComplete="new-password"
-            required
-          />
-        </AuthField>
+          <AuthField>
+            <AuthLabel htmlFor="password">비밀번호</AuthLabel>
+            <AuthInput
+              id="password"
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={handleChange}
+              autoComplete="new-password"
+              required
+            />
+          </AuthField>
 
-        <AuthField>
-          <AuthLabel htmlFor="passwordConfirm">비밀번호 확인</AuthLabel>
-          <AuthInput
-            id="passwordConfirm"
-            name="passwordConfirm"
-            type="password"
-            value={form.passwordConfirm}
-            onChange={handleChange}
-            autoComplete="new-password"
-            required
-          />
-        </AuthField>
+          <AuthField>
+            <AuthLabel htmlFor="passwordConfirm">비밀번호 확인</AuthLabel>
+            <AuthInput
+              id="passwordConfirm"
+              name="passwordConfirm"
+              type="password"
+              value={form.passwordConfirm}
+              onChange={handleChange}
+              autoComplete="new-password"
+              required
+            />
+          </AuthField>
 
-        <AuthField>
-          <AuthLabel htmlFor="nickname">닉네임</AuthLabel>
-          <AuthInput
-            id="nickname"
-            name="nickname"
-            type="text"
-            value={form.nickname}
-            onChange={handleChange}
-            autoComplete="nickname"
-            required
-          />
-        </AuthField>
+          <AuthField>
+            <AuthLabel htmlFor="nickname">닉네임</AuthLabel>
+            <AuthInput
+              id="nickname"
+              name="nickname"
+              type="text"
+              value={form.nickname}
+              onChange={handleChange}
+              autoComplete="nickname"
+              required
+            />
+          </AuthField>
 
-        <AuthField>
-          <AuthLabel htmlFor="regionId">지역 ID</AuthLabel>
-          <AuthInput
-            id="regionId"
-            name="regionId"
-            type="number"
-            min="1"
-            value={form.regionId}
-            onChange={handleChange}
-            required
-          />
-        </AuthField>
+          <AuthField>
+            <AuthLabel htmlFor="regionId">지역 ID</AuthLabel>
+            <AuthInput
+              id="regionId"
+              name="regionId"
+              type="number"
+              min="1"
+              value={form.regionId}
+              onChange={handleChange}
+              required
+            />
+          </AuthField>
 
-        {errorMessage && (
-          <AuthError role="alert">
-            {errorMessage}
-          </AuthError>
-        )}
+          {errorMessage && (
+            <AuthError role="alert">
+              {errorMessage}
+            </AuthError>
+          )}
 
-        <AuthButton type="submit" disabled={loading}>
-          {loading ? '가입 중...' : '회원가입'}
-        </AuthButton>
-      </AuthForm>
+          <AuthButton type="submit" disabled={loading}>
+            {loading ? '가입 중...' : '회원가입'}
+          </AuthButton>
+        </AuthForm>
 
-      <p>
-        이미 계정이 있나요? <Link to="/login">로그인</Link>
-      </p>
+        <p>
+          이미 계정이 있나요? <Link to="/login">로그인</Link>
+        </p>
       </AuthPanel>
     </AuthPage>
   )

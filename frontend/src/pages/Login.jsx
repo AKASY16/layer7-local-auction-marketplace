@@ -13,7 +13,6 @@ import {
   AuthError,
 } from '../components/AuthFormStyles'
 
-
 function Login() {
   const navigate = useNavigate()
   const submitting = useRef(false)

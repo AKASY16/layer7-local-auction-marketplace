@@ -19,7 +19,6 @@ function setAuthUser(user) {
   authListeners.forEach((listener) => listener())
 }
 
-
 export function setAccessToken(token) {
   accessToken = typeof token === 'string' && token ? token : null
 } // 토큰이 문자열이고 비어있지 않으면 accessToken에 저장, 아니면 null로 초기화

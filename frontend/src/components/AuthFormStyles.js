@@ -48,7 +48,7 @@ export const AuthInput = styled.input`
   color: #24212b;
 
   &:focus-visible {
-    outline: 2px solid ({ theme }) => theme.colors?.primary || '#8766bd';
+    outline: 2px solid ${({ theme }) => theme.colors?.primary || '#8766bd'};
     outline-offset: 2px;
   }
 `
@@ -58,7 +58,7 @@ export const AuthButton = styled.button`
   padding: 10px 16px;
   border: 0;
   border-radius: 8px;
-  background: ({ theme }) => theme.colors?.primary || '#c3a3ee';
+  background: ${({ theme }) => theme.colors?.primary || '#c3a3ee'};
   color: #24212b;
   font: inherit;
   font-weight: 600;
