@@ -1,12 +1,22 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { authApi } from '../api/client'
 import { getApiErrorMessage } from '../api/errorMessage'
+import {
+  AuthPage,
+  AuthPanel,
+  AuthForm,
+  AuthField,
+  AuthLabel,
+  AuthInput,
+  AuthButton,
+  AuthError,
+} from '../components/AuthFormStyles'
 
-const USE_MOCK_LOGIN = true
 
 function Login() {
   const navigate = useNavigate()
+  const submitting = useRef(false)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -15,6 +25,7 @@ function Login() {
 
   async function handleSubmit(event) {
     event.preventDefault()
+    if (submitting.current) return
     setErrorMessage('')
 
     const trimmedEmail = email.trim()
@@ -34,43 +45,31 @@ function Login() {
     // \.: . 문자 (정규식에서 .은 모든 문자를 의미, 따라서 .을 문자 그대로 인식시키기 위해 \를 붙임, 마침표가 포함되어있는지 검사)
     // $ : 끝까지 검사
 
+    submitting.current = true
     setIsLoading(true)
 
     try {
-      if (USE_MOCK_LOGIN) {
-        // 백엔드 연결 전 화면 흐름 확인용 임시 로그인
-        const mockUser = {
-          email: trimmedEmail,
-          nickname: trimmedEmail.split('@')[0],
-        }
-
-        sessionStorage.setItem('layer7MockUser', JSON.stringify(mockUser))
-      } else {
-        // 실제 API 연결 시 사용
-        await authApi.login({
-          email: trimmedEmail,
-          password,
-        })
-      }
+      await authApi.login({ email: trimmedEmail, password })
 
       navigate('/', { replace: true })
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error))
     } finally {
+      submitting.current = false
       setIsLoading(false)
     }
   }
 
   return (
-    <main className="login-page">
-      <section className="login-container">
+    <AuthPage>
+      <AuthPanel>
         <h2>로그인</h2>
         <p>Layer7 Auction에 오신 것을 환영합니다.</p>
 
-        <form onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="email">이메일</label>
-            <input
+        <AuthForm onSubmit={handleSubmit}>
+          <AuthField>
+            <AuthLabel htmlFor="email">이메일</AuthLabel>
+            <AuthInput
               id="email"
               type="email"
               value={email}
@@ -79,11 +78,11 @@ function Login() {
               autoComplete="email"
               required
             />
-          </div>
+          </AuthField>
 
-          <div>
-            <label htmlFor="password">비밀번호</label>
-            <input
+          <AuthField>
+            <AuthLabel htmlFor="password">비밀번호</AuthLabel>
+            <AuthInput
               id="password"
               type="password"
               value={password}
@@ -92,24 +91,24 @@ function Login() {
               autoComplete="current-password"
               required
             />
-          </div>
+          </AuthField>
 
           {errorMessage && (
-            <p role="alert" className="login-error">
+            <AuthError role="alert">
               {errorMessage}
-            </p>
+            </AuthError>
           )}
 
-          <button type="submit" disabled={isLoading}>
+          <AuthButton type="submit" disabled={isLoading}>
             {isLoading ? '로그인 중...' : '로그인'}
-          </button>
-        </form>
+          </AuthButton>
+        </AuthForm>
 
         <p>
           아직 회원이 아니신가요? <Link to="/signup">회원가입</Link>
         </p>
-      </section>
-    </main>
+      </AuthPanel>
+    </AuthPage>
   )
 }
 

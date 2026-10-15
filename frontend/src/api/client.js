@@ -2,6 +2,23 @@ const API_BASE_URL = '/api/v1' // API 요청 시 사용하는 기본 경로 apif
 
 // Access Token은 메모리에만 보관한다.
 let accessToken = null // 페이지 새로 고침 시 초기화
+let authUser = null
+const authListeners = new Set()
+
+export function subscribeAuth(listener) {
+  authListeners.add(listener)
+  return () => authListeners.delete(listener)
+}
+
+export function getAuthUser() {
+  return authUser
+}
+
+function setAuthUser(user) {
+  authUser = user
+  authListeners.forEach((listener) => listener())
+}
+
 
 export function setAccessToken(token) {
   accessToken = typeof token === 'string' && token ? token : null
@@ -13,6 +30,7 @@ export function getAccessToken() {
 
 export function clearAccessToken() {
   accessToken = null
+  setAuthUser(null)
 } // 로그아웃 or 인증 정보 초기화 시 사용
 
 // 공통 API 요청 함수
@@ -124,6 +142,7 @@ export const authApi = {
     }
 
     setAccessToken(data.accessToken)
+    setAuthUser(data.user?.nickname ? data.user : null)
     return data
   },
 
