@@ -19,6 +19,9 @@ export function getApiErrorMessage(error) {
     case 'ACCOUNT_WITHDRAWN':
       return '탈퇴 처리된 계정입니다.'
 
+    case 'RESOURCE_NOT_FOUND':
+      return '선택한 지역을 찾을 수 없습니다. 지역 ID를 확인해 주세요.'
+
     case 'NETWORK_ERROR':
       return '서버에 연결할 수 없습니다. 네트워크를 확인해 주세요.'
 
