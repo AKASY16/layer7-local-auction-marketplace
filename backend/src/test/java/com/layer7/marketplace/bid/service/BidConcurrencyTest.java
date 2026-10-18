@@ -32,7 +32,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * 동시성 테스트 계획(docs/backend/concurrency-testing.md)의 C02와 마감 경계.
+ * 동시성 테스트 계획(docs/backend/concurrency-testing.md)의 C02와, 이슈 #30의 마감 경계 입찰.
  *
  * <p>테스트 메서드에는 @Transactional을 두지 않는다. 각 worker가 BidService의 독립 트랜잭션으로 실제로 동시에 입찰한다.
  * 마감 경계는 결과가 락을 잡는 순서에 따라 달라지지 않도록, 테스트가 회원 행 락을 쥐고 입찰이 멈추는 지점을 정한다.
@@ -121,6 +121,8 @@ class BidConcurrencyTest extends IntegrationTest {
 				Future<BidOutcome> bid = executor.submit(bid(auction, first, 10_000));
 				awaitWaitingQueries("for share", 1);
 
+				// 늦은 입찰은 모두 first보다 높은 유효 금액으로 넣는다.
+				// 시각을 락보다 먼저 읽는 버그가 있으면 금액 부족이 아니라 마감 판정을 통과해 받아들여지므로 테스트가 실패한다
 				for (int i = 0; i < LATE_BIDDERS; i++) {
 					lateBids.add(executor.submit(bid(auction, lateBidders.get(i), 10_500 + i * 500L)));
 				}
@@ -139,7 +141,8 @@ class BidConcurrencyTest extends IntegrationTest {
 		}
 
 		// then
-		assertThat(firstOutcome.accepted()).isTrue();
+		// 실패하면 어떤 오류로 거절됐는지 보이도록 errorCode로 확인한다
+		assertThat(firstOutcome.errorCode()).isNull();
 		assertThat(lateOutcomes)
 			.extracting(BidOutcome::errorCode)
 			.containsOnly(ErrorCode.AUCTION_ENDED);
