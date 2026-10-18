@@ -35,6 +35,7 @@ Testcontainers로 MySQL 8.4를 실행합니다.
 ### 3. Concurrency Scenario Test
 ExecutorService + CountDownLatch로 여러 작업을 실제로 동시에 시작합니다.
 테스트 메서드 자체에는 @Transactional을 두지 않고, 각 worker가 실제 Service의 독립 Transaction을 사용합니다.
+결과가 락을 잡는 순서에 따라 달라지는 시나리오(마감 경계 등)는 한꺼번에 출발시키는 대신, 테스트가 행 락을 쥐고 작업이 멈추는 지점을 정한 뒤 진행합니다. 순서를 운에 맡기면 버그가 있어도 통과하는 실행이 생깁니다.
 
 ## 필수 시나리오
 
