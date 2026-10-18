@@ -82,6 +82,7 @@ public record BidResponse(Long id, BidType type, long amount, Instant createdAt)
   - 시간 컬럼은 `Instant`
   - 연관관계는 `@ManyToOne(fetch = FetchType.LAZY)` 단방향이 기본이며, 양방향은 Product ↔ ProductImage만 허용 ([ERD](erd.md)의 JPA 연관관계 원칙)
 - 생성·수정 시각(`createdAt`, `updatedAt`)이 있는 엔티티는 `BaseTimeEntity`(`global/time`)를 상속합니다. 저장·수정할 때 `Clock` 기준 시각이 자동으로 기록되므로 직접 넣지 않습니다.
+  - 예외: `Bid`는 수정하지 않아 `createdAt`만 있고, 입찰을 받아들인 판정 시각(경매 락을 잡은 뒤 읽은 시각)을 직접 넣습니다. 저장할 때 시계를 다시 읽으면 마감 직전에 받아들인 입찰이 마감 이후에 생성된 것처럼 기록될 수 있기 때문입니다.
 
 ## 6. 오류 처리
 

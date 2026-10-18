@@ -67,7 +67,7 @@ public class BidService {
 
 		validateAmount(auction, amount);
 
-		Bid bid = bidRepository.save(Bid.manual(auction, bidder, amount));
+		Bid bid = bidRepository.save(Bid.manual(auction, bidder, amount, now));
 		auction.acceptBid(bid);
 		// 응답의 version이 이번 변경까지 반영된 값이 되도록 먼저 DB에 반영한다
 		bidRepository.flush();
