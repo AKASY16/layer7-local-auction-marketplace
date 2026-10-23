@@ -1,54 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import styled from 'styled-components'
 import { apiFetch } from '../api/client'
 import { getApiErrorMessage } from '../api/errorMessage'
-import { AuthField, AuthLabel } from './AuthFormStyles'
-
-const RegionSelect = styled.select`
-  width: 100%;
-  min-height: 42px;
-  border: 1px solid #9c9ca6;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font: inherit;
-  background: #fff;
-  color: #24212b;
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors?.primary || '#8766bd'};
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    background: #f4f4f5;
-    cursor: not-allowed;
-  }
-`
-
-const RegionMessage = styled.p`
-  margin: 4px 0;
-  font-size: 0.9rem;
-  color: #555;
-`
-
-const RegionError = styled(RegionMessage)`
-  color: #b42318;
-`
-
-const RetryButton = styled.button`
-  align-self: flex-start;
-  padding: 8px 12px;
-  border: 1px solid #9c9ca6;
-  border-radius: 8px;
-  background: #fff;
-  font: inherit;
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors?.primary || '#8766bd'};
-    outline-offset: 2px;
-  }
-`
+import {
+  AuthField,
+  AuthLabel,
+  RegionSelect,
+  RegionMessage,
+  RegionError,
+  RetryButton,
+} from './AuthFormStyles'
 
 // 시도명과 시군구명이 같을 경우 중복 표시 방지
 function formatRegionName(region) {
@@ -202,9 +162,7 @@ function RegionSelector({ value, onChange, disabled = false }) {
 
       {error && (
         <>
-          <RegionError role="alert">
-            지역을 불러오지 못했습니다. {error}
-          </RegionError>
+          <RegionError role="alert">지역을 불러오지 못했습니다.</RegionError>
 
           <RetryButton
             type="button"
