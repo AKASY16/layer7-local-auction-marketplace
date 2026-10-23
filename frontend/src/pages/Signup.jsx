@@ -2,6 +2,8 @@ import { useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { authApi } from '../api/client'
 import { getApiErrorMessage } from '../api/errorMessage'
+import RegionSelector from '../components/RegionSelector'
+
 import {
   AuthPage,
   AuthPanel,
@@ -37,9 +39,19 @@ function Signup() {
     }))
   }
 
+  // 지역 선택 컴포넌트에서 선택한 ID 저장
+  function handleRegionChange(regionId) {
+    setForm((previous) => ({
+      ...previous,
+      regionId,
+    }))
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
+
     if (submitting.current) return
+
     setErrorMessage('')
 
     if (
@@ -60,7 +72,7 @@ function Signup() {
     const regionId = Number(form.regionId)
 
     if (!Number.isInteger(regionId) || regionId <= 0) {
-      setErrorMessage('올바른 지역 ID를 입력해 주세요.')
+      setErrorMessage('올바른 지역을 선택해 주세요.')
       return
     }
 
@@ -76,7 +88,7 @@ function Signup() {
       })
 
       alert('회원가입이 완료되었습니다.')
-      navigate('/login')
+      navigate('/login') //회원가입 후 로그인 페이지로 이동
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error))
     } finally {
@@ -143,18 +155,12 @@ function Signup() {
             />
           </AuthField>
 
-          <AuthField>
-            <AuthLabel htmlFor="regionId">지역 ID</AuthLabel>
-            <AuthInput
-              id="regionId"
-              name="regionId"
-              type="number"
-              min="1"
-              value={form.regionId}
-              onChange={handleChange}
-              required
-            />
-          </AuthField>
+          {/* 지역 ID 입력 대신 지역 선택 컴포넌트 사용 */}
+          <RegionSelector
+            value={form.regionId}
+            onChange={handleRegionChange}
+            disabled={loading}
+          />
 
           {errorMessage && <AuthError role="alert">{errorMessage}</AuthError>}
 
