@@ -7,10 +7,10 @@
 개발용 DB(3307)는 건드리지 않고, 시연용 MySQL(3308)을 따로 띄운다. 시연용 MySQL은 데이터를 메모리에만 두므로 멈추면 사라진다.
 
 ```bash
-# 1. 시연용 MySQL 실행 (빈 DB)
-docker compose --profile demo up -d demo-mysql
+# 1. 시연용 MySQL 실행 (빈 DB). --wait은 MySQL이 접속을 받을 수 있을 때까지 기다린다 (10~20초)
+docker compose --profile demo up -d --wait demo-mysql
 
-# 2. 백엔드를 demo 프로필로 실행 (AUCTION_JWT_SECRET 필요). 시작할 때 시연 데이터를 만들고 경매 id를 로그에 남긴다
+# 2. 백엔드를 demo 프로필로 실행 (AUCTION_JWT_SECRET 필요). 처음 시연 데이터를 만들 때 경매 id를 로그에 남긴다
 cd backend
 ./gradlew bootRun --args='--spring.profiles.active=demo'
 
@@ -19,15 +19,19 @@ cd frontend
 npm run dev
 ```
 
-IntelliJ에서는 AuctionApiApplication 실행 설정의 Active profiles에 `demo`를 넣으면 된다.
+MySQL이 준비되기 전에 백엔드를 켜면 DB에 접속하지 못해 바로 종료되므로, 1번이 끝난 뒤에 2번을 실행한다.
+
+IntelliJ에서는 AuctionApiApplication 실행 설정의 Environment variables에 `AUCTION_JWT_SECRET`과 함께 `SPRING_PROFILES_ACTIVE=demo`를 넣는다.
 
 리허설과 발표 직전에는 시연용 MySQL을 다시 띄워서 시각을 그 시점에 맞춘다. 진행 중 경매는 서버를 켠 때부터 1일 뒤에 마감된다.
 
 ```bash
 docker compose --profile demo stop demo-mysql
-docker compose --profile demo up -d demo-mysql
+docker compose --profile demo up -d --wait demo-mysql
 # 그다음 백엔드를 다시 켠다
 ```
+
+demo 프로필은 비밀번호가 공개된 시연 계정을 만들므로 운영 배포에서는 켜지 않는다.
 
 ## 시연 데이터
 
@@ -61,4 +65,4 @@ IntelliJ에서 `backend/http/demo.http`를 열고 위에서부터 순서대로 �
 5. 마감된 경매에 입찰 → `409 AUCTION_ENDED`
 6. 시작 전 경매에 입찰 → `409 AUCTION_NOT_OPEN`
 
-같은 순서가 `DemoDataInitializerTest`에도 있어서, 시연 데이터나 입찰 규칙이 바뀌어 순서가 깨지면 테스트가 실패한다.
+2~6번의 입찰 결과(오류 코드)는 `DemoDataInitializerTest`가 같은 순서로 확인하므로, 시연 데이터나 입찰 규칙이 바뀌어 순서가 깨지면 테스트가 실패한다. 오류 코드마다 HTTP 상태(403·409)가 명세 표와 같은지는 `ErrorCodeSpecTest`가, 실제 HTTP 응답 형식은 `BidApiTest`가 확인한다.
