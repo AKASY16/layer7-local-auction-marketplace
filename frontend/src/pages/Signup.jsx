@@ -6,14 +6,13 @@ import RegionSelector from '../components/RegionSelector'
 
 import {
   AuthPage,
-  AuthPanel,
+  AuthHeading,
+  AuthTitle,
   AuthForm,
-  AuthField,
-  AuthLabel,
-  AuthInput,
-  AuthButton,
-  AuthError,
+  AuthSwitch,
 } from '../components/AuthFormStyles'
+import Button from '../components/common/Button'
+import { Field, Label, Input, FieldError } from '../components/common/Field'
 
 function Signup() {
   const navigate = useNavigate()
@@ -99,80 +98,80 @@ function Signup() {
 
   return (
     <AuthPage>
-      <AuthPanel>
-        <h2>회원가입</h2>
+      <AuthHeading>
+        <AuthTitle>회원가입</AuthTitle>
+      </AuthHeading>
 
-        <AuthForm onSubmit={handleSubmit}>
-          <AuthField>
-            <AuthLabel htmlFor="email">이메일</AuthLabel>
-            <AuthInput
-              id="email"
-              name="email"
-              type="email"
-              value={form.email}
-              onChange={handleChange}
-              autoComplete="email"
-              required
-            />
-          </AuthField>
-
-          <AuthField>
-            <AuthLabel htmlFor="password">비밀번호</AuthLabel>
-            <AuthInput
-              id="password"
-              name="password"
-              type="password"
-              value={form.password}
-              onChange={handleChange}
-              autoComplete="new-password"
-              required
-            />
-          </AuthField>
-
-          <AuthField>
-            <AuthLabel htmlFor="passwordConfirm">비밀번호 확인</AuthLabel>
-            <AuthInput
-              id="passwordConfirm"
-              name="passwordConfirm"
-              type="password"
-              value={form.passwordConfirm}
-              onChange={handleChange}
-              autoComplete="new-password"
-              required
-            />
-          </AuthField>
-
-          <AuthField>
-            <AuthLabel htmlFor="nickname">닉네임</AuthLabel>
-            <AuthInput
-              id="nickname"
-              name="nickname"
-              type="text"
-              value={form.nickname}
-              onChange={handleChange}
-              autoComplete="nickname"
-              required
-            />
-          </AuthField>
-
-          {/* 지역 ID 입력 대신 지역 선택 컴포넌트 사용 */}
-          <RegionSelector
-            value={form.regionId}
-            onChange={handleRegionChange}
-            disabled={loading}
+      <AuthForm onSubmit={handleSubmit}>
+        <Field>
+          <Label htmlFor="email">이메일</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={handleChange}
+            autoComplete="email"
+            required
           />
+        </Field>
 
-          {errorMessage && <AuthError role="alert">{errorMessage}</AuthError>}
+        <Field>
+          <Label htmlFor="password">비밀번호</Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            value={form.password}
+            onChange={handleChange}
+            autoComplete="new-password"
+            required
+          />
+        </Field>
 
-          <AuthButton type="submit" disabled={loading}>
-            {loading ? '가입 중...' : '회원가입'}
-          </AuthButton>
-        </AuthForm>
+        <Field>
+          <Label htmlFor="passwordConfirm">비밀번호 확인</Label>
+          <Input
+            id="passwordConfirm"
+            name="passwordConfirm"
+            type="password"
+            value={form.passwordConfirm}
+            onChange={handleChange}
+            autoComplete="new-password"
+            required
+          />
+        </Field>
 
-        <p>
-          이미 계정이 있나요? <Link to="/login">로그인</Link>
-        </p>
-      </AuthPanel>
+        <Field>
+          <Label htmlFor="nickname">닉네임</Label>
+          <Input
+            id="nickname"
+            name="nickname"
+            type="text"
+            value={form.nickname}
+            onChange={handleChange}
+            autoComplete="nickname"
+            required
+          />
+        </Field>
+
+        {/* 지역 ID 입력 대신 지역 선택 컴포넌트 사용 */}
+        <RegionSelector
+          value={form.regionId}
+          onChange={handleRegionChange}
+          disabled={loading}
+        />
+
+        {errorMessage && <FieldError role="alert">{errorMessage}</FieldError>}
+
+        <Button type="submit" disabled={loading}>
+          {loading ? '가입 중...' : '회원가입'}
+        </Button>
+      </AuthForm>
+
+      <AuthSwitch>
+        이미 계정이 있나요?<Link to="/login">로그인</Link>
+      </AuthSwitch>
     </AuthPage>
   )
 }

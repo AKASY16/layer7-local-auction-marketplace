@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '../api/client'
 import { getApiErrorMessage } from '../api/errorMessage'
-import {
-  AuthField,
-  AuthLabel,
-  RegionSelect,
-  RegionMessage,
-  RegionError,
-  RetryButton,
-} from './AuthFormStyles'
+import styled from 'styled-components'
+import Button from './common/Button'
+import { Field, Label, Select, FieldMessage, FieldError } from './common/Field'
+
+const RetryButton = styled(Button)`
+  align-self: flex-start;
+`
 
 // 시도명과 시군구명이 같을 경우 중복 표시 방지
 function formatRegionName(region) {
@@ -111,10 +110,10 @@ function RegionSelector({ value, onChange, disabled = false }) {
 
   return (
     <>
-      <AuthField>
-        <AuthLabel htmlFor="sido">시도</AuthLabel>
+      <Field>
+        <Label htmlFor="sido">시도</Label>
 
-        <RegionSelect
+        <Select
           id="sido"
           value={selectedSido}
           onChange={handleSidoChange}
@@ -130,13 +129,13 @@ function RegionSelector({ value, onChange, disabled = false }) {
               {sido}
             </option>
           ))}
-        </RegionSelect>
-      </AuthField>
+        </Select>
+      </Field>
 
-      <AuthField>
-        <AuthLabel htmlFor="regionId">시군구</AuthLabel>
+      <Field>
+        <Label htmlFor="regionId">시군구</Label>
 
-        <RegionSelect
+        <Select
           id="regionId"
           name="regionId"
           value={value}
@@ -151,21 +150,23 @@ function RegionSelector({ value, onChange, disabled = false }) {
               {region.sigunguName}
             </option>
           ))}
-        </RegionSelect>
-      </AuthField>
+        </Select>
+      </Field>
 
       {selectedRegion && (
-        <RegionMessage aria-live="polite">
+        <FieldMessage aria-live="polite">
           선택한 지역: {formatRegionName(selectedRegion)}
-        </RegionMessage>
+        </FieldMessage>
       )}
 
       {error && (
         <>
-          <RegionError role="alert">지역을 불러오지 못했습니다.</RegionError>
+          <FieldError role="alert">지역을 불러오지 못했습니다.</FieldError>
 
           <RetryButton
             type="button"
+            $variant="secondary"
+            $size="small"
             onClick={() => setRetryCount((count) => count + 1)}
             disabled={disabled}
           >
@@ -175,7 +176,7 @@ function RegionSelector({ value, onChange, disabled = false }) {
       )}
 
       {!loading && !error && regions.length === 0 && (
-        <RegionMessage>선택할 수 있는 지역이 없습니다.</RegionMessage>
+        <FieldMessage>선택할 수 있는 지역이 없습니다.</FieldMessage>
       )}
     </>
   )
