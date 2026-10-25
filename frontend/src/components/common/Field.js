@@ -22,7 +22,7 @@ const controlStyle = css`
   color: ${({ theme }) => theme.colors.text};
 
   &::placeholder {
-    color: ${({ theme }) => theme.colors.textMuted};
+    color: ${({ theme }) => theme.colors.textSub};
   }
 
   &:focus-visible {
