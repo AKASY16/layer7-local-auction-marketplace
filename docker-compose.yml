@@ -18,6 +18,26 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
 
+  # 중간 발표 시연용 MySQL (docs/demo.md). --profile demo를 붙일 때만 뜬다.
+  # 데이터는 메모리(tmpfs)에만 있어서 컨테이너를 멈추면 사라지고, 다시 띄우면 빈 DB로 시작한다.
+  demo-mysql:
+    image: mysql:8.4
+    container_name: layer7-auction-demo-mysql
+    profiles: ["demo"]
+    environment:
+      MYSQL_DATABASE: auction
+      MYSQL_USER: auction
+      MYSQL_PASSWORD: auction
+      MYSQL_ROOT_PASSWORD: root
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - "3308:3306"
+    tmpfs:
+      - /var/lib/mysql
+
   # 이미지 저장소. S3 API를 그대로 제공하므로 운영 S3 호환 저장소로 바꿀 때 접속 주소와 키만 바꾸면 된다.
   # 업로드는 서명된(Presigned) URL로만, 읽기는 누구나 가능하다 (infra/seaweedfs/s3.json).
   storage:

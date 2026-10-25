@@ -1,0 +1,86 @@
+# 중간 발표 입찰 시연 (docs/demo.md). IntelliJ HTTP Client로 위에서부터 순서대로 실행한다.
+# 시연용 MySQL을 새로 띄우고 demo 프로필로 서버를 켜면 경매 id는 아래와 같다 (서버 시작 로그에도 나온다).
+
+@host = http://localhost:8080
+@password = layer7-demo
+@keyboardAuctionId = 1
+@endedAuctionId = 4
+@upcomingAuctionId = 5
+
+### 0-1. 입찰자 로그인: 익산사는개발자
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo-bidder1@example.com",
+  "password": "{{password}}"
+}
+
+> {% client.global.set("bidder1Token", response.body.accessToken); %}
+
+### 0-2. 입찰자 로그인: 키보드좋아
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo-bidder2@example.com",
+  "password": "{{password}}"
+}
+
+> {% client.global.set("bidder2Token", response.body.accessToken); %}
+
+### 0-3. 판매자 로그인: 김레이어
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo-seller@example.com",
+  "password": "{{password}}"
+}
+
+> {% client.global.set("sellerToken", response.body.accessToken); %}
+
+### 1. 입찰 성공 → 201. 현재가 85,000원 키보드에 다음 최소 입찰가 86,000원으로 입찰
+POST {{host}}/api/v1/auctions/{{keyboardAuctionId}}/bids
+Authorization: Bearer {{bidder1Token}}
+Content-Type: application/json
+
+{
+  "amount": 86000
+}
+
+### 2. 같은 금액 → 409 BID_AMOUNT_TOO_LOW (이제 최소 입찰가는 87,000원)
+POST {{host}}/api/v1/auctions/{{keyboardAuctionId}}/bids
+Authorization: Bearer {{bidder2Token}}
+Content-Type: application/json
+
+{
+  "amount": 86000
+}
+
+### 3. 판매자 본인 입찰 → 403 SELF_BID_FORBIDDEN
+POST {{host}}/api/v1/auctions/{{keyboardAuctionId}}/bids
+Authorization: Bearer {{sellerToken}}
+Content-Type: application/json
+
+{
+  "amount": 87000
+}
+
+### 4. 마감된 경매 → 409 AUCTION_ENDED
+POST {{host}}/api/v1/auctions/{{endedAuctionId}}/bids
+Authorization: Bearer {{bidder2Token}}
+Content-Type: application/json
+
+{
+  "amount": 60000
+}
+
+### 5. 시작 전 경매 → 409 AUCTION_NOT_OPEN
+POST {{host}}/api/v1/auctions/{{upcomingAuctionId}}/bids
+Authorization: Bearer {{bidder2Token}}
+Content-Type: application/json
+
+{
+  "amount": 50000
+}

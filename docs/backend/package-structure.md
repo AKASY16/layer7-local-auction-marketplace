@@ -14,7 +14,8 @@ com.layer7.marketplace
 ├── trade/          낙찰 후 거래, 거래 기한 Scheduler
 ├── trust/          신뢰점수 이력, 이용 정지
 ├── notification/   알림, Web Push 구독, 발송
-└── idempotency/    중복 요청 방지
+├── idempotency/    중복 요청 방지
+└── demo/           중간 발표 시연용 데이터 (demo 프로필 전용, docs/demo.md)
 ```
 
 각 패키지에 무엇이 들어가는지는 패키지의 `package-info.java`에 적어 둡니다.
