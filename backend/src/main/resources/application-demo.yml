@@ -1,0 +1,5 @@
+# 중간 발표 시연용 설정 (docs/demo.md).
+# 개발용 DB(3307)에 시연 데이터가 섞이지 않도록 시연용 MySQL(3308, docker compose --profile demo)에만 접속한다
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3308/auction?serverTimezone=UTC&characterEncoding=UTF-8
