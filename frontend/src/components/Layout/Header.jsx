@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { Link } from 'react-router'
+import { Link, useMatch } from 'react-router'
 import styled from 'styled-components'
 import { getAuthUser, subscribeAuth } from '../../api/client'
 import logo from '../../assets/logo.svg'
@@ -31,6 +31,10 @@ const LoginLink = styled(Link)`
 
 function Header() {
   const user = useSyncExternalStore(subscribeAuth, getAuthUser, getAuthUser)
+  const loginMatch = useMatch('/login')
+  const signupMatch = useMatch('/signup')
+  // 로그인·회원가입 화면에서는 이미 그 화면이라 로그인 버튼을 숨긴다
+  const onAuthPage = Boolean(loginMatch || signupMatch)
 
   return (
     <Bar>
@@ -41,7 +45,7 @@ function Header() {
       {user?.nickname ? (
         <Nickname>{user.nickname}님</Nickname>
       ) : (
-        <LoginLink to="/login">로그인</LoginLink>
+        !onAuthPage && <LoginLink to="/login">로그인</LoginLink>
       )}
     </Bar>
   )
