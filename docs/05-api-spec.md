@@ -39,6 +39,7 @@ Authorization: Bearer <access-token>
 토큰 없이 호출할 수 있는 API는 다음과 같고, 그 밖의 API는 토큰이 없으면 `401 UNAUTHORIZED`입니다.
 - `/auth/**`: 회원가입, 로그인, 토큰 갱신, 로그아웃
 - `GET /regions`, `GET /categories`, `GET /bid-increment-policy`
+- `GET /auctions`: 로그인하지 않아도 경매 목록을 둘러볼 수 있게 합니다. 경매 상세와 입찰은 토큰이 필요합니다
 - WebSocket 연결(`/ws`). 인증은 연결 뒤 STOMP `CONNECT` 프레임에서 합니다 ([Realtime](api/realtime.md))
 
 Access Token과 Refresh Token을 함께 사용합니다. 경매는 마감 직전에 참여가 몰리는데, 그 순간 토큰이 만료되어 재로그인하느라 마감을 놓치는 일이 없도록 하기 위함입니다.

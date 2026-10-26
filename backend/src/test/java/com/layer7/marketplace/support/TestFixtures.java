@@ -1,6 +1,7 @@
 package com.layer7.marketplace.support;
 
 import com.layer7.marketplace.auction.domain.Auction;
+import com.layer7.marketplace.auction.domain.AuctionStatus;
 import com.layer7.marketplace.product.domain.Category;
 import com.layer7.marketplace.product.domain.Product;
 import com.layer7.marketplace.product.domain.ProductCondition;
@@ -36,9 +37,13 @@ public class TestFixtures {
 	}
 
 	public User user() {
+		return user(DEFAULT_REGION_CODE);
+	}
+
+	public User user(String regionCode) {
 		return tx.execute(status -> {
 			String suffix = UUID.randomUUID().toString().substring(0, 8);
-			User user = User.create(suffix + "@example.com", "password-hash", "user-" + suffix, region());
+			User user = User.create(suffix + "@example.com", "password-hash", "user-" + suffix, region(regionCode));
 			em.persist(user);
 			return user;
 		});
@@ -46,11 +51,22 @@ public class TestFixtures {
 
 	// seller의 상품으로 READY 경매를 만든다. 시작 시각이 지났으면 첫 입찰에서 OPEN으로 바뀐다
 	public Auction auction(User seller, long startPrice, Instant startAt, Instant endAt) {
+		return auction(seller, "테스트 상품", Category.DIGITAL, startPrice, startAt, endAt);
+	}
+
+	public Auction auction(
+		User seller,
+		String title,
+		Category category,
+		long startPrice,
+		Instant startAt,
+		Instant endAt
+	) {
 		return tx.execute(status -> {
 			Product product = Product.create(
 				em.getReference(User.class, seller.getId()),
-				Category.DIGITAL,
-				"테스트 상품",
+				category,
+				title,
 				"테스트 상품 설명",
 				ProductCondition.GOOD,
 				"사용감 적음"
@@ -61,6 +77,11 @@ public class TestFixtures {
 			em.persist(auction);
 			return auction;
 		});
+	}
+
+	// 경매 종료·취소 기능이 아직 없어 저장 상태만 바꾼다
+	public void storeAuctionStatus(Long auctionId, AuctionStatus status) {
+		jdbcTemplate.update("UPDATE auctions SET status = ? WHERE id = ?", status.name(), auctionId);
 	}
 
 	// 회원탈퇴 기능이 아직 없어 상태만 바꾼다
@@ -78,9 +99,9 @@ public class TestFixtures {
 		);
 	}
 
-	private Region region() {
+	private Region region(String regionCode) {
 		return em.createQuery("SELECT r FROM Region r WHERE r.regionCode = :code", Region.class)
-			.setParameter("code", DEFAULT_REGION_CODE)
+			.setParameter("code", regionCode)
 			.getSingleResult();
 	}
 

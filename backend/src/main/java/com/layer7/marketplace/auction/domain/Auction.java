@@ -109,6 +109,11 @@ public class Auction extends BaseTimeEntity {
 		return AuctionStatus.OPEN;
 	}
 
+	// 종료·취소가 저장 상태까지 반영됐는지. 논리 상태가 ENDED여도 false면 낙찰 확정 전이다 (docs/backend/auction-state.md)
+	public boolean isFinalized() {
+		return status == AuctionStatus.ENDED || status == AuctionStatus.CANCELED;
+	}
+
 	// 논리 상태가 OPEN이 아니면 입찰을 거절한다.
 	// 시작 시각이 지난 READY는 따라붙는 부작용이 없으므로 그 자리에서 OPEN으로 바꾼다.
 	public void openForBid(Instant now) {
