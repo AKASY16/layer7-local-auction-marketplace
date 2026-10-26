@@ -163,4 +163,22 @@ export const authApi = {
   },
 }
 
+// 경매 API
+export const auctionApi = {
+  // 로그인하지 않아도 부를 수 있다. 값이 없는 조건은 쿼리에서 뺀다
+  async search(conditions = {}, options = {}) {
+    const params = new URLSearchParams()
+
+    Object.entries(conditions).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.set(key, value)
+      }
+    })
+
+    const query = params.toString()
+
+    return apiFetch(query ? `/auctions?${query}` : '/auctions', options)
+  },
+}
+
 // TODO: 다음 스프린트에서 Refresh Token 자동 갱신 구현
