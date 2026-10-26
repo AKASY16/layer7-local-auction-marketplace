@@ -45,6 +45,9 @@ class SecurityConfigTest {
 		"POST, /api/v1/auth/logout",
 		"GET, /api/v1/categories",
 		"GET, /api/v1/bid-increment-policy",
+		"GET, /api/v1/auctions",
+		"GET, /api/v1/auctions/1",
+		"GET, /api/v1/auctions/1/bids",
 		"GET, /actuator/health",
 		"GET, /ws"
 	})
@@ -64,6 +67,9 @@ class SecurityConfigTest {
 	@ParameterizedTest
 	@CsvSource({
 		"GET, /api/v1/users/me",
+		"GET, /api/v1/auctions/1/bid-policy",
+		"GET, /api/v1/auctions/1/auto-bid/me",
+		"POST, /api/v1/auctions",
 		"POST, /api/v1/auctions/1/bids",
 		"POST, /api/v1/regions",
 		"POST, /api/v1/categories"

@@ -46,21 +46,25 @@ Response `201`:
 ```
 
 ### GET /auctions
-경매 탐색.
+경매 탐색. 인증 없이 호출할 수 있습니다.
 
 Query:
 - `regionId` optional
 - `category` optional
-- `keyword` optional
+- `keyword` optional, 최대 100자
+  - 상품 제목 부분 검색. `%`·`_`도 글자 그대로 찾음
+  - 앞뒤 공백 제거. 비어 있으면 조건 없음
 - `status=READY|OPEN|ENDED` optional. 논리 상태 기준
-- page / size
+  - 그 밖의 값(`CANCELED` 포함)은 `400 VALIDATION_ERROR`
+  - 생략하면 상태로 거르지 않음 (취소된 경매도 포함)
+- page / size: [페이지](../05-api-spec.md#페이지) 공통 규칙 (기본 0 / 20, 최대 50)
 
 논리 상태 조회 조건:
 - READY: `status = READY AND startAt > now`
 - OPEN: `status IN (READY, OPEN) AND startAt <= now AND endAt > now`
 - ENDED: `status = ENDED OR (status IN (READY, OPEN) AND endAt <= now)`
 
-기본 정렬: 최신 등록순. Frontend 요구에 따라 종료임박순을 추가할 수 있음.
+기본 정렬: 최신 등록순 (등록 시각이 같으면 id가 큰 순). Frontend 요구에 따라 종료임박순을 추가할 수 있음.
 
 지역·카테고리·상태 필터는 auctions 테이블의 복사된 regionId/category로 처리해 products 조인 없이 인덱스를 탑니다. keyword는 MVP에서 상품 제목 LIKE 검색이며, 부하 테스트에서 병목으로 확인되면 FULLTEXT 검색으로 바꿉니다 ([ERD](../backend/erd.md#auctions)).
 
@@ -87,8 +91,16 @@ Item:
 }
 ```
 
+응답은 [페이지](../05-api-spec.md#페이지) 공통 형식이고 `content`에 Item이 들어갑니다.
+
+- `status`는 서버 시각 기준 논리 상태, `finalized`는 저장 status가 ENDED·CANCELED인지 여부 ([상태 모델](../backend/auction-state.md))
+- `thumbnailUrl`은 상품 이미지 기능이 생기기 전까지 `null`
+
+Errors:
+- 400 VALIDATION_ERROR
+
 ### GET /auctions/{auctionId}
-경매 상세.
+경매 상세. 인증 없이 호출할 수 있습니다.
 
 Response `200` 주요 필드:
 ```json
@@ -188,6 +200,7 @@ Response:
 Frontend는 이 표로 시작가·입찰가·maxAmount가 유효 금액인지 입력 즉시 검증하고, 표를 코드에 하드코딩하지 않습니다. 정책이 바뀌면 이 응답만 바뀝니다. 최종 검증은 Backend가 수행합니다.
 
 ### GET /auctions/{auctionId}/bid-policy
+인증 필요. 입찰 금액을 입력할 때 쓰는 조회입니다.
 
 Response:
 ```json
@@ -291,7 +304,7 @@ Errors (위에서부터 먼저 확인):
 - `Idempotency-Key` 헤더는 보내도 되지만 중복 요청 처리는 다음 스프린트에서 붙입니다.
 
 ### GET /auctions/{auctionId}/bids
-공개 Bid 이력.
+공개 Bid 이력. 인증 없이 호출할 수 있습니다.
 
 Query:
 - page / size

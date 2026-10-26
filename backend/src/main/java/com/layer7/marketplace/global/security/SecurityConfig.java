@@ -55,6 +55,11 @@ public class SecurityConfig {
 					"/api/v1/regions",
 					"/api/v1/categories",
 					"/api/v1/bid-increment-policy",
+					// 로그인하지 않아도 경매 목록·상세·입찰 이력은 볼 수 있다.
+					// 입찰·자동입찰·입찰 정책(/auctions/{id}/bid-policy) 같은 입찰용 API는 막아 둔다
+					"/api/v1/auctions",
+					"/api/v1/auctions/*",
+					"/api/v1/auctions/*/bids",
 					"/actuator/health"
 				)
 				.permitAll()
