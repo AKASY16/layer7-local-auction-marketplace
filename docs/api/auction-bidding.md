@@ -100,7 +100,7 @@ Errors:
 - 400 VALIDATION_ERROR
 
 ### GET /auctions/{auctionId}
-경매 상세.
+경매 상세. 인증 없이 호출할 수 있습니다.
 
 Response `200` 주요 필드:
 ```json
@@ -200,6 +200,7 @@ Response:
 Frontend는 이 표로 시작가·입찰가·maxAmount가 유효 금액인지 입력 즉시 검증하고, 표를 코드에 하드코딩하지 않습니다. 정책이 바뀌면 이 응답만 바뀝니다. 최종 검증은 Backend가 수행합니다.
 
 ### GET /auctions/{auctionId}/bid-policy
+인증 필요. 입찰 금액을 입력할 때 쓰는 조회입니다.
 
 Response:
 ```json
@@ -303,7 +304,7 @@ Errors (위에서부터 먼저 확인):
 - `Idempotency-Key` 헤더는 보내도 되지만 중복 요청 처리는 다음 스프린트에서 붙입니다.
 
 ### GET /auctions/{auctionId}/bids
-공개 Bid 이력.
+공개 Bid 이력. 인증 없이 호출할 수 있습니다.
 
 Query:
 - page / size
