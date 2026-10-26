@@ -1,123 +1,46 @@
 import styled from 'styled-components'
 
-export const AuthPage = styled.main`
+// 로그인·회원가입 화면 틀. 입력칸·버튼은 components/common의 공통 부품을 쓴다
+export const AuthPage = styled.section`
   display: flex;
-  justify-content: center;
-  padding: 40px 20px;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space.xl};
+  padding: ${({ theme }) => theme.space.xl} 0 40px;
 `
 
-export const AuthPanel = styled.section`
-  width: 100%;
-  max-width: 440px;
-  text-align: left;
+export const AuthHeading = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space.xs};
+`
 
-  h2 {
-    text-align: center;
-  }
+export const AuthTitle = styled.h2`
+  font-size: ${({ theme }) => theme.fontSizes.title};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.primaryDark};
+`
 
-  > p {
-    margin: 12px 0 20px;
-    text-align: center;
-  }
+export const AuthDescription = styled.p`
+  font-size: ${({ theme }) => theme.fontSizes.bodySmall};
+  color: ${({ theme }) => theme.colors.textSub};
 `
 
 export const AuthForm = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: ${({ theme }) => theme.space.lg};
 `
 
-export const AuthField = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-`
+// "이미 계정이 있나요? 로그인"처럼 다른 화면으로 넘어가는 안내
+export const AuthSwitch = styled.p`
+  text-align: center;
+  font-size: ${({ theme }) => theme.fontSizes.bodySmall};
+  color: ${({ theme }) => theme.colors.textSub};
 
-export const AuthLabel = styled.label`
-  font-weight: 600;
-`
-
-export const AuthInput = styled.input`
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 42px;
-  border: 1px solid #9c9ca6;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font: inherit;
-  background: #fff;
-  color: #24212b;
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors?.primary || '#8766bd'};
-    outline-offset: 2px;
-  }
-`
-
-export const AuthButton = styled.button`
-  min-height: 44px;
-  padding: 10px 16px;
-  border: 0;
-  border-radius: 8px;
-  background: ${({ theme }) => theme.colors?.primary || '#c3a3ee'};
-  color: #24212b;
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-
-  &:disabled {
-    cursor: wait;
-    opacity: 0.65;
-  }
-`
-
-export const AuthError = styled.p`
-  color: #b42318;
-  font-size: 0.9rem;
-`
-export const RegionSelect = styled.select`
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 42px;
-  border: 1px solid #9c9ca6;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font: inherit;
-  background: #fff;
-  color: #24212b;
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors?.primary || '#8766bd'};
-    outline-offset: 2px;
-  }
-
-  &:disabled {
-    background: #f4f4f5;
-    cursor: not-allowed;
-  }
-`
-
-export const RegionMessage = styled.p`
-  margin: 4px 0;
-  font-size: 0.9rem;
-`
-
-export const RegionError = styled(RegionMessage)`
-  color: #b42318;
-`
-
-export const RetryButton = styled.button`
-  align-self: flex-start;
-  padding: 8px 12px;
-  color: #24212b;
-  border: 1px solid #9c9ca6;
-  border-radius: 8px;
-  background: #fff;
-  font: inherit;
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid ${({ theme }) => theme.colors?.primary || '#8766bd'};
-    outline-offset: 2px;
+  a {
+    margin-left: ${({ theme }) => theme.space.xs};
+    color: ${({ theme }) => theme.colors.primary};
+    font-weight: ${({ theme }) => theme.fontWeights.semibold};
+    text-decoration: none;
   }
 `

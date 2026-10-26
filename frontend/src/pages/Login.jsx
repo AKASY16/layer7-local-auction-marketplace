@@ -4,14 +4,14 @@ import { authApi } from '../api/client'
 import { getApiErrorMessage } from '../api/errorMessage'
 import {
   AuthPage,
-  AuthPanel,
+  AuthHeading,
+  AuthTitle,
+  AuthDescription,
   AuthForm,
-  AuthField,
-  AuthLabel,
-  AuthInput,
-  AuthButton,
-  AuthError,
+  AuthSwitch,
 } from '../components/AuthFormStyles'
+import Button from '../components/common/Button'
+import { Field, Label, Input, FieldError } from '../components/common/Field'
 
 function Login() {
   const navigate = useNavigate()
@@ -61,48 +61,48 @@ function Login() {
 
   return (
     <AuthPage>
-      <AuthPanel>
-        <h2>로그인</h2>
-        <p>Layer7 Auction에 오신 것을 환영합니다.</p>
+      <AuthHeading>
+        <AuthTitle>로그인</AuthTitle>
+        <AuthDescription>Layer7에 오신 것을 환영합니다.</AuthDescription>
+      </AuthHeading>
 
-        <AuthForm onSubmit={handleSubmit}>
-          <AuthField>
-            <AuthLabel htmlFor="email">이메일</AuthLabel>
-            <AuthInput
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="이메일을 입력해 주세요"
-              autoComplete="email"
-              required
-            />
-          </AuthField>
+      <AuthForm onSubmit={handleSubmit}>
+        <Field>
+          <Label htmlFor="email">이메일</Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="이메일을 입력해 주세요"
+            autoComplete="email"
+            required
+          />
+        </Field>
 
-          <AuthField>
-            <AuthLabel htmlFor="password">비밀번호</AuthLabel>
-            <AuthInput
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="비밀번호를 입력해 주세요"
-              autoComplete="current-password"
-              required
-            />
-          </AuthField>
+        <Field>
+          <Label htmlFor="password">비밀번호</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            placeholder="비밀번호를 입력해 주세요"
+            autoComplete="current-password"
+            required
+          />
+        </Field>
 
-          {errorMessage && <AuthError role="alert">{errorMessage}</AuthError>}
+        {errorMessage && <FieldError role="alert">{errorMessage}</FieldError>}
 
-          <AuthButton type="submit" disabled={isLoading}>
-            {isLoading ? '로그인 중...' : '로그인'}
-          </AuthButton>
-        </AuthForm>
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? '로그인 중...' : '로그인'}
+        </Button>
+      </AuthForm>
 
-        <p>
-          아직 회원이 아니신가요? <Link to="/signup">회원가입</Link>
-        </p>
-      </AuthPanel>
+      <AuthSwitch>
+        아직 회원이 아니신가요?<Link to="/signup">회원가입</Link>
+      </AuthSwitch>
     </AuthPage>
   )
 }
