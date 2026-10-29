@@ -61,7 +61,7 @@ Response:
 ```
 
 ### POST /trades/{tradeId}/proceed
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 
 낙찰자(buyer)만 가능.
 `AWAITING_RESPONSE → IN_PROGRESS`.
@@ -76,7 +76,7 @@ Errors:
 - 409 TRADE_INVALID_STATE
 
 ### POST /trades/{tradeId}/decline
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 
 낙찰자만 가능.
 `AWAITING_RESPONSE → DECLINED`.
@@ -93,7 +93,7 @@ Header: `Idempotency-Key`
 - seller는 새 Auction 재경매 가능
 
 ### POST /trades/{tradeId}/cancel
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 
 일방 취소.
 - seller: `AWAITING_RESPONSE` / `IN_PROGRESS` / `COMPLETION_REQUESTED`에서 가능
@@ -117,7 +117,7 @@ Errors:
 - 409 TRADE_DEADLINE_PASSED
 
 ### POST /trades/{tradeId}/completion-request
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 
 seller 또는 buyer가 `IN_PROGRESS`에서 요청. tradeDeadline 전까지만 가능.
 
@@ -140,7 +140,7 @@ Response:
 ```
 
 ### POST /trades/{tradeId}/completion-confirm
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 
 완료 요청의 **상대방만** 가능. completionDeadline 전까지 가능.
 
@@ -154,7 +154,7 @@ Header: `Idempotency-Key`
 - 양측 Notification
 
 ### POST /trades/{tradeId}/completion-reject
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 
 완료 요청의 상대방만 가능. completionDeadline 전까지 가능.
 

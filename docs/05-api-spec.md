@@ -103,7 +103,14 @@ Auction과 Trade의 `status`는 DB에 저장된 값이 아니라 서버시간 �
 별도 공통 `data` wrapper를 사용하지 않습니다. Resource 또는 Command Result를 직접 반환합니다.
 
 ### Idempotency
-중복 실행 시 부작용이 발생하는 명령 API는 다음 헤더를 필수로 사용합니다.
+
+**P1: HTTP 요청 멱등 기능 전체를 후순위로 둡니다.** 상품·경매 생성·수동입찰과 신규 수요·편성 API에 `Idempotency-Key`를 요구하지 않습니다. 헤더가 전달되어도 이 키의 형식·재사용을 검증하거나 `requestHash`/응답 snapshot을 저장하지 않으며 `Idempotency-Replayed` 응답도 제공하지 않습니다. 재전송은 일반 요청으로 처리하므로 기존 응답 재사용이나 HTTP 단위 중복 실행 방지를 보장하지 않습니다. 인증·입력·도메인 상태 검증과 DB 제약은 그대로 적용합니다.
+
+이는 분석 이벤트 중복 처리 방지·재처리(#66), 종료 Scheduler의 상태 검사·락 기반 중복 실행 방지(#47)를 미루는 결정이 아닙니다.
+
+#### 후순위 도입 후의 HTTP 계약
+
+아래는 HTTP 멱등 기능을 도입한 후 적용할 설계입니다. 중복 실행 시 부작용이 발생하는 명령 API는 다음 헤더를 필수로 사용합니다.
 
 ```http
 Idempotency-Key: <UUID>
@@ -201,7 +208,7 @@ Validation 오류 예:
 | 409 | 현재 상태/동시성/중복키 때문에 명령 수행 불가 |
 | 415 | 지원하지 않는 Content-Type |
 | 500 | 예상하지 못한 서버 오류. 내부 메시지는 응답에 담지 않음 |
-| 503 | 락 대기 시간 초과 등 일시적으로 처리 불가. 같은 Idempotency-Key로 재시도 가능 |
+| 503 | 락 대기 시간 초과 등 일시적으로 처리 불가. P1 재시도는 현재 상태·가격·시간으로 다시 검증하며 기존 응답 재사용을 보장하지 않음 |
 
 ## 주요 Error Code
 
@@ -214,7 +221,7 @@ Validation 오류 예:
 | AMOUNT_LIMIT_EXCEEDED | 400 | 금액 상한(10,000,000원) 초과 |
 | INVALID_UPLOAD | 400 | imageKey가 본인 업로드가 아니거나 만료·미업로드·조건 불일치 |
 | AUCTION_PERIOD_INVALID | 400 | 경매 기간 1시간~7일, 예약 시작 7일 이내 조건 위반 |
-| IDEMPOTENCY_KEY_REQUIRED | 400 | 필수 Idempotency-Key 없음 |
+| IDEMPOTENCY_KEY_REQUIRED | 400 | 후순위 HTTP 멱등 기능 도입 시 필수 Idempotency-Key 없음 |
 | UNAUTHORIZED | 401 | 로그인 필요 |
 | INVALID_TOKEN | 401 | JWT 오류/만료 |
 | INVALID_CREDENTIALS | 401 | 로그인 정보 불일치 |
@@ -247,7 +254,7 @@ Validation 오류 예:
 | TRADE_INVALID_STATE | 409 | 허용되지 않은 Trade 상태전이 |
 | TRADE_RESPONSE_EXPIRED | 409 | 응답기한 종료 |
 | TRADE_DEADLINE_PASSED | 409 | 거래 기한 또는 완료 응답 기한 종료 |
-| IDEMPOTENCY_KEY_REUSED | 409 | 동일 key를 다른 요청에 재사용 |
+| IDEMPOTENCY_KEY_REUSED | 409 | 후순위 HTTP 멱등 기능 도입 시 동일 key를 다른 요청에 재사용 |
 | UNSUPPORTED_MEDIA_TYPE | 415 | 지원하지 않는 Content-Type |
 | INTERNAL_ERROR | 500 | 예상하지 못한 서버 오류 |
 | RESOURCE_BUSY | 503 | 락 대기 시간 초과. 재시도 가능 |

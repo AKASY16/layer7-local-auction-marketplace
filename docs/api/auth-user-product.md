@@ -1,6 +1,6 @@
 # Auth / User / Product API
 
-> 2026-10-29: 현재 구현은 가입·로그인·내 정보·지역 조회입니다. 최소 상품 등록은 #63, 그 외 Refresh·이미지 관리·탈퇴·Favorite 등은 후순위 설계입니다. 기존 지역 계약은 유지하며 수집품 식별 정보는 #62에서 확정합니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
+> 2026-10-29: 현재 구현은 가입·로그인·내 정보·지역 조회입니다. 최소 상품 등록(#63)은 최초 이미지 업로드·연결·표시를 포함합니다. Refresh·등록 후 이미지 편집/정리 배치·탈퇴·Favorite 등은 후순위 설계입니다. 기존 지역 계약은 유지하며 수집품 식별 정보는 #62에서 확정합니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
 
 ## 1. Auth
 
@@ -294,6 +294,8 @@ Category code/label 목록.
 
 ### 이미지 업로드
 
+**P1 필수:** 업로드 URL 발급 → 파일 PUT → 이미지 1~10장과 상품을 함께 등록 → 상품·경매 조회에서 이미지 확인. 아래 파일 형식·크기·본인 업로드·객체 존재 검증을 적용합니다. 등록 후 이미지 추가·삭제·재정렬, 정리 배치와 썸네일 생성은 후순위이며 대표 이미지는 등록된 첫 이미지 URL을 사용합니다. 아직 미구현이며 #63에서 등록 경로와 함께 구현합니다.
+
 상품 이미지는 Presigned URL로 클라이언트가 Object Storage에 직접 업로드합니다. 백엔드는 파일 본문을 받지 않고 objectKey만 등록합니다.
 
 ```text
@@ -343,7 +345,7 @@ Response `201`:
 
 ### POST /products
 인증 필요. 상품과 초기 이미지를 함께 등록.
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 
 Request:
 ```json
@@ -425,7 +427,7 @@ Errors:
 
 ### POST /products/{productId}/images
 판매자 전용. 핵심정보 수정과 같은 조건에서만 이미지 추가.
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 
 Request:
 ```json

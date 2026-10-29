@@ -240,7 +240,10 @@ COMMIT
 ## Idempotency / 중복 요청 처리
 
 ### HTTP 명령
-다음과 같이 중복 실행 시 부작용이 생길 수 있는 명령형 API는 `Idempotency-Key`를 사용:
+
+이번 P1에서는 HTTP 요청 멱등 기능과 관련 테스트를 모두 후순위로 둡니다. 키를 필수로 받거나 검증하지 않고, 전달된 키로 요청을 선점하거나 응답을 재사용하지 않습니다. 같은 요청을 다시 보내면 현재 상태·가격·시간에 따라 일반 요청으로 재검증합니다. 분석 이벤트(#66)와 종료 Scheduler(#47)의 중복 실행 방지는 별도로 유지합니다.
+
+아래는 **HTTP 멱등 기능 도입 후 적용할 설계**입니다. 다음과 같이 중복 실행 시 부작용이 생길 수 있는 명령형 API는 `Idempotency-Key`를 사용:
 - 경매 생성
 - 수동입찰
 - AutoBid 신규 설정 / maxAmount 변경
@@ -264,7 +267,7 @@ COMMIT
 
 ### Scheduler / 도메인 이벤트
 Scheduler나 내부 이벤트에는 HTTP용 Idempotency-Key를 사용하지 않음.
-대신 다음 조합으로 중복 실행 방지:
+P1의 분석 이벤트는 #66의 입찰 식별자 기반 처리 이력으로 중복을 막고 재처리합니다. 종료는 아래 Auction 규칙을 적용합니다. 나머지 후순위 도메인은 해당 기능 도입 시 다음 조합으로 중복을 방지합니다:
 - Auction 종료: Auction 상태검사 + PESSIMISTIC_WRITE
 - Trade 생성: `UNIQUE(auctionId)`
 - Trade 기한 처리: Trade 상태검사 + PESSIMISTIC_WRITE

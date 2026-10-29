@@ -64,4 +64,4 @@ User >──< Product
 - 신뢰점수는 표시용이며 제재는 UserRestriction(기간제 거래 참여 정지)으로 분리
 - Notification과 PushSubscription 분리
 - ProductAppend는 특정 Auction 중 추가 고지 전용이며 Product는 Auction을 통해 파생. 경매 상세는 같은 Product의 모든 Auction 고지를 함께 보여줌
-- 명령형 HTTP 중복실행은 IdempotencyRequest로 제어
+- HTTP 요청 멱등 기능과 IdempotencyRequest 연동은 후순위. P1 분석 이벤트(#66)와 종료(#47)의 중복 실행 방지는 유지
