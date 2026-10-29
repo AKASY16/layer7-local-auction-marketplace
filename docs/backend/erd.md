@@ -1,4 +1,6 @@
-# ERD / DB Schema - V1 후보
+# ERD / DB Schema
+
+> 2026-10-29 적용 범위: V1 스키마와 V2 지역 시드는 이미 Flyway로 적용됩니다. 아래 테이블 존재가 해당 기능의 구현 완료를 뜻하지는 않습니다. P1 권한·분석·상품 식별·수요·추천 변경안은 #61·#62에서 확정하며 기존 migration 소급 수정 대신 새 migration으로 관리합니다. [현재 요구사항](../02-requirements.md).
 
 ## 공통 원칙
 - MySQL 8.4 / InnoDB / utf8mb4

@@ -1,5 +1,7 @@
 # Scheduler
 
+> 2026-10-29 적용 범위: P1 필수는 경매 종료·낙찰 확정(#47)입니다. 시작 Scheduler는 최소 시연 흐름에 맞춰 판단하며, 거래 기한·알림·토큰/업로드 정리는 해당 기능 도입 때 적용합니다. [현재 요구사항](../02-requirements.md).
+
 경매 시작·종료와 거래 기한을 처리하는 Scheduler의 실행 규칙입니다. 정합성은 논리 시간 판정과 락이 보장하므로, Scheduler가 늦게 실행되어도 결과가 틀리지는 않습니다. 실행 주기는 "논리적으로 끝난 뒤 후처리가 반영되기까지 사용자가 얼마나 기다리는가"를 정하는 값입니다.
 
 ## 작업 목록
@@ -7,7 +9,7 @@
 | 작업 | 조회 조건 | 주기 | 처리 |
 |---|---|---|---|
 | 경매 시작 | `status = READY AND startAt <= now AND endAt > now` | 1초 | READY → OPEN. 쓰기 요청이 먼저 바꿨으면 건너뜀 |
-| 경매 종료 | `status IN (READY, OPEN) AND endAt <= now` | 1초 | ENDED, winningBid 확정, Trade 생성, 알림 |
+| 경매 종료 | `status IN (READY, OPEN) AND endAt <= now` | 1초 | ENDED, winningBid 확정 (Trade·알림은 후순위) |
 | 낙찰 미응답 | `status = AWAITING_RESPONSE AND responseDeadline <= now` | 1분 | NO_RESPONSE, 신뢰점수, 연속 실패·정지 판정 |
 | 거래 기한 만료 | `status = IN_PROGRESS AND tradeDeadline <= now` | 1분 | EXPIRED |
 | 완료 자동 확정 | `status = COMPLETION_REQUESTED AND completionDeadline <= now` | 1분 | COMPLETED, 신뢰점수, 상품 SOLD |

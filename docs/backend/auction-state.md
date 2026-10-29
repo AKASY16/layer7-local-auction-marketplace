@@ -1,5 +1,7 @@
 # Auction / Trade 상태 모델
 
+> 2026-10-29 적용 범위: P1의 종료 처리는 winningBid 확정까지입니다. 아래 Trade·거래 기한·재경매는 후순위이며 Auction.finalized를 위해 Trade 생성을 요구하지 않습니다. 논리 종료와 저장 상태 확정의 구분은 유지합니다. [현재 요구사항](../02-requirements.md).
+
 ## Auction
 
 상태는 `READY / OPEN / ENDED / CANCELED`입니다.
@@ -35,13 +37,13 @@ READY     저장 status가 READY이면서 now < startAt
 ```
 
 - READY → OPEN은 따라붙는 부작용이 없으므로, 쓰기 경로가 Auction 락을 잡은 뒤 논리 상태는 OPEN인데 저장값이 READY면 그 자리에서 OPEN으로 바꾸고 진행합니다. 시작 Scheduler는 놓친 전이를 뒤늦게 맞추는 용도입니다.
-- OPEN → ENDED는 winningBid 확정·Trade 생성·알림이 따라붙으므로 종료 Scheduler만 수행합니다. 그 전까지는 논리 상태가 ENDED라서 입찰을 거절합니다.
+- OPEN → ENDED는 winningBid 확정이 필요하므로 종료 Scheduler만 수행합니다. Trade 생성·알림은 후순위 도입 시 연결합니다. 그 전까지는 논리 상태가 ENDED라서 입찰을 거절합니다.
 - 종료 Scheduler 대상은 `status IN (READY, OPEN) AND endAt <= now`입니다. 시작 전이조차 못 한 채 끝난 경매도 정리됩니다.
 - 저장 상태를 바꾼 쪽이 AFTER_COMMIT으로 상태 이벤트를 발행합니다.
 - `finalized`는 저장 status가 ENDED 또는 CANCELED인지 여부입니다. 논리 상태가 ENDED여도 finalized가 false면 낙찰 확정 전입니다.
 - 회원탈퇴·상품 삭제의 의무 검사와 재경매 조건은 저장 상태(finalized) 기준으로 판단합니다. 정산 전 경매에는 아직 Trade가 없으므로 논리 상태만 보고 유찰로 판단하면 안 됩니다.
 - ENDED + finalized + winningBidId == null 이면 유찰, winningBidId != null 이면 낙찰입니다.
-- 낙찰 시에만 Trade를 생성하며, responseDeadline은 `Auction.endAt + 24시간`으로 계산합니다.
+- 후순위 Trade 도입 시에는 낙찰 시에만 생성하며, responseDeadline은 `Auction.endAt + 24시간`으로 계산합니다.
 
 ## Trade
 

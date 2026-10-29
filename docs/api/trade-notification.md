@@ -1,5 +1,7 @@
 # Trade / Trust / Notification API
 
+> 2026-10-29: 이 문서는 Trade·신뢰점수·범용 알림의 후순위 설계입니다. 이번 P1의 경매 종료·낙찰 확정은 Trade 생성에 의존하지 않습니다. 수요 관련 알림이 필요하면 최소 범위를 별도로 정합니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
+
 ## 1. Trade
 
 TradeStatus:

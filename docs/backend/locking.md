@@ -1,5 +1,7 @@
 # 락 순서와 트랜잭션 규칙
 
+> 2026-10-29 적용 범위: P1에서도 기존 입찰의 Auction → 입찰자 User(FOR SHARE), 락 후 시각 판정과 전역 순서를 유지합니다. Trade·AutoBid 관련 항목은 후순위 설계입니다. 위험 분석 계산·외부 호출은 입찰 트랜잭션 안에 추가하지 않습니다. [현재 요구사항](../02-requirements.md).
+
 경매·상품·거래·사용자 데이터를 바꾸는 쓰기 작업의 락 획득 규칙입니다. 동시성 버그와 데드락은 대부분 작업마다 "어떤 락을 어떤 순서로 잡는가"가 달라서 생기므로, 모든 쓰기 경로는 이 문서의 규칙을 따릅니다.
 
 ## 격리 수준
@@ -32,7 +34,7 @@ Product → Auction → Trade → User (여러 명이면 id 오름차순)
 | 상품 삭제 | Product |
 | 수동입찰·AutoBid 설정/변경 | Auction → 입찰자 User(FOR SHARE) |
 | AutoBid 중지·판매자 경매 취소·ProductAppend | Auction |
-| 경매 시작·종료 Scheduler | Auction (Trade는 INSERT만) |
+| 경매 시작·종료 Scheduler | Auction (P1은 Trade 생성 제외, 향후 도입 시 INSERT) |
 | Trade 명령·Trade 기한 Scheduler | Product → Trade → (신뢰점수·정지가 바뀌면) 당사자 User |
 | 회원탈퇴 | User |
 

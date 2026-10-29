@@ -1,12 +1,14 @@
 # API 명세 v1
 
+> **2026-10-29 적용 범위:** [요구사항](02-requirements.md)이 이번 P1 범위를 정합니다. 아래 계약에는 미구현·후순위 설계가 포함됩니다. 현재 구현된 REST API는 가입·로그인·내 정보·지역·경매 목록·수동입찰 6개이며, P1 신규 API·관리자 권한·ERD는 #61·#62에서 확정합니다.
+
 Base URL: `/api/v1`
 
 이 문서는 Frontend/Backend 간 계약의 기준입니다. 실제 구현 시 DTO/Controller 이름은 달라질 수 있지만 HTTP method, path, payload 의미, 상태코드와 비즈니스 규칙은 이 명세를 기준으로 합니다.
 
 ## API 문서 운영
 
-마크다운 명세와 코드에서 자동 생성하는 Swagger 문서(springdoc-openapi)를 역할을 나눠 함께 씁니다.
+마크다운 명세와 Swagger 문서(springdoc-openapi)를 나누어 운영하는 계획입니다. 현재 springdoc/Swagger는 미도입이므로 구현된 API도 코드·테스트와 마크다운을 대조합니다. 아래 Swagger 운영 규칙은 도입 후 적용합니다.
 
 | 문서 | 담는 것 | 기준이 되는 때 |
 |---|---|---|
@@ -62,7 +64,7 @@ Access Token과 Refresh Token을 함께 사용합니다. 경매는 마감 직전
 ### 상태와 finalized
 Auction과 Trade의 `status`는 DB에 저장된 값이 아니라 서버시간 기준 **논리 상태**로 반환합니다. 저장 상태는 Scheduler가 뒤따라 맞추는 값이고, 시간 경계의 기준은 startAt/endAt과 각 기한입니다.
 
-`finalized`는 저장 상태가 최종 상태에 도달해 후처리(낙찰 확정·Trade 생성·신뢰점수·정지·알림 등)가 끝났는지를 나타냅니다.
+`finalized`는 해당 자원의 확정 처리가 저장 상태까지 반영됐는지를 나타냅니다. 이번 P1에서 Auction은 종료·winningBid 확정까지이며 Trade 생성·신뢰점수·알림을 요구하지 않습니다. 아래 Trade 상태·기한 후처리는 후순위 설계입니다.
 - Auction: 저장 status가 ENDED 또는 CANCELED면 true
 - Trade: 저장 status가 COMPLETED / DECLINED / NO_RESPONSE / CANCELED / EXPIRED면 true
 

@@ -1,24 +1,22 @@
-# 지역 기반 중고거래 경매 플랫폼
+# LAYER7 — 전국 수집품 경매 플랫폼
 
-TEAM LAYER7의 캡스톤 프로젝트입니다.
+TEAM LAYER7의 3인 캡스톤 프로젝트입니다. 전국의 수집품을 대상으로 경매 플랫폼을 개발합니다. 현재 서비스 작업명은 Layer7이며 최종 명칭은 별도 결정합니다.
 
-지역 기반 중고거래에 제한시간 경매를 결합한 웹 애플리케이션을 개발합니다. 판매자는 상품과 경매 조건을 설정하고, 구매자는 수동 입찰 또는 자동 입찰에 참여합니다. 경매 종료 후에는 낙찰자의 거래 의사 확인부터 거래 완료·포기·미응답까지의 상태를 관리합니다.
+## 현재 개발 목표 — P1 최종 시연
 
-> TEAM LAYER7은 팀명이며 최종 서비스명은 아직 미정입니다.
+2026-10-29 기준 최종 시연까지 3~4주 동안 다음 두 기술의 구현·비교 실험에 집중합니다.
 
-## Backend Technical Focus
+- **이상입찰 탐지:** 논문을 근거로 입찰 행동을 분석하고 위험 점수·판단 근거·오탐 감소 결과를 제공합니다. 원문 지표·수식은 아직 미확인 상태이며 구현 완료를 뜻하지 않습니다.
+- **수요 기반 매칭·마감 편성:** 구매 희망과 상품 동일성을 매칭하고, 참여 가능 시간·대체 상품 경매·판매자 제약을 고려해 마감 시간을 추천합니다.
 
-단순 CRUD 기능 수보다 **실시간 경매에서 발생하는 경쟁 상태와 데이터 정합성 문제**를 핵심 기술 주제로 다룹니다.
+경매는 두 기술을 연결할 최소 MVP로 개발합니다. 기존 입찰 엔진의 비관적 락, 락 이후 서버 시각 판정, 판정 시각 기록과 MySQL 동시성 검증을 유지합니다. Trade·자동입찰·신뢰점수 변경·범용 Push·배송·결제·채팅은 후순위이고 WebSocket·실시간 ML 추론은 선택 범위입니다.
 
-- 동시에 여러 입찰이 들어올 때 현재가·최고입찰자·Bid 이력의 정합성
-- 수동입찰과 여러 AutoBid의 경쟁
-- 경매 종료 시각과 마지막 입찰의 race condition
-- 중복 요청 / Scheduler 중복 실행에 대한 멱등성
-- Transaction commit 이후 WebSocket / Web Push 전달
-- Testcontainers + MySQL 기반 동시성 통합테스트
-- 부하 테스트 및 운영 지표를 통한 병목 분석
+| 현재 구현 | 추가로 필요한 것 |
+|---|---|
+| 가입·로그인·내 정보·지역·공개 경매 목록·수동입찰 API | 상품 등록·경매 생성/상세·입찰 이력·종료/낙찰 확정 |
+| 홈 목록·가입/로그인 화면·공통 디자인·분리된 demo DB | 두 기술의 모듈·관리자 권한·화면·비교 실험·통합 시연 |
 
-기술 복잡도를 불필요하게 높이지 않고, 실제 문제와 측정 근거가 있을 때 MSA/Kafka/Redis 등의 도입을 검토합니다.
+[현재 요구사항](docs/02-requirements.md) · [P1 범위와 선행 작업](docs/p1/README.md) · [최종 시연 마일스톤](https://github.com/AKASY16/layer7-local-auction-marketplace/milestone/2)
 
 ## Team
 
@@ -33,16 +31,16 @@ TEAM LAYER7의 캡스톤 프로젝트입니다.
 - Frontend: React 19, Vite, JavaScript, Styled Components, React Router
 - Backend: Java 25, Spring Boot 4.1, Spring Data JPA, Spring Security + JWT, Flyway
 - Database: MySQL 8.4
-- Realtime: WebSocket(STOMP)
+- Realtime: WebSocket(STOMP) 설계는 보존하며 P1 화면 갱신 수단은 별도 선택
 - Auction consistency: Transaction / Lock
-- Scheduler: 예약 시작, 경매 종료, 낙찰 응답·거래 기한 처리
+- Scheduler: 경매 종료·낙찰 확정 구현 예정 (#47), 거래 기한 처리는 후순위
 - File: Object Storage
-- Deploy: Docker
-- Development Assist: ChatGPT, Claude Code
+- Local Infrastructure: Docker Compose (MySQL·S3 호환 저장소). 운영 배포 환경은 미정
+- Development Assist: ChatGPT, Claude Code, Codex
 
 ## Core Flow
 
-회원/지역 → 상품 등록 → 예약 또는 즉시 경매 → 수동/자동 입찰 → 경매 종료 → 낙찰 → 거래 응답 → 거래 진행 → 양측 완료 확인
+개발 목표: 구매 희망 등록 → 상품 매칭·수요 집계 → 마감 추천 → 경매 생성 → 정상/의심 입찰 → 위험 분석 → 종료·낙찰 확정 → 비교 실험 확인
 
 ## Project Structure
 
@@ -87,7 +85,7 @@ npm run dev
 | Access Key / Secret Key | `local` / `localsecret` (로컬 전용) |
 | 이미지 공개 URL | `http://localhost:8333/product-images/{objectKey}` |
 
-업로드는 서명된 URL로만 가능하고, 읽기는 누구나 가능합니다.
+저장소 접근 정책은 서명된 URL 업로드·공개 읽기를 전제로 합니다. 상품 이미지 업로드 API는 아직 구현되지 않았습니다.
 
 백엔드 테스트는 Testcontainers로 MySQL 8.4를 띄우므로 Docker가 실행 중이어야 합니다.
 

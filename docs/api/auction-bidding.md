@@ -1,5 +1,7 @@
 # Auction / Bid / AutoBid API
 
+> 2026-10-29: 현재 구현은 경매 목록과 수동입찰입니다. P1 필수는 경매 생성/상세(#64), 입찰 이력(#65), 종료·낙찰(#47)이며 AutoBid·재경매·ProductAppend는 후순위입니다. 아래 미구현 응답 예시를 현재 동작으로 간주하지 않습니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
+
 ## 1. Auction
 
 ### POST /products/{productId}/auctions
@@ -155,9 +157,10 @@ Header: `Idempotency-Key`
 기존 Auction은 변경하지 않고 동일 Product에 새 Auction 생성.
 
 허용 조건:
-- 원 Auction이 finalized ENDED (정산 전에는 Trade가 아직 없으므로 유찰로 판단하지 않음)
+- 원 Auction이 finalized ENDED (유찰 여부는 winningBid로 판단하며 Trade 유무만으로 판단하지 않음)
 - Product.status = ACTIVE
-- Trade가 없으면(유찰) 허용
+- 유찰(finalized ENDED, winningBid == null)이면 허용
+- 아래 Trade 기반 재경매 규칙은 후순위 도입 후 적용. 이번 P1에서 Trade가 없다는 사실만으로 유찰로 판단하지 않음
 - Trade가 있으면 finalized 상태가 DECLINED / NO_RESPONSE / CANCELED / EXPIRED일 때만 허용
 - AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED / COMPLETED이면 불가
 

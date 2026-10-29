@@ -12,7 +12,7 @@
 
 - Frontend와 Backend를 분리해 병렬 개발하고 API 명세를 연동 기준으로 사용합니다.
 - 기능별 Branch와 Pull Request를 사용해 변경사항을 검토한 뒤 통합합니다.
-- 회원·상품 → 경매 → 입찰 → 낙찰 → 거래 진행 순으로 핵심 거래 흐름을 우선 구현합니다.
+- 현재는 [P1](p1/README.md)의 이상입찰 탐지·수요 매칭·마감 편성을 우선하고 경매는 이를 연결할 최소 MVP로 개발합니다. 개인별 새 분담은 별도 확정합니다.
 - 경매 정책, API 변경, 공통 기능은 팀 단위로 합의합니다.
 - AI가 생성하거나 수정한 코드는 담당 개발자가 직접 검토한 뒤 반영합니다.
 
@@ -21,7 +21,8 @@
 ```text
 Issue 고르기 → 보드에서 In Progress로 이동 → 브랜치 만들기 → 커밋
 → PR 올리기 (본문에 Closes #이슈번호) → 보드에서 In Review로 이동
-→ 리뷰 · 승인 1개 + CI 통과 → Squash and merge → 브랜치 삭제 → 이슈 자동 종료(Done)
+→ 리뷰 · 승인 1개 + CI 통과 → Squash and merge → 브랜치 삭제
+→ 이슈 종료 확인 → 보드 Done 확인(자동 이동과 별개)
 ```
 
 - 작업은 모두 GitHub Issue에서 시작합니다. 이슈가 없는 작업이면 먼저 이슈를 만듭니다.
@@ -98,5 +99,5 @@ git switch -c feat/21-bid-increment-policy
 - Database: MySQL 8.4
 - Auction: WebSocket(STOMP) · Transaction/Lock · Scheduler
 - File / Deploy: Object Storage · Docker
-- AI: Multimodal AI API 검토
-- 개발 보조 도구: ChatGPT · Claude Code
+- 알고리즘: 논문 기반 이상입찰 탐지와 수요 기반 매칭·마감 편성. 구체 모델·실험 환경은 검토 중
+- 개발 보조 도구: ChatGPT · Claude Code · Codex
