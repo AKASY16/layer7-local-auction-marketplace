@@ -1,10 +1,12 @@
 # Auction / Bid / AutoBid API
 
+> 2026-10-29: 현재 구현은 경매 목록과 수동입찰입니다. P1 필수는 경매 생성/상세(#64), 입찰 이력(#65), 종료·낙찰(#47)이며 AutoBid·재경매·ProductAppend는 후순위입니다. 아래 미구현 응답 예시를 현재 동작으로 간주하지 않습니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
+
 ## 1. Auction
 
 ### POST /products/{productId}/auctions
 판매자 전용.
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 
 Request:
 ```json
@@ -94,7 +96,7 @@ Item:
 응답은 [페이지](../05-api-spec.md#페이지) 공통 형식이고 `content`에 Item이 들어갑니다.
 
 - `status`는 서버 시각 기준 논리 상태, `finalized`는 저장 status가 ENDED·CANCELED인지 여부 ([상태 모델](../backend/auction-state.md))
-- `thumbnailUrl`은 상품 이미지 기능이 생기기 전까지 `null`
+- 현재 구현의 `thumbnailUrl`은 `null`. P1의 최초 이미지 등록(#63) 이후에는 등록된 첫 이미지 URL을 반환해 표시하며 썸네일 변환 기능은 요구하지 않음
 
 Errors:
 - 400 VALIDATION_ERROR
@@ -150,14 +152,15 @@ Response `200` 주요 필드:
 Response `200`: Auction 상태.
 
 ### POST /auctions/{auctionId}/relist
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 
 기존 Auction은 변경하지 않고 동일 Product에 새 Auction 생성.
 
 허용 조건:
-- 원 Auction이 finalized ENDED (정산 전에는 Trade가 아직 없으므로 유찰로 판단하지 않음)
+- 원 Auction이 finalized ENDED (유찰 여부는 winningBid로 판단하며 Trade 유무만으로 판단하지 않음)
 - Product.status = ACTIVE
-- Trade가 없으면(유찰) 허용
+- 유찰(finalized ENDED, winningBid == null)이면 허용
+- 아래 Trade 기반 재경매 규칙은 후순위 도입 후 적용. 이번 P1에서 Trade가 없다는 사실만으로 유찰로 판단하지 않음
 - Trade가 있으면 finalized 상태가 DECLINED / NO_RESPONSE / CANCELED / EXPIRED일 때만 허용
 - AWAITING_RESPONSE / IN_PROGRESS / COMPLETION_REQUESTED / COMPLETED이면 불가
 
@@ -226,7 +229,7 @@ Frontend 편의를 위한 조회이며 최종 검증은 Bid 요청 Transaction �
 
 ### POST /auctions/{auctionId}/bids
 인증 필요.
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 
 Request:
 ```json
@@ -301,7 +304,7 @@ Errors (위에서부터 먼저 확인):
 ### 현재 구현 범위 — Sprint 1 (#27)
 
 - AutoBid가 아직 없어 `resolution`은 항상 `LEADING`이고, `acceptedBid: null`인 `200` 응답은 없습니다.
-- `Idempotency-Key` 헤더는 보내도 되지만 중복 요청 처리는 다음 스프린트에서 붙입니다.
+- P1에서는 HTTP 요청 멱등 기능 자체를 미룹니다. `Idempotency-Key`는 필수가 아니고 전달되어도 검증·중복 처리·응답 재사용에 사용하지 않습니다. 분석 이벤트(#66)와 종료 처리(#47)의 중복 방지는 별도로 필수입니다.
 
 ### GET /auctions/{auctionId}/bids
 공개 Bid 이력. 인증 없이 호출할 수 있습니다.
@@ -335,7 +338,7 @@ Response:
 
 ### PUT /auctions/{auctionId}/auto-bid
 신규 설정 또는 기존 maxAmount 변경/재활성화.
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 
 AutoBid는 저장만 해두는 예약값이 아니라 **설정/변경 요청이 성공한 Transaction 안에서 즉시 경매 경쟁에 참여**합니다.
 
@@ -400,7 +403,7 @@ Response `200`:
 설정 직후 바로 지는 경우에도 HTTP 요청 자체는 성공이며, 결과를 resolution과 `autoBid.status`로 전달합니다.
 
 ### DELETE /auctions/{auctionId}/auto-bid
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 
 AutoBid를 삭제하지 않고 `STOPPED`로 전환. 이미 성립한 Bid에는 영향 없음. 거래 참여 정지 중에도 중지는 가능합니다.
 현재 선두 사용자가 AutoBid를 중지해도 이미 성립한 leadingBid는 그대로 유지되며 가격은 내려가지 않습니다.
@@ -423,7 +426,7 @@ Response `200`: AutoBid 상태.
 
 ### POST /auctions/{auctionId}/appends
 판매자 전용.
-Header: `Idempotency-Key`
+Header: `Idempotency-Key`는 후순위 HTTP 멱등 기능 도입 시 적용 (P1에서는 불필요·전달 시 무시)
 - 논리 상태 READY 또는 OPEN (입찰 여부 무관)
 - content 1~200자
 - 경매당 최대 10건 (`409 PRODUCT_APPEND_LIMIT`)

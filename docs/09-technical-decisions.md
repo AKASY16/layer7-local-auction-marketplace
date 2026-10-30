@@ -1,15 +1,13 @@
 # 기술 의사결정
 
-## 프로젝트 기술 목표
-이 프로젝트는 캡스톤 결과물로서 실제 서비스 수준의 백엔드 안정성과 설계 근거를 확보하는 것을 목표로 합니다.
+## 현재 기술 목표 — P1
 
-따라서 기능 수를 무리하게 늘리기보다 **실시간 경매 도메인에서 발생하는 경쟁 상태와 데이터 정합성 문제를 설계·구현·검증하는 것**을 기술 중심축으로 둡니다.
+전국 수집품 경매에서 **이상입찰 탐지와 수요 기반 매칭·마감 편성을 구현·비교·검증**합니다. 기존 입찰 정합성은 두 기술의 기반으로 유지합니다. 적용 범위의 원본은 [요구사항](02-requirements.md)이며 평가 기준은 [실험 계획](p1/experiments.md)입니다.
 
-핵심 설명 문장:
+## 기존 기술·정책 결정
 
-> 실시간 경매라는 경쟁 상태가 발생하는 도메인에서 Transaction, Lock, 자동입찰, 상태 전이, Scheduler를 이용해 데이터 정합성을 설계하고 테스트한다.
+아래에는 현재 구현과 후순위 설계가 함께 있습니다. Refresh·Swagger·WebSocket·AutoBid·Trade 등이 구현 완료라는 뜻은 아닙니다. 실제 구현 상태와 이번 적용 범위는 요구사항을 따릅니다.
 
-## 확정
 - 서비스 형태: 웹 애플리케이션
 - Frontend: React 19 / Vite / JavaScript / Styled Components / React Router / oxlint / Prettier
 - Backend: Java 25 / Spring Boot 4.1 / Spring Data JPA / Spring Security + JWT / Flyway / Gradle
@@ -19,7 +17,7 @@
 - API 문서: 정책·흐름은 마크다운, 엔드포인트별 필드는 코드에서 생성하는 Swagger(springdoc-openapi). 구현 전에는 마크다운이 기준
 - 실시간 전달: WebSocket(STOMP). 경매 이벤트에 `version`을 넣어 순서를 판단하고, 발송은 AFTER_COMMIT 이후 별도 executor에서 수행
 - Scheduler: 예약 시작 / 종료 / 응답 마감
-- 이미지 저장: Object Storage. 클라이언트가 Presigned URL로 직접 업로드하고 백엔드는 objectKey만 등록
+- 이미지 저장: Object Storage. Presigned URL 발급·직접 업로드·최초 등록·표시는 P1 필수, 등록 후 이미지 편집·정리 배치는 후순위
 - 배포 단위: Docker
 - 수동입찰 + 자동입찰
 - 입찰 금액은 서비스 공통 가격구간별 `BidIncrementPolicy`의 유효 가격 격자를 사용
@@ -46,9 +44,9 @@
 - 거래 기한은 `endAt + 7d`, 완료 요청을 받은 상대방에게는 요청 시점부터 최소 24시간 보장
 - 거래 일방 취소는 취소한 쪽 -5, 기한 만료(EXPIRED)는 페널티 없음
 - 신뢰점수는 표시용이며 제재는 본인 책임 실패 3회 연속 시 7일 거래 참여 정지(UserRestriction)
-- 부작용이 있는 HTTP 명령은 `Idempotency-Key + requestHash + DB UNIQUE`로 중복 실행 방지
+- 아래 HTTP 요청 멱등 설계는 기능·테스트 모두 후순위. P1은 키를 요구/검증하지 않고 전달되어도 무시함. 도입 후 `Idempotency-Key + requestHash + DB UNIQUE`로 중복 실행 방지
 - 동일 key 재전송은 기존 결과를 재사용하고, 같은 key에 다른 요청 내용은 409 Conflict
-- 멱등 기록은 비즈니스 트랜잭션의 첫 쓰기로 INSERT하고 성공한 결과만 24시간 보관
+- 후순위 HTTP 멱등 기능 도입 시에만 해당 기록을 비즈니스 트랜잭션의 첫 쓰기로 INSERT하고 성공한 결과를 24시간 보관
 - Scheduler/내부 이벤트는 상태 조건, row lock, 도메인 UNIQUE 제약으로 멱등성 보장
 - Trade는 `UNIQUE(auctionId)`, TrustHistory는 `UNIQUE(tradeId,userId,reason)`, Notification은 `dedupeKey UNIQUE` 활용
 - 경매 탐색용으로 auctions에 regionId/category를 복사해 조인 없이 필터링. keyword LIKE 검색은 부하 테스트로 측정한 뒤 개선
@@ -69,26 +67,17 @@
 ## 기술 우선순위
 
 ### 최우선
-- 동시입찰 정합성
-- 자동입찰 경합
-- 경매 종료와 입찰의 race condition
-- 중복 요청 / 멱등성
-- Scheduler 중복 실행 방지
-- WebSocket / Push의 AFTER_COMMIT 처리
-- Testcontainers 기반 실제 MySQL 동시성 테스트
-- 부하 테스트 및 병목 수치 기록
+- LSS 원문·온라인 적용 가능 특성 확인, 위험 점수·오탐 감소·데이터 부족·근거 제공
+- 상품 동일성·구매 희망·시간대 매칭과 마감 추천·설명
+- 공개/합성/실사용 데이터 구분, 기준 방식과 재현 가능한 비교 실험
+- 입찰 커밋 후 분석과 실패·중복 처리, 관리자 권한
+- 최초 이미지 업로드·상품 등록/표시·경매·입찰 이력·종료/낙찰 흐름과 두 기술의 통합 시연
+- 기존 비관적 락·Clock·MySQL 동시성 회귀 검증, 입찰 응답 성능과 분석 지연 분리 측정
 
-### 일반 서비스 기능
-- 회원 / 상품 / 지역
-- Trade 상태 관리
-- 신뢰점수
-- 관심상품 / 알림
-
-### 후순위
-- 자체 채팅
-- 안심결제 / 에스크로
-- 복잡한 관리자 기능
-- 불필요한 소셜 기능
+### 후순위와 선택
+- 자동입찰·Trade·신뢰점수 변경·범용 Push·재경매·Refresh·등록 후 이미지 편집/정리 배치·HTTP 요청 멱등 기능은 후순위
+- WebSocket·실시간 ML 추론·MRF/LOF·임베딩은 선택
+- 관리자 분석 조회 권한은 P1 필수이며 일반적인 관리자 기능 전체를 개발하지 않음
 
 ### 지양
 Kafka, Kubernetes, MSA, Redis 등을 근거 없이 추가하지 않습니다. 실제 병목이나 요구가 확인될 때 도입 여부를 검토합니다.
@@ -97,6 +86,7 @@ Kafka, Kubernetes, MSA, Redis 등을 근거 없이 추가하지 않습니다. �
 - 최종 서비스명
 - 실제 배포 환경
 - Object Storage 제공자
-- 대표 AI 기능 2~3개
-- 추가 차별 기능
+- LSS 원문과 적용 특성·수식, 상품군·카탈로그 출처
+- 정확한 발표일·P1 세부 API/ERD
 
+개인별 담당은 각 이슈의 Assignees와 담당·책임 본문을 따릅니다. [협업 규칙](00-team-and-collaboration.md).

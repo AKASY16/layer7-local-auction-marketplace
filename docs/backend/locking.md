@@ -1,5 +1,7 @@
 # 락 순서와 트랜잭션 규칙
 
+> 2026-10-29 적용 범위: P1에서도 기존 입찰의 Auction → 입찰자 User(FOR SHARE), 락 후 시각 판정과 전역 순서를 유지합니다. Trade·AutoBid 관련 항목은 후순위 설계입니다. 위험 분석 계산·외부 호출은 입찰 트랜잭션 안에 추가하지 않습니다. [현재 요구사항](../02-requirements.md).
+
 경매·상품·거래·사용자 데이터를 바꾸는 쓰기 작업의 락 획득 규칙입니다. 동시성 버그와 데드락은 대부분 작업마다 "어떤 락을 어떤 순서로 잡는가"가 달라서 생기므로, 모든 쓰기 경로는 이 문서의 규칙을 따릅니다.
 
 ## 격리 수준
@@ -20,7 +22,7 @@ Product → Auction → Trade → User (여러 명이면 id 오름차순)
 ```
 
 - 뒤 순서의 락을 쥔 채로 앞 순서의 락을 요청하지 않습니다.
-- Idempotency 기록 INSERT는 이 순서보다 앞, 트랜잭션의 첫 쓰기로 수행합니다. 같은 key의 중복 요청은 도메인 락을 잡지 않은 채 UNIQUE index에서 대기하므로 순환 대기가 생기지 않습니다.
+- 후순위 HTTP 멱등 기능 도입 시에만 Idempotency 기록 INSERT를 이 순서보다 앞, 트랜잭션의 첫 쓰기로 수행합니다. P1에는 이 INSERT가 없습니다. 같은 key의 중복 요청은 도메인 락을 잡지 않은 채 UNIQUE index에서 대기하므로 순환 대기가 생기지 않습니다.
 - 락은 `SELECT ... FOR UPDATE`(PESSIMISTIC_WRITE) 또는 `SELECT ... FOR SHARE`로 잡고 트랜잭션 끝까지 유지합니다.
 
 ## 작업별 락
@@ -32,7 +34,7 @@ Product → Auction → Trade → User (여러 명이면 id 오름차순)
 | 상품 삭제 | Product |
 | 수동입찰·AutoBid 설정/변경 | Auction → 입찰자 User(FOR SHARE) |
 | AutoBid 중지·판매자 경매 취소·ProductAppend | Auction |
-| 경매 시작·종료 Scheduler | Auction (Trade는 INSERT만) |
+| 경매 시작·종료 Scheduler | Auction (P1은 Trade 생성 제외, 향후 도입 시 INSERT) |
 | Trade 명령·Trade 기한 Scheduler | Product → Trade → (신뢰점수·정지가 바뀌면) 당사자 User |
 | 회원탈퇴 | User |
 
@@ -44,7 +46,7 @@ Scheduler는 대상 하나마다 별도 트랜잭션으로 처리합니다. 여�
 
 - 애플리케이션 커넥션의 `innodb_lock_wait_timeout`을 3초로 설정합니다(커넥션 초기화 SQL). MySQL 기본값 50초를 그대로 두면 인기 경매에 요청이 몰릴 때 대기 요청이 커넥션을 쥔 채 쌓여 커넥션 풀 전체가 그 경매에 묶이고, 다른 API까지 멈춥니다.
 - MySQL의 `SELECT ... FOR UPDATE`는 문장 단위 대기 시간을 지정할 수 없으므로 JPA lock timeout 힌트가 아니라 세션 변수로 설정합니다.
-- 락 대기 시간 초과는 `503 RESOURCE_BUSY`로 응답하고, 클라이언트는 같은 Idempotency-Key로 재시도합니다. 실패한 요청은 롤백되어 멱등 기록도 남지 않으므로 재시도가 그대로 실행됩니다.
+- 락 대기 시간 초과는 `503 RESOURCE_BUSY`로 응답하고 실패한 트랜잭션은 롤백됩니다. P1의 재시도는 HTTP 멱등 키 없이 일반 요청으로 현재 상태·가격·시간을 다시 검증하며, 같은 응답의 재사용을 보장하지 않습니다. 분석 이벤트·종료의 중복 실행 방지는 별도로 유지합니다.
 - 한 경매가 처리할 수 있는 초당 입찰 수는 대략 `1 ÷ 락 보유시간`입니다. 부하 테스트에서는 락 보유시간, 락 대기 초과 건수, 커넥션 풀 대기 스레드 수를 함께 기록합니다.
 - 커넥션 풀 크기는 기본값으로 시작해 부하 테스트 결과로 조정합니다.
 

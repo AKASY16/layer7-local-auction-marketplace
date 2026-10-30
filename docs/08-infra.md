@@ -1,5 +1,7 @@
 # Infra / Deployment
 
+> 현재 로컬 인프라는 유지합니다. P1 실험 실행 환경과 운영 배포는 미정이며 별도 모델 서버·브로커 도입을 선확정하지 않습니다. 범위는 [요구사항](02-requirements.md)을 따릅니다.
+
 ## 현재 방향
 - Docker (로컬 개발용 MySQL 8.4와 이미지 저장소 SeaweedFS는 루트 docker-compose.yml)
 - MySQL 8.4

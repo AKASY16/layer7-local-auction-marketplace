@@ -1,5 +1,7 @@
 # 경매 정책 및 비즈니스 규칙
 
+> 2026-10-29 P1: [현재 요구사항](02-requirements.md)이 적용 범위를 정합니다. 수동입찰·가격단위·락/시간 규칙은 유지하며 아래 자동입찰·거래·신뢰점수·재경매는 후순위 설계입니다. 이번 종료 처리는 낙찰 확정까지이며 Trade 생성이 완료 조건이 아닙니다.
+
 ## 입찰
 
 - 수동 입찰과 자동 입찰 모두 지원
@@ -49,7 +51,7 @@ MVP 기본 정책:
 ## 금액 상한과 경매 기간
 
 - startPrice, 수동입찰 금액, AutoBid maxAmount는 모두 10,000,000원 이하
-  - 일상·생활용품 중심 서비스 기준의 상한이며, 장난성 고액 AutoBid로 경매를 망치는 것을 막기 위함
+  - 기존 금액 정책을 P1에서도 유지함. 수집품에 적합한 상한 변경은 별도 근거·결정 후 진행
 - 경매 기간(`endAt - 실제 startAt`)은 1시간 이상 7일 이하
 - 예약 시작 `startAt`은 생성 시점부터 7일 이내
 - 재경매에도 같은 제한을 적용
@@ -238,7 +240,10 @@ COMMIT
 ## Idempotency / 중복 요청 처리
 
 ### HTTP 명령
-다음과 같이 중복 실행 시 부작용이 생길 수 있는 명령형 API는 `Idempotency-Key`를 사용:
+
+이번 P1에서는 HTTP 요청 멱등 기능과 관련 테스트를 모두 후순위로 둡니다. 키를 필수로 받거나 검증하지 않고, 전달된 키로 요청을 선점하거나 응답을 재사용하지 않습니다. 같은 요청을 다시 보내면 현재 상태·가격·시간에 따라 일반 요청으로 재검증합니다. 분석 이벤트(#66)와 종료 Scheduler(#47)의 중복 실행 방지는 별도로 유지합니다.
+
+아래는 **HTTP 멱등 기능 도입 후 적용할 설계**입니다. 다음과 같이 중복 실행 시 부작용이 생길 수 있는 명령형 API는 `Idempotency-Key`를 사용:
 - 경매 생성
 - 수동입찰
 - AutoBid 신규 설정 / maxAmount 변경
@@ -262,7 +267,7 @@ COMMIT
 
 ### Scheduler / 도메인 이벤트
 Scheduler나 내부 이벤트에는 HTTP용 Idempotency-Key를 사용하지 않음.
-대신 다음 조합으로 중복 실행 방지:
+P1의 분석 이벤트는 #66의 입찰 식별자 기반 처리 이력으로 중복을 막고 재처리합니다. 종료는 아래 Auction 규칙을 적용합니다. 나머지 후순위 도메인은 해당 기능 도입 시 다음 조합으로 중복을 방지합니다:
 - Auction 종료: Auction 상태검사 + PESSIMISTIC_WRITE
 - Trade 생성: `UNIQUE(auctionId)`
 - Trade 기한 처리: Trade 상태검사 + PESSIMISTIC_WRITE
@@ -292,7 +297,7 @@ Scheduler나 내부 이벤트에는 HTTP용 Idempotency-Key를 사용하지 않�
 - 클라이언트가 버튼을 누른 시각이나 브라우저 카운트다운은 판정 근거로 사용하지 않음
 - 입찰 처리 시 Auction 쓰기 락을 획득한 뒤 서버 현재시각을 다시 읽어 판정
 - 저장 status가 아직 READY여도 `now >= startAt`이면 입찰 가능. 부작용이 없는 전이이므로 그 트랜잭션에서 OPEN으로 바꿈
-- 저장 status가 아직 OPEN이어도 `now >= endAt`이면 입찰 거절. 종료 전이는 winningBid·Trade·알림이 따라붙으므로 종료 Scheduler만 수행
+- 저장 status가 아직 OPEN이어도 `now >= endAt`이면 입찰 거절. 종료 전이는 winningBid 확정을 위해 종료 Scheduler만 수행. Trade·알림 연동은 후순위
 - Scheduler가 실제로 ENDED 상태를 기록하는 시점은 endAt보다 조금 늦을 수 있으나, 논리적 종료시점은 항상 endAt
 - 애플리케이션 시간 조회는 직접 `now()`를 흩어 쓰지 않고 주입된 `Clock`을 사용
 - 애플리케이션 내부 시간 기준은 `Instant`/UTC로 통일하고 화면에서 사용자 지역시간으로 변환
@@ -311,8 +316,8 @@ Scheduler나 내부 이벤트에는 HTTP용 Idempotency-Key를 사용하지 않�
 
 - 차순위 승계 없음
 - 입찰자가 없으면 유찰, Trade 생성 안 함
-- 낙찰자가 있으면 Trade 생성
-- 낙찰자 응답 기한 24시간
+- 낙찰자가 있으면 winningBid로 확정. 아래 Trade 생성·거래 기한은 후순위 도입 시 적용
+- 후순위 Trade 도입 시 낙찰자 응답 기한 24시간
 - Trade.responseDeadline은 Scheduler 실제 처리시각이 아니라 `Auction.endAt + 24시간`으로 계산
 
 ## 거래 기한과 취소

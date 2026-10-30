@@ -1,5 +1,7 @@
 # Backend 패키지 구조
 
+> 2026-10-29 적용 범위: 아래는 기존 패키지 구조입니다. P1 신규 분석·수요 도메인의 경계와 API/ERD는 #61·#62에서 정하고 실제 구현 PR과 함께 반영합니다. [현재 요구사항](../02-requirements.md).
+
 기능(도메인)별로 패키지를 나눕니다. "경매에 관한 코드는 `auction`에 다 있다"처럼, 어떤 코드를 찾을 때 도메인 이름만 알면 되게 하기 위함입니다.
 
 ```text
@@ -14,7 +16,7 @@ com.layer7.marketplace
 ├── trade/          낙찰 후 거래, 거래 기한 Scheduler
 ├── trust/          신뢰점수 이력, 이용 정지
 ├── notification/   알림, Web Push 구독, 발송
-├── idempotency/    중복 요청 방지
+├── idempotency/    HTTP 중복 요청 방지 (기능·테스트 후순위)
 └── demo/           중간 발표 시연용 데이터 (demo 프로필 전용, docs/demo.md)
 ```
 

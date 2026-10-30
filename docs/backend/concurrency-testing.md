@@ -1,5 +1,13 @@
 # 경매 동시성 테스트 계획
 
+## P1 적용과 구현 상태
+
+C01 가격 정책과 C02·마감 경계 입찰은 구현되어 있습니다. 실제 입찰 대 종료 Scheduler인 C08은 #47의 미구현 작업입니다. C03/C04·상품/탈퇴 경쟁 등도 모두 구현된 것으로 읽지 않습니다. AutoBid(C05~C07)·HTTP 요청 멱등 기능·테스트(C09)·Trade/Trust(C10~C12·C15)는 후순위입니다. C08-1 시작 Scheduler 검증은 해당 구현 시 적용합니다.
+
+HTTP 요청의 키 검증·중복 처리·응답 재사용 기능도 P1에서 제외합니다. 분석 이벤트의 중복 방지·재처리(#66)와 종료의 중복 실행 방지(#47)는 필수 검증으로 유지합니다.
+
+아래는 전체 시나리오 설계 목록입니다. 이번 C08은 Trade 생성 없이 종료·winningBid 정합성·중복 종료를 검증합니다. P1 분석·실험·성능 검증은 [실험 계획](../p1/experiments.md)을 따릅니다.
+
 ## 목적
 경매 핵심 로직을 H2가 아닌 Testcontainers 기반 MySQL 8.4에서 검증합니다.
 
@@ -112,7 +120,7 @@ endAt 경계에서 입찰 worker와 종료 worker를 동시에 실행.
 
 불변조건:
 - ENDED 이후 새 Bid 없음
-- Trade는 Auction당 최대 1개
+- 중복 종료에도 winningBid와 종료 결과가 변하지 않음
 - winningBid/currentPrice/leadingBidder 간 모순 없음
 
 ### C08-1. 시작 경계와 Scheduler 지연
@@ -125,6 +133,8 @@ endAt 경계에서 입찰 worker와 종료 worker를 동시에 실행.
 - API 응답 status는 저장값과 관계없이 논리 상태
 
 ### C09. 동일 Idempotency-Key 동시 재요청
+
+HTTP 요청 멱등 기능을 도입한 이후 적용할 후순위 시나리오입니다. P1의 분석 이벤트 중복 방지나 종료 중복 실행 검증을 뜻하지 않습니다.
 동일 사용자가 동일 key와 동일 요청으로 여러 번 동시 호출.
 
 기대:
@@ -190,7 +200,7 @@ startAt 경계에서 상품 수정 worker와 입찰 worker를 동시에 실행.
 
 ## 공통 불변조건
 
-모든 동시성 테스트 종료 후 다음을 검사합니다.
+구현한 시나리오에 해당하는 불변조건을 검사합니다. AutoBid·Trade·HTTP IdempotencyRequest 항목은 후순위 기능 구현 후 적용합니다.
 
 - Auction.currentPrice는 유효 가격 격자 위에 있음
 - leadingBidder는 currentPrice를 만든 최종 상태와 일치

@@ -1,5 +1,7 @@
 # Realtime / WebSocket 명세
 
+> 2026-10-29: WebSocket은 이번 P1의 선택 범위이며 아래는 기존 전달 설계입니다. 입찰 커밋 후 위험 분석의 멱등·실패·재처리 계약은 #61·#66에서 별도로 정하며, 아래 화면 이벤트의 유실 허용을 그대로 적용하지 않습니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
+
 Spring WebSocket + STOMP를 사용합니다.
 
 ## 연결
@@ -58,7 +60,7 @@ DB Commit 이후 발행.
 
 저장 상태를 바꾼 쪽이 DB Commit 이후 발행합니다.
 - OPEN: 시작 Scheduler 또는 startAt 이후 첫 쓰기 요청(입찰 등)이 READY → OPEN으로 바꿀 때
-- ENDED: 종료 Scheduler가 낙찰 확정·Trade 생성을 마쳤을 때 (`finalized: true`)
+- ENDED: 종료 Scheduler가 낙찰 확정을 마쳤을 때 (이번 P1에서는 Trade 생성 제외) (`finalized: true`)
 - CANCELED: 판매자 취소 시 (`finalized: true`)
 
 논리적으로 종료되는 endAt 순간에는 이벤트가 없습니다. 클라이언트는 `endAt`과 `serverTime`으로 종료를 표시하고, 정산 완료는 ENDED 이벤트의 `finalized: true`로 확인합니다.

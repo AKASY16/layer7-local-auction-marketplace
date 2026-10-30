@@ -1,5 +1,7 @@
 # Backend Domain
 
+> 2026-10-29 적용 범위: 아래 전체 도메인 목록은 기존 설계를 포함합니다. 현재 JPA 엔티티는 User·Region·Product·Auction·Bid이며 P1 새 도메인·관계는 #61·#62에서 확정합니다. AutoBid·Trade·Trust·알림 등은 후순위입니다. [현재 요구사항](../02-requirements.md).
+
 ## Core Domain
 - User
 - RefreshToken
@@ -62,4 +64,4 @@ User >──< Product
 - 신뢰점수는 표시용이며 제재는 UserRestriction(기간제 거래 참여 정지)으로 분리
 - Notification과 PushSubscription 분리
 - ProductAppend는 특정 Auction 중 추가 고지 전용이며 Product는 Auction을 통해 파생. 경매 상세는 같은 Product의 모든 Auction 고지를 함께 보여줌
-- 명령형 HTTP 중복실행은 IdempotencyRequest로 제어
+- HTTP 요청 멱등 기능과 IdempotencyRequest 연동은 후순위. P1 분석 이벤트(#66)와 종료(#47)의 중복 실행 방지는 유지
