@@ -1,5 +1,7 @@
 # V2-C 종료 시각 TOP3 정책 평가 보고서
 
+> 이 보고서의 실행 코드(`src/v2_policy/`, `validation/v2_policy/*.py`)와 결과 파일은 저장소로 옮기지 않았다. 담당자 로컬에 보관하며, 여기서는 결과 수치와 그림만 참고한다.
+
 2026-10-31 · 브랜치 `codex/v2c-policy-evaluation-20261031`
 
 ## 판정과 제품 제공 수준
@@ -347,7 +349,7 @@ conservative의 상대% 구간은 양수지만, 주 지표 KRW 구간 하한은 
 `analyze_policy.py`는 seed 차이/구간/간섭/층화, `plots.py`는 독립 PNG/SVG를 생성한다.
 첫 실패의 design registry와 technical-check도 보존하되 효과 추정에 섞지 않았다.
 
-[실행 안내](/experiments/auction-simulator/src/v2_policy/README.md) ·
+실행 안내 (미업로드) ·
 전체 결과 (미업로드) ·
 시드별 구간 (미업로드) ·
 판정 근거 (미업로드) ·

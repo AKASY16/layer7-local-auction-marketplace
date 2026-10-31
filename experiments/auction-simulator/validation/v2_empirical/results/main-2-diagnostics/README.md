@@ -1,1 +1,0 @@
-Descriptive post-run diagnostics only. Future registered listings and actual activity are evaluation outcomes, NEVER recommendation inputs. Similar-series counts use<=60min; policy score uses taxonomy-weighted triangular kernel with strict<60min. No causal interpretation or auction-level IID inference.
