@@ -5,14 +5,14 @@
 | 이름 | GitHub | 역할 | 주요 책임 |
 |---|---|---|---|
 | 유선엽 | [AKASY16](https://github.com/AKASY16) | Backend / 팀장 | 전체 일정·협업 관리, 핵심 연구·알고리즘·동시성·설계 |
-| 장재혁 | [redrum2555](https://github.com/redrum2555) | Backend | 상품·경매·수요 등록·관리자 조회 등 백엔드 API |
-| 박지우 | [woo081](https://github.com/woo081) | Frontend | 사용자·관리자 화면과 API 연동 |
+| 장재혁 | [redrum2555](https://github.com/redrum2555) | Backend | 상품·경매·수요 등록 등 백엔드 API |
+| 박지우 | [woo081](https://github.com/woo081) | Frontend | 사용자 화면과 API 연동 |
 
 ## 협업 방향
 
 - Frontend와 Backend를 분리해 병렬 개발하고 API 명세를 연동 기준으로 사용합니다.
 - 기능별 Branch와 Pull Request를 사용해 변경사항을 검토한 뒤 통합합니다.
-- 현재는 [P1](p1/README.md)의 이상입찰 탐지·수요 매칭·마감 편성을 우선하고 경매는 이를 연결할 최소 MVP로 개발합니다. 개인별 책임은 각 이슈의 Assignees와 담당·책임 본문을 따릅니다.
+- 현재는 [P1](p1/README.md)의 수요 매칭·마감 편성을 우선하고 경매는 이를 연결할 최소 MVP로 개발합니다. 이상입찰 탐지는 보류했습니다([보류 계획](later/anomaly-bid-detection.md)). 개인별 책임은 각 이슈의 Assignees와 담당·책임 본문을 따릅니다.
 - 경매 정책, API 변경, 공통 기능은 팀 단위로 합의합니다.
 - AI가 생성하거나 수정한 코드는 담당 개발자가 직접 검토한 뒤 반영합니다.
 
@@ -101,5 +101,5 @@ git switch -c feat/21-bid-increment-policy
 - Database: MySQL 8.4
 - Auction: WebSocket(STOMP) · Transaction/Lock · Scheduler
 - File / Deploy: Object Storage · Docker
-- 알고리즘: 논문 기반 이상입찰 탐지와 수요 기반 매칭·마감 편성. 구체 모델·실험 환경은 검토 중
+- 알고리즘: 수요 기반 매칭·마감 편성. 구체 모델·실험 환경은 검토 중. 이상입찰 탐지는 보류
 - 개발 보조 도구: ChatGPT · Claude Code · Codex
