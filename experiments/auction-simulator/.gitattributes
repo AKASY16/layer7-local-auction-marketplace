@@ -1,0 +1,2 @@
+# 동결 해시(BASELINE_v4.json, AUDIT_FIX_v1.json)가 원래 파일 바이트 기준이라 이 폴더는 줄바꿈을 변환하지 않는다
+* -text whitespace=cr-at-eol

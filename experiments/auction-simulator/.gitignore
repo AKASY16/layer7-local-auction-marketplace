@@ -1,0 +1,25 @@
+.venv/
+data/
+__pycache__/
+*.pyc
+research/papers/
+
+# 2026-10-31 정리: 논문 원문 추출본은 저작권 때문에, Retailrocket 파생 자료는 기각·비상업 라이선스 때문에 커밋하지 않음
+research/activity_20261031/simonsohn_text/
+research/activity_20261031/published_text/
+research/activity_20261031/paper_previews/
+research/activity_20261031/retailrocket_analysis/
+research/activity_20261031/retailrocket_replay/
+research/activity_20261031/activity_transfer_profiles*.json
+research/activity_20261031/figures/
+validation/v2_empirical/archive/setup-v1/research/
+
+# 원시·합성 데이터셋과 실험 결과 CSV·JSON·로그는 올리지 않는다 (README "현재 상태" 참고)
+*.csv
+*.json
+*.txt
+*.svg
+!requirements.txt
+!/BASELINE_v4.json
+!/AUDIT_FIX_v1.json
+!/calibration/parameter_sources.csv

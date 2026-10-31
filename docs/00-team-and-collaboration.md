@@ -102,4 +102,5 @@ git switch -c feat/21-bid-increment-policy
 - Auction: WebSocket(STOMP) · Transaction/Lock · Scheduler
 - File / Deploy: Object Storage · Docker
 - 알고리즘: 논문 기반 이상입찰 탐지와 수요 기반 매칭·마감 편성. 구체 모델·실험 환경은 검토 중
+- 실험: Python 3.12 · pandas · NumPy · SciPy · statsmodels (`experiments/`)
 - 개발 보조 도구: ChatGPT · Claude Code · Codex

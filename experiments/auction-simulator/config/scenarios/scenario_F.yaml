@@ -1,0 +1,5 @@
+scenario: {id: F, name: "콜드스타트 (cold start)",
+  description: "Very small market: 150 buyers, 50 auctions, 12 sellers over 30 days.",
+  evidence: "Scale ASSUMED for an early-stage platform; behaviour parameters as baseline."}
+scale: {n_buyers: 150, n_auctions: 50, n_sellers: 12, days: 30}
+param_overrides: {thickness_elasticity: 0.3}

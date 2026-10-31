@@ -38,6 +38,7 @@ TEAM LAYER7의 3인 캡스톤 프로젝트입니다. 전국의 수집품을 대�
 - Scheduler: 경매 종료·낙찰 확정 구현 예정 (#47), 거래 기한 처리는 후순위
 - File: Object Storage
 - Local Infrastructure: Docker Compose (MySQL·S3 호환 저장소). 운영 배포 환경은 미정
+- Experiments: Python 3.12 (pandas·NumPy·SciPy·statsmodels), 합성 경매 시뮬레이터는 `experiments/auction-simulator/`
 - Development Assist: ChatGPT, Claude Code, Codex
 
 ## Core Flow
@@ -53,6 +54,7 @@ frontend/            React 웹 클라이언트 (Vite)
 docs/                기획·정책·API 명세·설계 문서
 infra/               로컬 인프라 설정 (SeaweedFS S3 계정)
 docker-compose.yml   로컬 개발용 MySQL 8.4, 이미지 저장소(SeaweedFS)
+experiments/         실험 코드와 기록 (auction-simulator: 경매 종료 시각 합성 시뮬레이터, 원시·합성 데이터는 미업로드)
 .github/             CI, PR/Issue 템플릿
 ```
 
@@ -137,6 +139,7 @@ cd backend
 - [기술 의사결정](docs/09-technical-decisions.md)
 - [AI 기능 검토](docs/ai-features.md)
 - [현재 작업 목록](docs/task-board.md)
+- [경매 종료 시각 합성 시뮬레이터](experiments/auction-simulator/README.md)
 
 ## Development Policy
 

@@ -1,0 +1,10 @@
+scenario: {id: C, name: "유사 상품 경쟁 (high substitutability)",
+  description: "Two series per category and strong substitution; buyers who lead or won one item skip its substitutes.",
+  evidence: "Cannibalisation among substitutes is reported by Bimpikis et al. (2020) for B2B iPhone lots; strength here is ASSUMED."}
+similarity: {same_series: 0.95, same_subcategory: 0.6, same_category: 0.2}
+categories:
+  - {name: tcg, subcategories: [single_card, graded_card, sealed_product], n_series: 2, supply_share: 0.35, demand_share: 0.35}
+  - {name: figure, subcategories: [scale_figure, action_figure, blind_box], n_series: 2, supply_share: 0.25, demand_share: 0.25}
+  - {name: retro_game, subcategories: [cartridge, console, cib_box], n_series: 2, supply_share: 0.20, demand_share: 0.20}
+  - {name: limited_goods, subcategories: [goods, apparel, art_print], n_series: 2, supply_share: 0.20, demand_share: 0.20}
+param_overrides: {thickness_elasticity: 0.05}

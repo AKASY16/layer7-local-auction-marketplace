@@ -1,0 +1,821 @@
+version: 1.0.0
+classes:
+  EMPIRICAL: estimated from the raw files by the scripts in statistical_analysis/
+  LITERATURE: taken from one of the four papers (quoted in method)
+  ASSUMED: no direct evidence; set for simulation (tuned ones say so)
+params:
+  price_logsd_retro_game:
+    value: 1.367
+    unit: log KRW
+    meaning: sd of log value, retro games
+    source: ebay-sold-comps retro-video-games-cib/lots
+    method: lognormal MLE (AIC best of 4)
+    n: 120
+    market: US eBay sold listings 2026-08/09
+    uncertainty: n=120; CIB and lots mixed
+    class: EMPIRICAL
+    transfer_to_layer7: dispersion only; level is ASSUMED
+  price_logsd_figure:
+    value: 0.846
+    unit: log KRW
+    meaning: sd of log value, figures/toys
+    source: ShopGoodwill LEGO, non-lot titles
+    method: lognormal MLE
+    n: 213
+    market: US Goodwill auctions 2026-06
+    uncertainty: hotwheels eBay gives 1.03 (n=60)
+    class: EMPIRICAL
+    transfer_to_layer7: LEGO used as proxy for figures
+  price_logsd_limited_goods:
+    value: 0.894
+    unit: log KRW
+    meaning: sd of log value, limited goods
+    source: ShopGoodwill 12 files, non-lot titles
+    method: median over files of sd(log price)
+    n: 2582
+    market: US Goodwill auctions 2026-06..09
+    uncertainty: file range 0.74-1.12
+    class: EMPIRICAL
+    transfer_to_layer7: category proxy
+  seller_listings_nb_size:
+    value: 0.398
+    unit: '-'
+    meaning: NB size (dispersion) of listings per seller
+    source: ShopGoodwill
+    method: zero-truncated NB MLE on listings per seller
+    n: 144
+    market: US Goodwill stores (institutional sellers)
+    uncertainty: sold-only listings; stores are not C2C sellers
+    class: EMPIRICAL
+    transfer_to_layer7: shape only, mean set by scale
+  rebid_fast_share:
+    value: 0.703
+    unit: share
+    meaning: share of same-bidder re-bids within 10 min
+    source: Jank & Shmueli 9 datasets, calibration split
+    method: empirical share
+    n: 3861
+    market: eBay 2003 hard close
+    uncertainty: split point 10 min chosen by hand
+    class: EMPIRICAL
+    transfer_to_layer7: ''
+  rebid_fast_median_min:
+    value: 0.366
+    unit: min
+    meaning: median delay, fast re-bid
+    source: Jank & Shmueli
+    method: median of gaps <= 10 min
+    n: 3861
+    market: eBay 2003
+    uncertainty: ''
+    class: EMPIRICAL
+    transfer_to_layer7: ''
+  rebid_fast_logsd:
+    value: 0.951
+    unit: log min
+    meaning: log sd, fast re-bid
+    source: Jank & Shmueli
+    method: sd of log gap <= 10 min
+    n: 3861
+    market: eBay 2003
+    uncertainty: ''
+    class: EMPIRICAL
+    transfer_to_layer7: ''
+  rebid_slow_median_min:
+    value: 597.7
+    unit: min
+    meaning: median delay, slow re-bid
+    source: Jank & Shmueli
+    method: median of gaps > 10 min
+    n: 3861
+    market: eBay 2003
+    uncertainty: ''
+    class: EMPIRICAL
+    transfer_to_layer7: ''
+  rebid_slow_logsd:
+    value: 1.734
+    unit: log min
+    meaning: log sd, slow re-bid
+    source: Jank & Shmueli
+    method: sd of log gap > 10 min
+    n: 3861
+    market: eBay 2003
+    uncertainty: ''
+    class: EMPIRICAL
+    transfer_to_layer7: ''
+  snipe_offset_max_sec:
+    value: 120
+    unit: s
+    meaning: snipes land uniformly in the last N seconds
+    source: Shmueli, Russo & Jank 2007, Table 4 and 5.3
+    method: last stage lasts ~2 min or less, alpha3 ~ 1 (uniform)
+    n: 9 eBay datasets
+    market: eBay hard close
+    uncertainty: d2 0.5-2 min across datasets
+    class: LITERATURE
+    transfer_to_layer7: ''
+  snipe_transmit_fail_prob:
+    value: 0.045
+    unit: prob
+    meaning: late bid fails to register
+    source: Roth & Ockenfels 2002, sec. II
+    method: esnipe statistic, Sept 2000
+    n: ~4,200 bids/day
+    market: eBay 2000
+    uncertainty: one service, one month
+    class: LITERATURE
+    transfer_to_layer7: ''
+  snipe_unavailable_prob:
+    value: 0.1
+    unit: prob
+    meaning: planned late bidder not available at the end
+    source: Roth & Ockenfels 2002, survey
+    method: median self-reported frequency
+    n: survey responders
+    market: eBay 2000
+    uncertainty: self-report
+    class: LITERATURE
+    transfer_to_layer7: ''
+  wtp_idio_logsd:
+    value: 0.25
+    unit: log
+    meaning: idiosyncratic buyer-item valuation dispersion
+    source: Bimpikis et al. 2020, Table 11
+    method: 'idiosyncratic SD / mean valuation: MU 2978/18594=0.16, UD 4313/15459=0.28'
+    n: 74 MU + 113 UD bidders
+    market: B2B iPhone liquidation
+    uncertainty: B2B resellers, not collectors
+    class: LITERATURE
+    transfer_to_layer7: ''
+  buyer_daily_retention:
+    value: 0.97
+    unit: prob/day
+    meaning: probability an active buyer stays another day
+    source: Bimpikis et al. 2020, Table 11
+    method: MU 0.968 (UD 0.843)
+    n: 187 bidders
+    market: B2B
+    uncertainty: B2B pool dynamics
+    class: LITERATURE
+    transfer_to_layer7: ''
+  supply_peak_ratio:
+    value: 1.5
+    unit: ratio
+    meaning: top-4-hour share of auction ends / of bids (crowded scenario)
+    source: Simonsohn 2010, sec. 1 and Fig. 2
+    method: 37.6% of auctions vs 25.0% of bids end/placed 5-9 pm (Pacific)
+    n: 14,973 auctions, 44,735 bids
+    market: eBay US DVDs 2008
+    uncertainty: US eBay hours, applied as a ratio only
+    class: LITERATURE
+    transfer_to_layer7: ''
+  thickness_elasticity:
+    value: 0.15
+    unit: '-'
+    meaning: elasticity of visit rate in number of relevant auctions ending soon
+    source: baseline value; scenario D uses 0.47 from Bimpikis et al. 2020 Fig. 13
+    method: ASSUMED for baseline
+    n: ''
+    market: ''
+    uncertainty: no C2C estimate exists
+    class: ASSUMED
+    transfer_to_layer7: ''
+  fx_krw_per_usd_anchor:
+    value: 1350
+    unit: KRW/USD
+    meaning: only used to sanity-check KRW medians
+    source: '-'
+    method: '-'
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  price_median_krw_tcg:
+    value: 40000
+    unit: KRW
+    meaning: median base value, TCG (cards, boxes)
+    source: '-'
+    method: no TCG price data in inputs
+    n: ''
+    market: LAYER7 (hypothetical)
+    uncertainty: unknown
+    class: ASSUMED
+    transfer_to_layer7: ''
+  price_median_krw_figure:
+    value: 45000
+    unit: KRW
+    meaning: median base value, figures/toys
+    source: '-'
+    method: US LEGO median $22 x 1350 = 30,162; set higher for figures
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  price_median_krw_retro_game:
+    value: 60000
+    unit: KRW
+    meaning: median base value, retro games
+    source: '-'
+    method: US eBay median $58 x 1350 = 78,132; set lower for Korean market
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  price_median_krw_limited_goods:
+    value: 35000
+    unit: KRW
+    meaning: median base value, limited goods
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  price_logsd_tcg:
+    value: 1.2
+    unit: log KRW
+    meaning: sd of log value, TCG
+    source: '-'
+    method: no TCG data; inside observed 0.72-1.37 range of other collectibles
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  item_appeal_logsd:
+    value: 1.4
+    unit: log
+    meaning: item-level browse appeal (popularity) dispersion
+    source: '-'
+    method: simulated-moment grid search, seed 101 (weighted squared relative error
+      over bidders_per_auction_mean_pos, bids_per_bidder_in_auction_mean, share_repeat_bidder_pairs,
+      share_bids_last_5min, share_auctions_last_bid_5min, share_bids_first_10pct,
+      share_bids_last_60min, bids_per_auction_nb_size_mom, slope_log_price_log_bids_sold)
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  appeal_wtp_elasticity:
+    value: 1.0
+    unit: '-'
+    meaning: WTP multiplier = appeal ** this (popular items valued higher)
+    source: '-'
+    method: simulated-moment grid search, seed 101 (weighted squared relative error
+      over bidders_per_auction_mean_pos, bids_per_bidder_in_auction_mean, share_repeat_bidder_pairs,
+      share_bids_last_5min, share_auctions_last_bid_5min, share_bids_first_10pct,
+      share_bids_last_60min, bids_per_auction_nb_size_mom, slope_log_price_log_bids_sold)
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  series_zipf_exponent:
+    value: 1.0
+    unit: '-'
+    meaning: popularity of series within a category
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  rarity_value_multiplier:
+    value:
+    - 1.0
+    - 1.6
+    - 3.0
+    - 8.0
+    unit: x
+    meaning: value multiplier common/uncommon/rare/ultra
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  condition_share:
+    value:
+    - 0.25
+    - 0.35
+    - 0.4
+    unit: share
+    meaning: new / like_new / used
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  condition_value_multiplier:
+    value:
+    - 1.2
+    - 1.0
+    - 0.75
+    unit: x
+    meaning: value multiplier by condition
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  seller_primary_category_share:
+    value: 0.8
+    unit: share
+    meaning: listings in the seller's main category
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  start_price_ratio_quantiles:
+    value:
+    - 0.0001
+    - 0.0001
+    - 0.0001
+    - 0.00188
+    - 0.0043
+    - 0.0047
+    - 0.00808
+    - 0.03042
+    - 0.04275
+    - 0.06783
+    - 0.16374
+    - 0.24655
+    - 0.38253
+    - 0.4443
+    - 0.51878
+    - 0.67284
+    - 0.78652
+    - 0.86059
+    - 0.90315
+    - 0.98318
+    - 1.0
+    unit: x value
+    meaning: quantile function (21 points) of opening bid / closing price; start =
+      ratio x estimated value
+    source: Jank & Shmueli 9 datasets, calibration split
+    method: empirical quantiles of openbid/price
+    n: 444
+    market: eBay 2003
+    uncertainty: median 0.164; closing price, not value, in the denominator
+    class: EMPIRICAL
+    transfer_to_layer7: LAYER7 start-price rule unknown; eBay sellers' habit is used
+  start_price_min_krw:
+    value: 1000.0
+    unit: KRW
+    meaning: minimum starting price
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  duration_share:
+    value:
+    - 0.35
+    - 0.35
+    - 0.3
+    unit: share
+    meaning: 24 / 48 / 72 h
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  visit_rate_median_per_day:
+    value: 1.0
+    unit: visits/day
+    meaning: median organic visit rate before scaling
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  visit_rate_scale:
+    value: 0.35
+    unit: x
+    meaning: global visit-rate scale (tuned)
+    source: '-'
+    method: simulated-moment grid search, seed 101 (weighted squared relative error
+      over bidders_per_auction_mean_pos, bids_per_bidder_in_auction_mean, share_repeat_bidder_pairs,
+      share_bids_last_5min, share_auctions_last_bid_5min, share_bids_first_10pct,
+      share_bids_last_60min, bids_per_auction_nb_size_mom, slope_log_price_log_bids_sold)
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  visit_rate_logsd:
+    value: 1.0
+    unit: log
+    meaning: buyer activity heterogeneity
+    source: '-'
+    method: 'checked against bids-per-bidder Gini: J&S 0.48, Swoopo 0.75'
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  buyer_hour_offset_sd:
+    value: 1.5
+    unit: h
+    meaning: individual shift of the activity profile
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  weekend_activity_factor:
+    value: 1.15
+    unit: x
+    meaning: weekend visit multiplier
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  buyer_secondary_category_prob:
+    value: 0.3
+    unit: prob
+    meaning: interest in each non-main category
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  buyer_n_favorite_series:
+    value: 2
+    unit: count
+    meaning: favourite series per interest category
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  favorite_series_wtp_multiplier:
+    value: 1.3
+    unit: x
+    meaning: WTP uplift for favourite series
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  favorite_series_view_weight:
+    value: 3.0
+    unit: x
+    meaning: browse weight for favourite series
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  buyer_price_level_logsd:
+    value: 0.3
+    unit: log
+    meaning: buyer-level WTP scale
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  budget_items_median:
+    value: 3.0
+    unit: items
+    meaning: 30-day budget in units of main-category median value
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  budget_logsd:
+    value: 0.7
+    unit: log
+    meaning: budget dispersion
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  buyer_initial_active_share:
+    value: 0.7
+    unit: share
+    meaning: buyers active from day 0; rest join uniformly
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  style_share_early:
+    value: 0.371
+    unit: share
+    meaning: proxy-early bidders (tuned)
+    source: '-'
+    method: simulated-moment grid search, seed 101 (weighted squared relative error
+      over bidders_per_auction_mean_pos, bids_per_bidder_in_auction_mean, share_repeat_bidder_pairs,
+      share_bids_last_5min, share_auctions_last_bid_5min, share_bids_first_10pct,
+      share_bids_last_60min, bids_per_auction_nb_size_mom, slope_log_price_log_bids_sold)
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  style_share_incremental:
+    value: 0.329
+    unit: share
+    meaning: incremental re-bidders (tuned)
+    source: '-'
+    method: simulated-moment grid search, seed 101 (weighted squared relative error
+      over bidders_per_auction_mean_pos, bids_per_bidder_in_auction_mean, share_repeat_bidder_pairs,
+      share_bids_last_5min, share_auctions_last_bid_5min, share_bids_first_10pct,
+      share_bids_last_60min, bids_per_auction_nb_size_mom, slope_log_price_log_bids_sold)
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  style_share_sniper:
+    value: 0.3
+    unit: share
+    meaning: late bidders (tuned)
+    source: '-'
+    method: simulated-moment grid search, seed 101 (weighted squared relative error
+      over bidders_per_auction_mean_pos, bids_per_bidder_in_auction_mean, share_repeat_bidder_pairs,
+      share_bids_last_5min, share_auctions_last_bid_5min, share_bids_first_10pct,
+      share_bids_last_60min, bids_per_auction_nb_size_mom, slope_log_price_log_bids_sold)
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  rebid_propensity_mean:
+    value: 0.97
+    unit: prob
+    meaning: mean prob. of returning when outbid
+    source: '-'
+    method: simulated-moment grid search, earlier pass (kept fixed in the final pass)
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  rebid_propensity_concentration:
+    value: 4.0
+    unit: '-'
+    meaning: Beta concentration
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  incremental_mean_extra_steps:
+    value: 1.0
+    unit: increments
+    meaning: extra increments above minimum
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  early_act_prob:
+    value: 0.1
+    unit: prob
+    meaning: non-sniper bids at once when the end is more than the window away (tuned)
+    source: '-'
+    method: simulated-moment grid search, earlier pass (kept fixed in the final pass)
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  act_now_window_min:
+    value: 60.0
+    unit: min
+    meaning: inside this window before the end viewers act at once
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  session_window_min:
+    value: 10.0
+    unit: min
+    meaning: re-bids this soon after being outbid skip the hour availability check
+    source: '-'
+    method: 'J&S: 70% of same-bidder re-bids come within 10 min'
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  watch_return_prob:
+    value: 0.8
+    unit: prob
+    meaning: viewer comes back near the end (tuned)
+    source: '-'
+    method: simulated-moment grid search, seed 101 (weighted squared relative error
+      over bidders_per_auction_mean_pos, bids_per_bidder_in_auction_mean, share_repeat_bidder_pairs,
+      share_bids_last_5min, share_auctions_last_bid_5min, share_bids_first_10pct,
+      share_bids_last_60min, bids_per_auction_nb_size_mom, slope_log_price_log_bids_sold)
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  watch_return_mean_min_before_end:
+    value: 360.0
+    unit: min
+    meaning: how long before the end watchers return
+    source: '-'
+    method: simulated-moment grid search, earlier pass (kept fixed in the final pass)
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  attention_mean_views:
+    value: 3.0
+    unit: auctions
+    meaning: mean auctions viewed per organic visit
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  attention_thickness_elasticity:
+    value: 0.0
+    unit: '-'
+    meaning: elasticity of views per visit in the thickness signal
+    source: '-'
+    method: 0 in baseline; scenario D sets 1 so that bidders per auction rise with
+      thickness (Bimpikis et al. 2020 Fig. 13 reports bidders/auction, not visits)
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  ending_soon_boost:
+    value: 10.0
+    unit: x
+    meaning: extra browse weight for auctions about to end
+    source: '-'
+    method: set by hand trials against the same targets before the grid search
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  ending_soon_tau_hours:
+    value: 4.0
+    unit: h
+    meaning: decay of the ending-soon boost
+    source: '-'
+    method: set by hand trials against the same targets before the grid search
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  alert_follow_prob:
+    value: 0.3
+    unit: prob
+    meaning: buyer follows an interest category
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  alert_open_prob:
+    value: 0.15
+    unit: prob
+    meaning: follower opens a new-listing alert
+    source: '-'
+    method: set by hand trials against the same targets before the grid search
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  alert_delay_mean_min:
+    value: 180.0
+    unit: min
+    meaning: delay from listing to alert visit
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  thickness_window_hours:
+    value: 6.0
+    unit: h
+    meaning: window for the thickness signal
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  thickness_reference_count:
+    value: 3.0
+    unit: auctions
+    meaning: count at which multiplier = 1
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  thickness_multiplier_min:
+    value: 0.5
+    unit: x
+    meaning: lower clamp
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+  thickness_multiplier_max:
+    value: 2.5
+    unit: x
+    meaning: upper clamp
+    source: '-'
+    method: ''
+    n: ''
+    market: ''
+    uncertainty: ''
+    class: ASSUMED
+    transfer_to_layer7: ''
+validation_targets:
+  js3_bids_per_auction_mean: 14.201058201058203
+  js3_bidders_per_auction_mean: 6.603341687552214
+  js_bids_per_bidder_in_auction_mean: 2.0616663444809586
+  js_share_repeat_bidder_pairs: 0.43417745988787937
+  js_cal_bids_per_bidder_in_auction_mean: 2.06158922188617
+  js_cal_share_repeat_bidder_pairs: 0.4382733021721199
+  js_hold_bids_per_bidder_in_auction_mean: 2.0618489583333335
+  js_hold_share_repeat_bidder_pairs: 0.4244791666666667
+  js_hold_bids_per_auction_nb_size: 2.7899806638600193
+  goodwill_hold_slope_log_price_log_bids: 0.7698190956037347
+  js3_share_bids_last_5min: 0.08347873948785789
+  js3_share_bids_last_60min: 0.192403406406501
+  js3_share_auctions_last_bid_5min: 0.4785018100807575
+  js3_share_bids_first_10pct: 0.0657065380011969
+  js_bids_per_auction_nb_size: 2.0577620805329735
+  js_gini_bids_per_bidder: 0.4839744806228719
+  swoopo_gini_bids_per_user: 0.7549417239720763
+  goodwill_slope_log_price_log_bids: 0.7552050795975389
+  maxsold_slope_log1p_bids_log1p_views: 0.41503839648355906
+  maxsold_share_zero_bid_items: 0.06747098611441243

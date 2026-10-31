@@ -1,0 +1,5 @@
+scenario: {id: A, name: "균등 시장 (uniform market)",
+  description: "Buyer activity close to flat over the day and seller end times spread uniformly.",
+  evidence: "No data source shows a flat market; this is the reference case where end time should matter least."}
+buyer_hour_blend_flat: 0.7
+seller_end_hour_mode: uniform

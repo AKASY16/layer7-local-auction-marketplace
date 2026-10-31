@@ -1,0 +1,11 @@
+scenario: {id: E, name: "희소 수집품 시장 (rare collectibles)",
+  description: "Many distinct series, more rare items, weak substitution, wider valuation spread.",
+  evidence: "All settings ASSUMED; Goodwill price dispersion by seller (ICC up to 0.6) hints at heterogeneous items but does not identify substitution."}
+rarity_share: [0.30, 0.30, 0.28, 0.12]
+similarity: {same_series: 0.3, same_subcategory: 0.05, same_category: 0.0}
+categories:
+  - {name: tcg, subcategories: [single_card, graded_card, sealed_product], n_series: 60, supply_share: 0.35, demand_share: 0.35}
+  - {name: figure, subcategories: [scale_figure, action_figure, blind_box], n_series: 60, supply_share: 0.25, demand_share: 0.25}
+  - {name: retro_game, subcategories: [cartridge, console, cib_box], n_series: 60, supply_share: 0.20, demand_share: 0.20}
+  - {name: limited_goods, subcategories: [goods, apparel, art_print], n_series: 60, supply_share: 0.20, demand_share: 0.20}
+param_overrides: {wtp_idio_logsd: 0.4}

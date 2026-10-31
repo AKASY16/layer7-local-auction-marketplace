@@ -1,0 +1,66 @@
+objective: weighted squared relative error over bidders_per_auction_mean_pos, bids_per_bidder_in_auction_mean,
+  share_repeat_bidder_pairs, share_bids_last_5min, share_auctions_last_bid_5min, share_bids_first_10pct,
+  share_bids_last_60min, bids_per_auction_nb_size_mom, slope_log_price_log_bids_sold
+seed: 101
+loss: 0.11708557360508072
+moments_at_best:
+  bidders_per_auction_mean_pos: 7.076566125290023
+  bids_per_bidder_in_auction_mean: 2.0472131147540984
+  share_repeat_bidder_pairs: 0.3439344262295082
+  share_bids_last_5min: 0.07062780269058296
+  share_auctions_last_bid_5min: 0.5591647331786543
+  share_bids_first_10pct: 0.06390134529147982
+  share_bids_last_60min: 0.18481742472773863
+  bids_per_auction_nb_size_mom: 2.328741576824634
+  slope_log_price_log_bids_sold: 0.7097217030404694
+targets:
+  bidders_per_auction_mean_pos: 6.603341687552214
+  bids_per_bidder_in_auction_mean: 2.06158922188617
+  share_repeat_bidder_pairs: 0.4382733021721199
+  share_bids_last_5min: 0.08347873948785789
+  share_auctions_last_bid_5min: 0.4785018100807575
+  share_bids_first_10pct: 0.0657065380011969
+  share_bids_last_60min: 0.192403406406501
+  bids_per_auction_nb_size_mom: 2.0577620805329735
+  slope_log_price_log_bids_sold: 0.7552050795975389
+values:
+  ending_soon_boost: 10.0
+  ending_soon_tau_hours: 4.0
+  alert_open_prob: 0.15
+  early_act_prob: 0.1
+  watch_return_mean_min_before_end: 360.0
+  rebid_propensity_mean: 0.97
+  visit_rate_scale: 0.35
+  item_appeal_logsd: 1.4
+  appeal_wtp_elasticity: 1.0
+  style_share_sniper: 0.3
+  watch_return_prob: 0.8
+  style_share_early: 0.371
+  style_share_incremental: 0.329
+fixed_by_hand:
+- alert_open_prob
+- ending_soon_boost
+- ending_soon_tau_hours
+fixed_from_previous_pass:
+- early_act_prob
+- rebid_propensity_mean
+- watch_return_mean_min_before_end
+grid:
+  visit_rate_scale:
+  - 0.25
+  - 0.35
+  item_appeal_logsd:
+  - 1.0
+  - 1.4
+  appeal_wtp_elasticity:
+  - 1.0
+  - 1.5
+  incremental_share_of_non_snipers:
+  - 0.47
+  - 0.62
+  style_share_sniper:
+  - 0.2
+  - 0.3
+  watch_return_prob:
+  - 0.6
+  - 0.8

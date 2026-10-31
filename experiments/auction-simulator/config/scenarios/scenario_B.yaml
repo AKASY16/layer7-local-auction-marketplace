@@ -1,0 +1,4 @@
+scenario: {id: B, name: "인기 시간 집중 (peak-hour crowding)",
+  description: "Evening buyer peak; sellers over-enter the peak so supply concentration exceeds demand concentration.",
+  evidence: "Supply/demand peak ratio 1.5 from Simonsohn (2010) US eBay DVDs; Korean hours are ASSUMED."}
+seller_end_hour_mode: crowded

@@ -1,0 +1,5 @@
+scenario: {id: D, name: "시장 집중 이점 (thickness attracts buyers)",
+  description: "Buyers visit more when many relevant auctions end soon; substitution moderate.",
+  evidence: "Elasticity 0.47 = log(10/4)/log(7) from Bimpikis et al. (2020) Fig. 13 (MU bidders per auction vs market thickness), a structural-model output for B2B buyers, not a C2C estimate. Applied to the visit rate, with views per visit proportional to thickness (attention elasticity 1, ASSUMED) so that bidders per auction rise with thickness."}
+similarity: {same_series: 0.4, same_subcategory: 0.15, same_category: 0.05}
+param_overrides: {thickness_elasticity: 0.47, attention_thickness_elasticity: 1.0}

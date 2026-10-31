@@ -34,3 +34,4 @@
 
 - [실험과 측정 기준](experiments.md)
 - [통합 시연 목표](demo.md)
+- [경매 종료 시각 합성 시뮬레이터](../../experiments/auction-simulator/README.md)

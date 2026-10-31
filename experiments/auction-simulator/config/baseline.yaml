@@ -1,0 +1,30 @@
+# LAYER7 synthetic auction market - baseline settings shared by all scenarios.
+# Behavioural parameter values live in calibration/parameters.yaml (with sources);
+# scenarios override them through param_overrides.
+parameters_file: calibration/parameters.yaml
+start_date: "2026-11-02T00:00:00+09:00"   # Monday, KST
+scale: {n_buyers: 1500, n_auctions: 500, n_sellers: 120, days: 30}
+smoke_scale: {n_buyers: 200, n_auctions: 60, n_sellers: 15, days: 10}
+scenarios: [A, B, C, D, E, F]
+seeds: [1, 2, 3]
+close_rule: hard            # LAYER7 rule; "soft" only for sensitivity runs
+soft_close: {threshold_min: 2, extend_min: 2}   # MaxSold-like values, used only when close_rule: soft
+duration_hours_choices: [24, 48, 72]
+increment_rule_name: tiered_krw_v1
+increment_table_krw:        # [price below, increment]; ASSUMED tiers in the spirit of eBay's table
+  - [10000, 500]
+  - [50000, 1000]
+  - [100000, 2000]
+  - [500000, 5000]
+  - [null, 10000]
+buyer_hour_profile: korea_evening   # ASSUMED, see src/world.py HOUR_PROFILES
+buyer_hour_blend_flat: 0.0
+seller_end_hour_mode: follow        # uniform | follow (proportional to buyer activity) | crowded
+rarity_share: [0.55, 0.28, 0.13, 0.04]
+similarity: {same_series: 0.7, same_subcategory: 0.3, same_category: 0.1}
+categories:
+  - {name: tcg, subcategories: [single_card, graded_card, sealed_product], n_series: 12, supply_share: 0.35, demand_share: 0.35}
+  - {name: figure, subcategories: [scale_figure, action_figure, blind_box], n_series: 12, supply_share: 0.25, demand_share: 0.25}
+  - {name: retro_game, subcategories: [cartridge, console, cib_box], n_series: 12, supply_share: 0.20, demand_share: 0.20}
+  - {name: limited_goods, subcategories: [goods, apparel, art_print], n_series: 12, supply_share: 0.20, demand_share: 0.20}
+param_overrides: {}
