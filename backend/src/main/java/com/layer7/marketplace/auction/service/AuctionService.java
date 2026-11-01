@@ -1,6 +1,7 @@
 package com.layer7.marketplace.auction.service;
 
 import com.layer7.marketplace.auction.domain.Auction;
+import com.layer7.marketplace.auction.domain.AuctionStatus;
 import com.layer7.marketplace.auction.dto.AuctionPageResponse;
 import com.layer7.marketplace.auction.dto.AuctionSearchCondition;
 import com.layer7.marketplace.auction.dto.AuctionSummaryResponse;
@@ -27,6 +28,9 @@ public class AuctionService {
 	// 최신 등록순. 등록 시각이 같으면 id가 큰 순으로 순서를 고정해 페이지 사이에 항목이 겹치거나 빠지지 않게 한다
 	private static final Sort NEWEST_FIRST = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
 
+	// 저장 상태가 아직 종료·취소가 아닌 경매. 시작 전이 반영되지 못한 READY도 마감이 지나면 종료 대상이다 (docs/backend/auction-state.md)
+	private static final List<AuctionStatus> CLOSABLE_STATUSES = List.of(AuctionStatus.READY, AuctionStatus.OPEN);
+
 	private final AuctionRepository auctionRepository;
 	private final Clock clock;
 
@@ -40,6 +44,19 @@ public class AuctionService {
 	public Auction getAuctionForUpdate(Long auctionId) {
 		return auctionRepository.findByIdForUpdate(auctionId)
 			.orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+	}
+
+	// 종료 Scheduler가 처리할 경매 id. 마감이 지난 READY·OPEN 경매를 마감 시각이 이른 순으로 최대 limit개 고른다
+	public List<Long> findAuctionIdsToClose(int limit) {
+		return auctionRepository.findIdsToClose(CLOSABLE_STATUSES, Instant.now(clock), PageRequest.of(0, limit));
+	}
+
+	// 경매 하나를 자기 트랜잭션에서 종료한다. 종료됐으면 true.
+	// 락을 잡은 뒤 시각을 읽고 상태를 다시 판단하므로, 조회 뒤 다른 처리가 먼저 종료했거나 같은 경매를 두 번 처리해도 결과가 바뀌지 않는다
+	@Transactional
+	public boolean closeAuction(Long auctionId) {
+		Auction auction = getAuctionForUpdate(auctionId);
+		return auction.close(Instant.now(clock));
 	}
 
 	// GET /api/v1/auctions. 상태 조건과 응답의 status는 같은 서버 시각으로 판단한다

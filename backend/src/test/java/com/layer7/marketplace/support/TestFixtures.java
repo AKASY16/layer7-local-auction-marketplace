@@ -79,7 +79,7 @@ public class TestFixtures {
 		});
 	}
 
-	// 경매 종료·취소 기능이 아직 없어 저장 상태만 바꾼다
+	// 취소 기능이 아직 없고, 종료 처리를 거치지 않은 저장 상태가 필요한 테스트가 있어 저장 상태만 바꾼다
 	public void storeAuctionStatus(Long auctionId, AuctionStatus status) {
 		jdbcTemplate.update("UPDATE auctions SET status = ? WHERE id = ?", status.name(), auctionId);
 	}
