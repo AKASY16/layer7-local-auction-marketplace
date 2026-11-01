@@ -4,18 +4,18 @@ TEAM LAYER7의 3인 캡스톤 프로젝트입니다. 전국의 수집품을 대�
 
 ## 현재 개발 목표 — P1 최종 시연
 
-2026-10-29 기준 최종 시연까지 3~4주 동안 다음 기술의 구현·비교 실험에 집중합니다.
+최종 시연에서는 일반 경매와 함께 **타임 경매**를 보여 줍니다.
 
-- **수요 기반 매칭·마감 편성:** 구매 희망과 상품 동일성을 매칭하고, 참여 가능 시간·대체 상품 경매·판매자 제약을 고려해 마감 시간을 추천합니다.
+- **타임 경매:** 판매자가 24~48시간 전에 일정을 예고하고, 정해진 시각에 30분 동안 집중해서 입찰을 받습니다. 관심상품 등록자에게 시작 알림을 보내고, 마지막 1분 안에 입찰이 들어오면 그 시점부터 1분을 다시 보장합니다. 핵심 과제는 짧은 시간에 몰리는 입찰과 연장·종료가 겹쳐도 결과가 하나로 정해지게 하는 것입니다. 규칙은 [경매 정책](docs/03-auction-policy.md#타임-경매)에 있습니다.
 
-이상입찰 탐지는 2026-10-31 보류했습니다. 계획은 [보류 계획](docs/later/anomaly-bid-detection.md)에 남겨 두었습니다.
+수요 기반 매칭·마감 편성은 쓸 수 있는 데이터가 없어 2026-11-01 뺐고, 이상입찰 탐지는 2026-10-31 보류했습니다([보류 계획](docs/later/anomaly-bid-detection.md)).
 
-경매는 이 기술을 연결할 최소 MVP로 개발합니다. 기존 입찰 엔진의 비관적 락, 락 이후 서버 시각 판정, 판정 시각 기록과 MySQL 동시성 검증을 유지합니다. 최소 상품 이미지 업로드·등록·표시는 MVP에 포함합니다. HTTP 요청 멱등 기능·Trade·자동입찰·신뢰점수 변경·범용 Push·배송·결제·채팅은 후순위이고 WebSocket·실시간 ML 추론은 선택 범위입니다.
+경매 MVP는 그대로 개발합니다. 기존 입찰 엔진의 비관적 락, 락 이후 서버 시각 판정, 판정 시각 기록과 MySQL 동시성 검증을 유지합니다. 최소 상품 이미지 업로드·등록·표시는 MVP에 포함합니다. WebSocket 화면 갱신과 앱 내부 알림은 P1에 포함합니다. HTTP 요청 멱등 기능·Trade·자동입찰·신뢰점수 변경·푸시 알림·배송·결제·채팅은 후순위입니다.
 
 | 현재 구현 | 추가로 필요한 것 |
 |---|---|
 | 가입·로그인·내 정보·지역·공개 경매 목록·수동입찰 API | 이미지 업로드·상품 등록/이미지 표시·경매 생성/상세·입찰 이력·종료/낙찰 확정 |
-| 홈 목록·가입/로그인 화면·공통 디자인·분리된 demo DB | 수요·편성 모듈·화면·비교 실험·통합 시연 |
+| 홈 목록·가입/로그인 화면·공통 디자인·분리된 demo DB | WebSocket·관심상품·앱 내부 알림·상품/경매 화면, 타임 경매, 통합 시연 |
 
 [현재 요구사항](docs/02-requirements.md) · [P1 범위와 선행 작업](docs/p1/README.md) · [최종 시연 마일스톤](https://github.com/AKASY16/layer7-local-auction-marketplace/milestone/2)
 
@@ -23,8 +23,8 @@ TEAM LAYER7의 3인 캡스톤 프로젝트입니다. 전국의 수집품을 대�
 
 | 이름 | GitHub | 역할 | 담당 |
 |---|---|---|---|
-| 유선엽 | [AKASY16](https://github.com/AKASY16) | Backend / 팀장 | 전체 일정·협업 관리, 핵심 연구·알고리즘·동시성·설계 |
-| 장재혁 | [redrum2555](https://github.com/redrum2555) | Backend | 상품·경매·수요 등록 등 백엔드 API |
+| 유선엽 | [AKASY16](https://github.com/AKASY16) | Backend / 팀장 | 전체 일정·협업 관리, 핵심 설계·동시성·WebSocket·알림 |
+| 장재혁 | [redrum2555](https://github.com/redrum2555) | Backend | 상품 등록·이미지 업로드·경매 생성/상세 백엔드 API |
 | 박지우 | [woo081](https://github.com/woo081) | Frontend | 사용자 화면과 API 연동 |
 
 개별 작업의 책임자는 각 이슈의 Assignees를 기준으로 관리합니다. 새 이슈는 담당자를 지정해 생성하고, 공동 작업은 본문에 주관자와 각자 책임을 기록합니다. [협업 규칙](docs/00-team-and-collaboration.md).
@@ -34,16 +34,16 @@ TEAM LAYER7의 3인 캡스톤 프로젝트입니다. 전국의 수집품을 대�
 - Frontend: React 19, Vite, JavaScript, Styled Components, React Router
 - Backend: Java 25, Spring Boot 4.1, Spring Data JPA, Spring Security + JWT, Flyway
 - Database: MySQL 8.4
-- Realtime: WebSocket(STOMP) 설계는 보존하며 P1 화면 갱신 수단은 별도 선택
+- Realtime: WebSocket(STOMP)으로 경매 화면 갱신
 - Auction consistency: Transaction / Lock
-- Scheduler: 경매 종료·낙찰 확정 구현 예정 (#47), 거래 기한 처리는 후순위
+- Scheduler: 경매 종료·낙찰 확정(#47), 타임 경매 시작 알림 구현 예정. 거래 기한 처리는 후순위
 - File: Object Storage
 - Local Infrastructure: Docker Compose (MySQL·S3 호환 저장소). 운영 배포 환경은 미정
 - Development Assist: ChatGPT, Claude Code, Codex
 
 ## Core Flow
 
-개발 목표: 구매 희망 등록 → 상품 매칭·수요 집계 → 마감 추천 → 경매 생성 → 입찰 → 종료·낙찰 확정 → 비교 실험 확인
+개발 목표: 상품 등록 → 타임 경매 예고·관심상품 등록 → 시작 알림 → 30분 실시간 입찰(마지막 1분 연장) → 종료·낙찰 확정
 
 ## Project Structure
 

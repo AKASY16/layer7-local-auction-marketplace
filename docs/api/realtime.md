@@ -1,6 +1,6 @@
 # Realtime / WebSocket 명세
 
-> 2026-10-29: WebSocket은 이번 P1의 선택 범위이며 아래는 기존 전달 설계입니다. 보류한 이상입찰 탐지의 커밋 후 분석 이벤트에는 아래 화면 이벤트의 유실 허용을 그대로 적용하지 않습니다([보류 계획](../later/anomaly-bid-detection.md)). 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
+> 2026-11-01: WebSocket 화면 갱신은 P1 필수입니다(#83). 공개 Auction Topic과 아래 전달 원칙을 우선 구현하고, 타임 경매 연장 시에는 새 종료 시각과 연장 횟수를 알리는 이벤트를 추가합니다(필드는 구현 이슈에서 정함). Web Push는 후순위입니다. 보류한 이상입찰 탐지의 커밋 후 분석 이벤트에는 아래 화면 이벤트의 유실 허용을 그대로 적용하지 않습니다([보류 계획](../later/anomaly-bid-detection.md)). 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
 
 Spring WebSocket + STOMP를 사용합니다.
 

@@ -1,6 +1,6 @@
 # Auction / Trade 상태 모델
 
-> 2026-10-29 적용 범위: P1의 종료 처리는 winningBid 확정까지입니다. 아래 Trade·거래 기한·재경매는 후순위이며 Auction.finalized를 위해 Trade 생성을 요구하지 않습니다. 논리 종료와 저장 상태 확정의 구분은 유지합니다. [현재 요구사항](../02-requirements.md).
+> 2026-10-29 적용 범위: P1의 종료 처리는 winningBid 확정까지입니다. 아래 Trade·거래 기한·재경매는 후순위이며 Auction.finalized를 위해 Trade 생성을 요구하지 않습니다. 논리 종료와 저장 상태 확정의 구분은 유지합니다. 타임 경매는 성공한 입찰이 `endAt`을 늘릴 수 있으며, 아래 논리 상태는 항상 연장이 반영된 현재 `endAt`으로 계산합니다([자동 연장](../03-auction-policy.md#자동-연장)). [현재 요구사항](../02-requirements.md).
 
 ## Auction
 
