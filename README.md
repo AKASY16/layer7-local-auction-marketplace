@@ -23,8 +23,8 @@ TEAM LAYER7의 3인 캡스톤 프로젝트입니다. 전국의 수집품을 대�
 
 | 이름 | GitHub | 역할 | 담당 |
 |---|---|---|---|
-| 유선엽 | [AKASY16](https://github.com/AKASY16) | Backend / 팀장 | 전체 일정·협업 관리, 핵심 연구·알고리즘·동시성·설계 |
-| 장재혁 | [redrum2555](https://github.com/redrum2555) | Backend | 상품·경매·관심상품·알림 등 백엔드 API |
+| 유선엽 | [AKASY16](https://github.com/AKASY16) | Backend / 팀장 | 전체 일정·협업 관리, 핵심 설계·동시성·WebSocket·알림 |
+| 장재혁 | [redrum2555](https://github.com/redrum2555) | Backend | 상품 등록·이미지 업로드·경매 생성/상세 백엔드 API |
 | 박지우 | [woo081](https://github.com/woo081) | Frontend | 사용자 화면과 API 연동 |
 
 개별 작업의 책임자는 각 이슈의 Assignees를 기준으로 관리합니다. 새 이슈는 담당자를 지정해 생성하고, 공동 작업은 본문에 주관자와 각자 책임을 기록합니다. [협업 규칙](docs/00-team-and-collaboration.md).

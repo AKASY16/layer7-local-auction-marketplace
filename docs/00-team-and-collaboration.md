@@ -4,8 +4,8 @@
 
 | 이름 | GitHub | 역할 | 주요 책임 |
 |---|---|---|---|
-| 유선엽 | [AKASY16](https://github.com/AKASY16) | Backend / 팀장 | 전체 일정·협업 관리, 핵심 연구·알고리즘·동시성·설계 |
-| 장재혁 | [redrum2555](https://github.com/redrum2555) | Backend | 상품·경매·관심상품·알림 등 백엔드 API |
+| 유선엽 | [AKASY16](https://github.com/AKASY16) | Backend / 팀장 | 전체 일정·협업 관리, 핵심 설계·동시성·WebSocket·알림 |
+| 장재혁 | [redrum2555](https://github.com/redrum2555) | Backend | 상품 등록·이미지 업로드·경매 생성/상세 백엔드 API |
 | 박지우 | [woo081](https://github.com/woo081) | Frontend | 사용자 화면과 API 연동 |
 
 ## 협업 방향
