@@ -1,6 +1,6 @@
 # Scheduler
 
-> 2026-10-29 적용 범위: P1 필수는 경매 종료·낙찰 확정(#47)입니다. 시작 Scheduler는 최소 시연 흐름에 맞춰 판단하며, 거래 기한·알림·토큰 정리와 만료 업로드 정리 배치는 후순위입니다. 최초 이미지 업로드·상품 등록은 P1 필수이며 정리 배치를 선행 조건으로 두지 않습니다. [현재 요구사항](../02-requirements.md).
+> 2026-10-29 적용 범위: P1 필수는 경매 종료·낙찰 확정(#47)과 타임 경매 시작 알림입니다. READY → OPEN 전이 자체는 입찰 경로가 처리하므로 시작 Scheduler는 선택이며, 거래 기한·알림·토큰 정리와 만료 업로드 정리 배치는 후순위입니다. 최초 이미지 업로드·상품 등록은 P1 필수이며 정리 배치를 선행 조건으로 두지 않습니다. [현재 요구사항](../02-requirements.md).
 
 경매 시작·종료와 거래 기한을 처리하는 Scheduler의 실행 규칙입니다. 정합성은 논리 시간 판정과 락이 보장하므로, Scheduler가 늦게 실행되어도 결과가 틀리지는 않습니다. 실행 주기는 "논리적으로 끝난 뒤 후처리가 반영되기까지 사용자가 얼마나 기다리는가"를 정하는 값입니다.
 
@@ -9,7 +9,8 @@
 | 작업 | 조회 조건 | 주기 | 처리 |
 |---|---|---|---|
 | 경매 시작 | `status = READY AND startAt <= now AND endAt > now` | 1초 | READY → OPEN. 쓰기 요청이 먼저 바꿨으면 건너뜀 |
-| 경매 종료 | `status IN (READY, OPEN) AND endAt <= now` | 1초 | ENDED, winningBid 확정 (Trade·알림은 후순위) |
+| 경매 종료 | `status IN (READY, OPEN) AND endAt <= now` | 1초 | ENDED, winningBid 확정 (Trade·알림은 후순위). 락 뒤 연장된 `endAt`으로 다시 판정 |
+| 타임 경매 시작 알림 | 타임 경매이면서 `startAt <= now`이고 시작 알림을 아직 처리하지 않은 경매 (조건·처리 표시 방법은 구현 이슈에서 정함) | 구현 이슈에서 정함 | 관심상품 등록자에게 앱 내부 알림. `dedupe_key`로 사용자·경매당 한 번 |
 | 낙찰 미응답 | `status = AWAITING_RESPONSE AND responseDeadline <= now` | 1분 | NO_RESPONSE, 신뢰점수, 연속 실패·정지 판정 |
 | 거래 기한 만료 | `status = IN_PROGRESS AND tradeDeadline <= now` | 1분 | EXPIRED |
 | 완료 자동 확정 | `status = COMPLETION_REQUESTED AND completionDeadline <= now` | 1분 | COMPLETED, 신뢰점수, 상품 SOLD |

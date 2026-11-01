@@ -1,6 +1,6 @@
 # Backend Domain
 
-> 2026-10-29 적용 범위: 아래 전체 도메인 목록은 기존 설계를 포함합니다. 현재 JPA 엔티티는 User·Region·Product·Auction·Bid이며 P1 새 도메인·관계는 #62에서 확정합니다. AutoBid·Trade·Trust·알림 등은 후순위입니다. [현재 요구사항](../02-requirements.md).
+> 2026-10-29 적용 범위: 아래 전체 도메인 목록은 기존 설계를 포함합니다. 현재 JPA 엔티티는 User·Region·Product·Auction·Bid이며 P1에서 Favorite·Notification(앱 내부 알림)을 추가하고 Auction에 타임 경매 유형·연장 정보를 더합니다. AutoBid·Trade·Trust·푸시 알림 등은 후순위입니다. [현재 요구사항](../02-requirements.md).
 
 ## Core Domain
 - User
