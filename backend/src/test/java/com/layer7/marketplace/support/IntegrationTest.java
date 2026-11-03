@@ -16,7 +16,8 @@ import org.springframework.context.annotation.Primary;
  * <p>테스트 클래스에서 {@code @MockitoBean}, {@code @TestPropertySource} 등으로 설정을 바꾸면 그 클래스만 컨텍스트와
  * 컨테이너를 새로 띄우므로 꼭 필요할 때만 쓴다. 시각이 필요하면 {@link #clock}을 고정하고, 테스트가 끝나면 실제 시각으로 돌아간다.
  */
-@SpringBootTest
+// 배경 Scheduler가 테스트가 만든 경매를 먼저 종료하지 않도록 끈다. Scheduler 테스트는 메서드를 직접 부른다
+@SpringBootTest(properties = "auction.scheduling.enabled=false")
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, IntegrationTest.TestClockConfig.class})
 public abstract class IntegrationTest {

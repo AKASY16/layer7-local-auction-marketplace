@@ -146,4 +146,15 @@ public class Auction extends BaseTimeEntity {
 		this.currentPrice = bid.getAmount();
 		this.leadingBid = bid;
 	}
+
+	// 마감이 지난 경매를 ENDED로 저장하고 선두 입찰을 낙찰로 확정한다. 입찰이 없으면 유찰(winningBid = null)이다.
+	// 이미 종료·취소됐거나 아직 마감 전이면 아무것도 바꾸지 않고 false를 돌려준다. 종료 Scheduler만 부른다 (docs/backend/auction-state.md)
+	public boolean close(Instant now) {
+		if (isFinalized() || statusAt(now) != AuctionStatus.ENDED) {
+			return false;
+		}
+		this.status = AuctionStatus.ENDED;
+		this.winningBid = leadingBid;
+		return true;
+	}
 }
