@@ -93,6 +93,11 @@ public class JwtTokenProvider {
 	}
 
 	public Long parseUserId(String token) {
+		return parseAccessToken(token).userId();
+	}
+
+	// WebSocket은 연결을 오래 유지하므로, 연결 뒤에도 만료를 확인할 수 있게 만료 시각을 함께 돌려준다 (docs/api/realtime.md "연결")
+	public AccessToken parseAccessToken(String token) {
 		try {
 			Jwt jwt = jwtDecoder.decode(token);
 
@@ -109,9 +114,12 @@ public class JwtTokenProvider {
 				throw new BusinessException(ErrorCode.INVALID_TOKEN);
 			}
 
-			return userId;
+			return new AccessToken(userId, expiresAt);
 		} catch (JwtException | IllegalArgumentException exception) {
 			throw new BusinessException(ErrorCode.INVALID_TOKEN);
 		}
+	}
+
+	public record AccessToken(Long userId, Instant expiresAt) {
 	}
 }

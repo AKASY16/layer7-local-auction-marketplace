@@ -1,6 +1,8 @@
 # Realtime / WebSocket 명세
 
 > 2026-11-01: WebSocket 화면 갱신은 P1 필수입니다(#83). 공개 Auction Topic과 아래 전달 원칙을 우선 구현하고, 타임 경매 연장 시에는 새 종료 시각과 연장 횟수를 알리는 이벤트를 추가합니다(필드는 구현 이슈에서 정함). Web Push는 후순위입니다. 보류한 이상입찰 탐지의 커밋 후 분석 이벤트에는 아래 화면 이벤트의 유실 허용을 그대로 적용하지 않습니다([보류 계획](../later/anomaly-bid-detection.md)). 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
+>
+> 현재 구현(#83): `/ws` 연결, CONNECT의 JWT 인증과 구독 범위 제한, AUCTION_PRICE_CHANGED(입찰 성립), AUCTION_STATUS_CHANGED(ENDED, 종료 처리). CANCELED·PRODUCT_APPEND_ADDED·사용자 Queue 발송·연장 이벤트는 해당 기능과 함께 추가합니다.
 
 Spring WebSocket + STOMP를 사용합니다.
 
@@ -12,6 +14,8 @@ Spring WebSocket + STOMP를 사용합니다.
 - 서버는 CONNECT 시 Access Token 만료 시각을 세션에 저장하고, 만료 후 들어온 SUBSCRIBE 프레임에는 ERROR를 보내고 연결을 종료
 - 클라이언트는 Access Token을 갱신하면 새 토큰으로 다시 연결하고, 재연결 후 REST로 상태를 동기화
 - 클라이언트는 WebSocket을 통해 입찰 명령을 보내지 않으며, 상태변경 명령은 REST API를 사용
+- 구독할 수 있는 주소는 `/topic/auctions/{auctionId}`와 `/user/queue/notifications`뿐입니다. 그 밖의 SUBSCRIBE와 모든 SEND는 ERROR 프레임으로 거절하고 연결을 끊습니다
+- 연결을 허용할 화면 주소(Origin)는 설정 `auction.websocket.allowed-origins`로 정합니다. 기본값은 개발 서버 `http://localhost:5173`입니다
 
 ## 공개 Auction Topic
 
@@ -59,7 +63,7 @@ DB Commit 이후 발행.
 ### AUCTION_STATUS_CHANGED
 
 저장 상태를 바꾼 쪽이 DB Commit 이후 발행합니다.
-- OPEN: 시작 Scheduler 또는 startAt 이후 첫 쓰기 요청(입찰 등)이 READY → OPEN으로 바꿀 때
+- OPEN: 시작 Scheduler가 READY → OPEN으로 바꿀 때(도입 시). startAt 이후 첫 입찰이 함께 바꾸는 경우에는 보내지 않고 AUCTION_PRICE_CHANGED만 보냅니다. 한 트랜잭션에서 나간 두 소식은 version이 같아서, 화면이 "본 version 이하는 버린다" 규칙으로 둘 중 하나를 버리기 때문입니다. 화면은 시작 여부를 `startAt`과 `serverTime`으로 판단합니다
 - ENDED: 종료 Scheduler가 낙찰 확정을 마쳤을 때 (이번 P1에서는 Trade 생성 제외) (`finalized: true`)
 - CANCELED: 판매자 취소 시 (`finalized: true`)
 

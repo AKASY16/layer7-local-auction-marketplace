@@ -6,7 +6,7 @@
 
 ```text
 com.layer7.marketplace
-├── global/         여러 도메인이 함께 쓰는 공통 코드 (config, error, scheduling, security, time)
+├── global/         여러 도메인이 함께 쓰는 공통 코드 (config, error, scheduling, security, time, websocket)
 ├── auth/           회원가입·로그인·토큰 갱신·로그아웃, RefreshToken
 ├── user/           회원, 내 정보, 지역 변경, 회원탈퇴
 ├── region/         시·군·구 지역
@@ -32,6 +32,7 @@ auction/
 ├── service/      비즈니스 규칙과 트랜잭션
 ├── domain/       엔티티와 도메인 규칙 (예: Auction, AuctionStatus)
 ├── repository/   DB 조회·저장 (Spring Data JPA)
+├── event/        도메인 이벤트와 커밋 후 처리 리스너 (예: AuctionPriceChangedEvent, AuctionEventBroadcaster)
 ├── scheduler/    @Scheduled 작업. service를 호출만 하고 규칙·트랜잭션은 service에 둔다 (예: AuctionCloseScheduler)
 └── dto/          요청·응답 객체 (record)
 ```

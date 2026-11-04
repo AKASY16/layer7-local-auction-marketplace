@@ -5,6 +5,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -16,14 +17,21 @@ import org.springframework.context.annotation.Primary;
  * <p>테스트 클래스에서 {@code @MockitoBean}, {@code @TestPropertySource} 등으로 설정을 바꾸면 그 클래스만 컨텍스트와
  * 컨테이너를 새로 띄우므로 꼭 필요할 때만 쓴다. 시각이 필요하면 {@link #clock}을 고정하고, 테스트가 끝나면 실제 시각으로 돌아간다.
  */
-// 배경 Scheduler가 테스트가 만든 경매를 먼저 종료하지 않도록 끈다. Scheduler 테스트는 메서드를 직접 부른다
-@SpringBootTest(properties = "auction.scheduling.enabled=false")
+// 배경 Scheduler가 테스트가 만든 경매를 먼저 종료하지 않도록 끈다. Scheduler 테스트는 메서드를 직접 부른다.
+// WebSocket 테스트가 실제 연결을 맺도록 서버를 빈 포트에 띄운다. MockMvc 테스트는 그대로 동작하고, 컨텍스트는 여전히 하나다
+@SpringBootTest(
+	webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+	properties = "auction.scheduling.enabled=false"
+)
 @AutoConfigureMockMvc
 @Import({TestcontainersConfiguration.class, IntegrationTest.TestClockConfig.class})
 public abstract class IntegrationTest {
 
 	@Autowired
 	protected TestClock clock;
+
+	@LocalServerPort
+	protected int port;
 
 	@AfterEach
 	protected void resetClock() {
