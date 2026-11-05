@@ -1,6 +1,7 @@
 package com.layer7.marketplace.bid.service;
 
 import com.layer7.marketplace.auction.domain.Auction;
+import com.layer7.marketplace.auction.event.AuctionPriceChangedEvent;
 import com.layer7.marketplace.auction.service.AuctionService;
 import com.layer7.marketplace.bid.domain.Bid;
 import com.layer7.marketplace.bid.domain.BidIncrementPolicy;
@@ -14,6 +15,7 @@ import com.layer7.marketplace.user.service.UserService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.OptionalLong;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ public class BidService {
 	private final TrustService trustService;
 	private final BidRepository bidRepository;
 	private final BidIncrementPolicy bidIncrementPolicy;
+	private final ApplicationEventPublisher eventPublisher;
 	private final Clock clock;
 
 	public BidService(
@@ -34,6 +37,7 @@ public class BidService {
 		TrustService trustService,
 		BidRepository bidRepository,
 		BidIncrementPolicy bidIncrementPolicy,
+		ApplicationEventPublisher eventPublisher,
 		Clock clock
 	) {
 		this.auctionService = auctionService;
@@ -41,6 +45,7 @@ public class BidService {
 		this.trustService = trustService;
 		this.bidRepository = bidRepository;
 		this.bidIncrementPolicy = bidIncrementPolicy;
+		this.eventPublisher = eventPublisher;
 		this.clock = clock;
 	}
 
@@ -73,15 +78,23 @@ public class BidService {
 		bidRepository.flush();
 
 		OptionalLong nextBidAmount = bidIncrementPolicy.nextValidAmount(auction.getCurrentPrice());
+		Long nextAmount = nextBidAmount.isPresent() ? nextBidAmount.getAsLong() : null;
 		long bidCount = bidRepository.countByAuctionId(auctionId);
 
-		return BidCreateResponse.leading(
-			bid,
-			auction,
-			nextBidAmount.isPresent() ? nextBidAmount.getAsLong() : null,
+		// 실시간 소식은 커밋된 뒤에만 나간다(AuctionEventBroadcaster). 응답과 같은 version을 담는다.
+		// 첫 입찰이 READY를 OPEN으로 함께 바꿔도 상태 소식은 따로 보내지 않는다. 같은 version의 소식 두 개 중 하나는 화면이 버리기 때문이다 (docs/api/realtime.md)
+		eventPublisher.publishEvent(new AuctionPriceChangedEvent(
+			auctionId,
+			auction.getVersion(),
+			now,
+			auction.getCurrentPrice(),
+			nextAmount,
 			bidCount,
-			now
-		);
+			bidder.getId(),
+			bidder.getNickname()
+		));
+
+		return BidCreateResponse.leading(bid, auction, nextAmount, bidCount, now);
 	}
 
 	// 상한 → 가격 단위 → 최소 금액 순서로 확인한다. 상한을 넘는 금액은 가격 단위 검사에서도 false라서 상한을 먼저 본다

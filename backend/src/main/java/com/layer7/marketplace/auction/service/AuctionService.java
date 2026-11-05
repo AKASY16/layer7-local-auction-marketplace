@@ -5,6 +5,7 @@ import com.layer7.marketplace.auction.domain.AuctionStatus;
 import com.layer7.marketplace.auction.dto.AuctionPageResponse;
 import com.layer7.marketplace.auction.dto.AuctionSearchCondition;
 import com.layer7.marketplace.auction.dto.AuctionSummaryResponse;
+import com.layer7.marketplace.auction.event.AuctionClosedEvent;
 import com.layer7.marketplace.auction.repository.AuctionRepository;
 import com.layer7.marketplace.auction.repository.AuctionSpecifications;
 import com.layer7.marketplace.global.error.BusinessException;
@@ -13,6 +14,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -32,10 +34,12 @@ public class AuctionService {
 	private static final List<AuctionStatus> CLOSABLE_STATUSES = List.of(AuctionStatus.READY, AuctionStatus.OPEN);
 
 	private final AuctionRepository auctionRepository;
+	private final ApplicationEventPublisher eventPublisher;
 	private final Clock clock;
 
-	public AuctionService(AuctionRepository auctionRepository, Clock clock) {
+	public AuctionService(AuctionRepository auctionRepository, ApplicationEventPublisher eventPublisher, Clock clock) {
 		this.auctionRepository = auctionRepository;
+		this.eventPublisher = eventPublisher;
 		this.clock = clock;
 	}
 
@@ -56,7 +60,17 @@ public class AuctionService {
 	@Transactional
 	public boolean closeAuction(Long auctionId) {
 		Auction auction = getAuctionForUpdate(auctionId);
-		return auction.close(Instant.now(clock));
+		Instant now = Instant.now(clock);
+		if (!auction.close(now)) {
+			return false;
+		}
+
+		// 실시간 소식의 version이 이번 종료까지 반영된 값이 되도록 먼저 DB에 반영한다. 소식은 커밋된 뒤에만 나간다
+		auctionRepository.flush();
+		Long winningBidId = auction.getWinningBid() == null ? null : auction.getWinningBid().getId();
+		eventPublisher.publishEvent(
+			new AuctionClosedEvent(auctionId, auction.getVersion(), now, winningBidId, auction.getEndAt()));
+		return true;
 	}
 
 	// GET /api/v1/auctions. 상태 조건과 응답의 status는 같은 서버 시각으로 판단한다

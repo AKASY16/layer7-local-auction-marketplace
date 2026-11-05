@@ -29,3 +29,6 @@ spring:
 auction:
   jwt:
     secret: ${AUCTION_JWT_SECRET}
+  websocket:
+    # /ws 연결을 허용할 화면 주소. 개발 서버(Vite)의 /ws 프록시는 Origin을 5173으로 보낸다. 여러 개면 쉼표로 구분
+    allowed-origins: ${AUCTION_WEBSOCKET_ALLOWED_ORIGINS:http://localhost:5173}
