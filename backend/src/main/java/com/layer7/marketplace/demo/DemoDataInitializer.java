@@ -4,6 +4,9 @@ import com.layer7.marketplace.auction.domain.Auction;
 import com.layer7.marketplace.auth.dto.SignupRequest;
 import com.layer7.marketplace.auth.service.AuthService;
 import com.layer7.marketplace.bid.service.BidService;
+import com.layer7.marketplace.notification.domain.NotificationType;
+import com.layer7.marketplace.notification.dto.NewNotification;
+import com.layer7.marketplace.notification.service.NotificationService;
 import com.layer7.marketplace.product.domain.Category;
 import com.layer7.marketplace.product.domain.Product;
 import com.layer7.marketplace.product.domain.ProductCondition;
@@ -20,7 +23,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * demo 프로필로 서버를 켜면 시연용 계정·상품·경매·입찰 기록을 만든다. 이미 있으면 다시 만들지 않는다.
+ * demo 프로필로 서버를 켜면 시연용 계정·상품·경매·입찰 기록과 앱 내부 알림을 만든다. 이미 있으면 다시 만들지 않는다.
  *
  * <p>시각은 실행 시점 기준이라, 시연 직전에 시연용 MySQL을 새로 띄우고 서버를 켠다 (docs/demo.md).
  * 새 DB에서 켜면 경매 id는 만든 순서대로 1~5다.
@@ -42,6 +45,7 @@ public class DemoDataInitializer implements ApplicationRunner {
 
 	private final AuthService authService;
 	private final BidService bidService;
+	private final NotificationService notificationService;
 	private final EntityManager em;
 	private final TransactionTemplate tx;
 	private final Clock clock;
@@ -49,12 +53,14 @@ public class DemoDataInitializer implements ApplicationRunner {
 	public DemoDataInitializer(
 		AuthService authService,
 		BidService bidService,
+		NotificationService notificationService,
 		EntityManager em,
 		TransactionTemplate tx,
 		Clock clock
 	) {
 		this.authService = authService;
 		this.bidService = bidService;
+		this.notificationService = notificationService;
 		this.em = em;
 		this.tx = tx;
 		this.clock = clock;
@@ -135,6 +141,16 @@ public class DemoDataInitializer implements ApplicationRunner {
 		bid(chair, bidder1, 110_000);
 		bid(chair, bidder2, 120_000);
 
+		// 알림 화면(#90)을 확인할 데이터. 아직 알림을 만드는 기능이 없어 입찰 기록에 맞춰 직접 만든다.
+		// 익산사는개발자: 커피머신에서 밀렸다가 다시 선두가 된 알림은 읽음, 의자에서 밀린 알림은 안 읽음
+		addNotification(bidder1, NotificationType.OUTBID, coffeeMachine,
+			"드롱기 아이코나 커피머신 경매에서 다른 입찰자가 더 높은 금액을 입찰했습니다.");
+		notificationService.markAllRead(bidder1);
+		addNotification(bidder1, NotificationType.OUTBID, chair,
+			"시디즈 T50 사무용 의자 경매에서 다른 입찰자가 더 높은 금액을 입찰했습니다.");
+		addNotification(seller, NotificationType.AUCTION_UNSOLD, endedCase,
+			"아이패드 프로 키보드 케이스 경매가 입찰 없이 종료되었습니다.");
+
 		return new DemoAuctions(keyboard, coffeeMachine, chair, endedCase, upcomingMouse);
 	}
 
@@ -187,6 +203,14 @@ public class DemoDataInitializer implements ApplicationRunner {
 
 	private void bid(Long auctionId, Long bidderId, long amount) {
 		bidService.placeManualBid(auctionId, bidderId, amount);
+	}
+
+	private void addNotification(Long userId, NotificationType type, Long auctionId, String message) {
+		Long productId = tx.execute(status -> em.find(Auction.class, auctionId).getProduct().getId());
+		notificationService.create(new NewNotification(
+			userId, type, message, productId, auctionId, null,
+			"demo:" + type.name() + ":" + auctionId + ":" + userId
+		));
 	}
 
 	record DemoAuctions(Long keyboard, Long coffeeMachine, Long chair, Long endedCase, Long upcomingMouse) {

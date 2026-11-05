@@ -15,7 +15,7 @@ com.layer7.marketplace
 ├── bid/            수동입찰, 자동입찰, 가격단위표
 ├── trade/          낙찰 후 거래, 거래 기한 Scheduler
 ├── trust/          신뢰점수 이력, 이용 정지
-├── notification/   알림, Web Push 구독, 발송
+├── notification/   앱 내부 알림 저장·조회·읽음 (Web Push 구독·발송은 후순위)
 ├── idempotency/    HTTP 중복 요청 방지 (기능·테스트 후순위)
 └── demo/           중간 발표 시연용 데이터 (demo 프로필 전용, docs/demo.md)
 ```

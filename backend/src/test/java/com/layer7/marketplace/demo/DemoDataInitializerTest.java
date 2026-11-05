@@ -6,6 +6,7 @@ import com.layer7.marketplace.auth.service.AuthService;
 import com.layer7.marketplace.bid.service.BidService;
 import com.layer7.marketplace.global.error.BusinessException;
 import com.layer7.marketplace.global.error.ErrorCode;
+import com.layer7.marketplace.notification.service.NotificationService;
 import com.layer7.marketplace.support.IntegrationTest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
@@ -31,6 +32,9 @@ class DemoDataInitializerTest extends IntegrationTest {
 
 	@Autowired
 	private BidService bidService;
+
+	@Autowired
+	private NotificationService notificationService;
 
 	@Autowired
 	private EntityManager em;
@@ -102,8 +106,38 @@ class DemoDataInitializerTest extends IntegrationTest {
 		assertThat(onUpcoming).isEqualTo(ErrorCode.AUCTION_NOT_OPEN);
 	}
 
+	@Test
+	@DisplayName("알림 화면을 확인할 수 있도록 입찰자와 판매자에게 경매를 가리키는 알림을 만든다")
+	void createsNotifications() {
+		// given
+		initializer().run(null);
+		Long bidder1 = userId(DemoDataInitializer.BIDDER1_EMAIL);
+		Long seller = userId(DemoDataInitializer.SELLER_EMAIL);
+
+		// then
+		assertThat(count("SELECT COUNT(*) FROM notifications WHERE user_id = ?", bidder1)).isEqualTo(2);
+		assertThat(count(
+			"SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read_at IS NULL AND auction_id = ?",
+			bidder1, auctionId("시디즈 T50 사무용 의자")
+		)).isEqualTo(1);
+		assertThat(count(
+			"SELECT COUNT(*) FROM notifications WHERE user_id = ? AND read_at IS NOT NULL AND auction_id = ?",
+			bidder1, auctionId("드롱기 아이코나 커피머신")
+		)).isEqualTo(1);
+		assertThat(count(
+			"SELECT COUNT(*) FROM notifications WHERE user_id = ? AND type = 'AUCTION_UNSOLD' AND auction_id = ?",
+			seller, auctionId("아이패드 프로 키보드 케이스")
+		)).isEqualTo(1);
+		// 알림의 상품 id가 그 경매의 상품과 같아야 화면에서 바른 상품을 보여 준다
+		assertThat(count(
+			"SELECT COUNT(*) FROM notifications n JOIN auctions a ON a.id = n.auction_id "
+				+ "WHERE n.user_id IN (?, ?) AND n.product_id <> a.product_id",
+			bidder1, seller
+		)).isZero();
+	}
+
 	private DemoDataInitializer initializer() {
-		return new DemoDataInitializer(authService, bidService, em, tx, clock);
+		return new DemoDataInitializer(authService, bidService, notificationService, em, tx, clock);
 	}
 
 	// 성공하면 null, 거절되면 그 ErrorCode
