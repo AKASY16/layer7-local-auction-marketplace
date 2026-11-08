@@ -90,7 +90,7 @@ npm run dev
 
 저장소 접근 정책은 서명된 URL 업로드·공개 읽기를 전제로 합니다. 상품 이미지 업로드 API는 아직 구현되지 않았습니다.
 
-백엔드 테스트는 Testcontainers로 MySQL 8.4를 띄우므로 Docker가 실행 중이어야 합니다.
+백엔드 테스트는 Testcontainers로 MySQL 8.4와 SeaweedFS 4.48을 띄우므로 Docker가 실행 중이어야 합니다.
 
 ```bash
 cd backend
@@ -118,6 +118,7 @@ cd backend
 
 ## Documents
 
+- [이미지 업로드·상품 등록 실행 안내](docs/product-images.md)
 - [팀 역할 및 협업 규칙](docs/00-team-and-collaboration.md)
 - [프로젝트 기획](docs/01-project-planning.md)
 - [요구사항](docs/02-requirements.md)
