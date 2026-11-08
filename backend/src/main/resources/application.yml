@@ -27,6 +27,13 @@ spring:
     locations: classpath:db/migration
 
 auction:
+  storage:
+    endpoint: ${AUCTION_STORAGE_ENDPOINT:http://localhost:8333}
+    region: ${AUCTION_STORAGE_REGION:us-east-1}
+    bucket: ${AUCTION_STORAGE_BUCKET:product-images}
+    access-key: ${AUCTION_STORAGE_ACCESS_KEY:local}
+    secret-key: ${AUCTION_STORAGE_SECRET_KEY:localsecret}
+    public-url: ${AUCTION_STORAGE_PUBLIC_URL:http://localhost:8333/product-images}
   jwt:
     secret: ${AUCTION_JWT_SECRET}
   websocket:

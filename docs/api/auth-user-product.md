@@ -279,6 +279,14 @@ Category code/label 목록.
 
 ## 3. Product
 
+### 현재 구현 범위 — #63 (1차: 업로드 URL 발급)
+
+- `POST /api/v1/uploads/product-images`를 구현한다. JWT 인증이 필요하며 탈퇴한 사용자는 `403 ACCOUNT_WITHDRAWN`이다.
+- 요청 파일은 1~10개, JPEG/PNG/WebP, 파일당 1~10,485,760바이트(10MiB)여야 한다. 형식 검증 실패는 `400 VALIDATION_ERROR`이다.
+- 서버가 `uploads/{uuid}` objectKey를 생성하고 본인 소유의 PENDING 업로드 기록을 저장한다.
+- 응답은 10분짜리 PUT URL과 `headers.Content-Type`을 포함한다. PUT에 이 헤더를 그대로 보내야 한다. `expiresAt`은 SDK가 실제로 서명한 URL의 만료 시각이다.
+- 상품 등록·조회와 목록 썸네일 연결은 2차 변경에서 구현한다. 아래 관련 API는 전체 명세다.
+
 ### ProductCondition
 - UNOPENED
 - LIKE_NEW
