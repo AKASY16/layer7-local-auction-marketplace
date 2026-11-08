@@ -18,7 +18,7 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v6
-      # Testcontainers가 MySQL 8.4를 띄워 Flyway V1 마이그레이션까지 실행한다
+      # Testcontainers가 MySQL 8.4와 SeaweedFS 4.48을 띄워 DB·이미지 업로드까지 검증한다
       - run: ./gradlew build
 
   frontend:
