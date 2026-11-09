@@ -1,0 +1,6 @@
+// Windows/동기화 폴더에서 기존 build 디렉터리를 정리할 수 없을 때 쓰는 로컬 전용 출력 경로.
+// .run의 IntelliJ 실행 설정에서만 적용한다. CI와 기본 Gradle 빌드 경로는 그대로다.
+allprojects {
+	def projectSuffix = Integer.toHexString(projectDir.canonicalPath.hashCode())
+	layout.buildDirectory = new File(System.getProperty('java.io.tmpdir'), "layer7-auction-build-${projectSuffix}")
+}
