@@ -1,16 +1,16 @@
-import { useEffect, useRef, useState } from "react";
-import { Navigate, useLocation } from "react-router";
-import styled from "styled-components";
+import { useEffect, useRef, useState } from 'react'
+import { Navigate, useLocation } from 'react-router'
+import styled from 'styled-components'
 
-import { clearAccessToken, getAccessToken } from "../api/client";
-import { getApiErrorMessage } from "../api/errorMessage";
+import { clearAccessToken, getAccessToken } from '../api/client'
+import { getApiErrorMessage } from '../api/errorMessage'
 import {
   productApi,
   putProductImage,
   requestProductImageUpload,
-} from "../api/product";
+} from '../api/product'
 
-import Button from "../components/common/Button";
+import Button from '../components/common/Button'
 import {
   Field,
   FieldError,
@@ -18,43 +18,43 @@ import {
   Input,
   Label,
   Select,
-} from "../components/common/Field";
+} from '../components/common/Field'
 import {
   AuthDescription,
   AuthForm,
   AuthPage,
   AuthTitle,
-} from "../components/AuthFormStyles";
+} from '../components/AuthFormStyles'
 
 // 이미지 형식 및 개수 제한
-const ACCEPTED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
-const MAX_IMAGES = 10;
-const MAX_BYTES = 10 * 1024 * 1024;
+const MAX_IMAGES = 10
+const MAX_BYTES = 10 * 1024 * 1024
 
 // 백엔드 Category enum 기준
 const CATEGORY_LABELS = {
-  DIGITAL: "디지털",
-  HOME_APPLIANCE: "생활가전",
-  FURNITURE: "가구",
-  LIVING_KITCHEN: "생활·주방",
-  FASHION: "패션",
-  BEAUTY: "뷰티",
-  SPORTS_LEISURE: "스포츠·레저",
-  HOBBY_GAME: "취미·게임",
-  BOOK_MEDIA: "도서·미디어",
-  ETC: "기타",
-};
+  DIGITAL: '디지털',
+  HOME_APPLIANCE: '생활가전',
+  FURNITURE: '가구',
+  LIVING_KITCHEN: '생활·주방',
+  FASHION: '패션',
+  BEAUTY: '뷰티',
+  SPORTS_LEISURE: '스포츠·레저',
+  HOBBY_GAME: '취미·게임',
+  BOOK_MEDIA: '도서·미디어',
+  ETC: '기타',
+}
 
 // 상품 상태
 const CONDITIONS = [
-  ["UNOPENED", "미개봉"],
-  ["LIKE_NEW", "거의 새 상품"],
-  ["GOOD", "양호"],
-  ["FAIR", "사용감 있음"],
-  ["DAMAGED", "손상 있음"],
-  ["NEEDS_REPAIR", "수리 필요"],
-];
+  ['UNOPENED', '미개봉'],
+  ['LIKE_NEW', '거의 새 상품'],
+  ['GOOD', '양호'],
+  ['FAIR', '사용감 있음'],
+  ['DAMAGED', '손상 있음'],
+  ['NEEDS_REPAIR', '수리 필요'],
+]
 
 // 이미지 목록 디자인
 const ImageGrid = styled.ul`
@@ -64,7 +64,7 @@ const ImageGrid = styled.ul`
   padding: 0;
   margin: 0;
   list-style: none;
-`;
+`
 
 const ImageItem = styled.li`
   min-width: 0;
@@ -72,7 +72,7 @@ const ImageItem = styled.li`
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.radius.control};
   overflow-wrap: anywhere;
-`;
+`
 
 const Thumbnail = styled.img`
   display: block;
@@ -81,7 +81,7 @@ const Thumbnail = styled.img`
   object-fit: cover;
   border-radius: ${({ theme }) => theme.radius.control};
   margin-bottom: ${({ theme }) => theme.space.sm};
-`;
+`
 
 const Description = styled.textarea`
   width: 100%;
@@ -96,7 +96,7 @@ const Description = styled.textarea`
   &:focus-visible {
     outline: 2px solid ${({ theme }) => theme.colors.primary};
   }
-`;
+`
 
 const Notice = styled.section`
   padding: ${({ theme }) => theme.space.lg};
@@ -104,7 +104,7 @@ const Notice = styled.section`
   background: ${({ theme }) => theme.colors.cream};
   display: grid;
   gap: ${({ theme }) => theme.space.md};
-`;
+`
 
 const ButtonRow = styled.div`
   display: flex;
@@ -114,109 +114,109 @@ const ButtonRow = styled.div`
   & > button {
     flex: 1 1 auto;
   }
-`;
+`
 
 const HiddenHelp = styled.span`
   color: ${({ theme }) => theme.colors.textSub};
   font-size: ${({ theme }) => theme.fontSizes.sub};
-`;
+`
 
 function ProductRegister() {
-  const location = useLocation();
+  const location = useLocation()
 
   // 현재 Access Token 존재 여부
-  const authenticated = Boolean(getAccessToken());
+  const authenticated = Boolean(getAccessToken())
 
-  const mounted = useRef(true);
-  const controller = useRef(null);
-  const filesRef = useRef([]);
-  const busy = useRef(false);
+  const mounted = useRef(true)
+  const controller = useRef(null)
+  const filesRef = useRef([])
+  const busy = useRef(false)
 
   // 선택한 이미지
-  const [files, setFiles] = useState([]);
+  const [files, setFiles] = useState([])
 
   // 상품 입력 정보
   const [form, setForm] = useState({
-    title: "",
-    description: "",
-    category: "",
-    condition: "",
-    conditionDescription: "",
-  });
+    title: '',
+    description: '',
+    category: '',
+    condition: '',
+    conditionDescription: '',
+  })
 
-  const [categories, setCategories] = useState(Object.entries(CATEGORY_LABELS));
+  const [categories, setCategories] = useState(Object.entries(CATEGORY_LABELS))
 
-  const [busyUI, setBusyUI] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(null);
-  const [imageViewError, setImageViewError] = useState("");
-  const [authExpired, setAuthExpired] = useState(false);
+  const [busyUI, setBusyUI] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(null)
+  const [imageViewError, setImageViewError] = useState('')
+  const [authExpired, setAuthExpired] = useState(false)
 
   // 이미지 목록 상태 갱신
   function updateFiles(fn) {
-    const next = fn(filesRef.current);
-    filesRef.current = next;
+    const next = fn(filesRef.current)
+    filesRef.current = next
 
     if (mounted.current) {
-      setFiles(next);
+      setFiles(next)
     }
   }
 
   // 화면을 벗어날 때 요청 및 미리보기 정리
   useEffect(() => {
-    mounted.current = true;
+    mounted.current = true
 
     return () => {
-      mounted.current = false;
-      controller.current?.abort();
+      mounted.current = false
+      controller.current?.abort()
 
       filesRef.current.forEach((entry) => {
-        URL.revokeObjectURL(entry.preview);
-      });
-    };
-  }, []);
+        URL.revokeObjectURL(entry.preview)
+      })
+    }
+  }, [])
 
   // 서버에서 카테고리 목록 조회
   useEffect(() => {
-    if (!authenticated) return;
+    if (!authenticated) return
 
-    const aborter = new AbortController();
+    const aborter = new AbortController()
 
     productApi
       .categories(aborter.signal)
       .then((data) => {
-        const list = Array.isArray(data) ? data : data?.content;
+        const list = Array.isArray(data) ? data : data?.content
 
-        if (!Array.isArray(list) || !mounted.current) return;
+        if (!Array.isArray(list) || !mounted.current) return
 
         const options = list
           .map((item) => [item.code, item.label])
           .filter(
             ([code, label]) =>
-              Object.hasOwn(CATEGORY_LABELS, code) && typeof label === "string",
-          );
+              Object.hasOwn(CATEGORY_LABELS, code) && typeof label === 'string',
+          )
 
         if (options.length) {
-          setCategories(options);
+          setCategories(options)
         }
       })
       .catch(() => {
         // API가 아직 준비되지 않았으면 enum 기준 목록 사용
-      });
+      })
 
-    return () => aborter.abort();
-  }, [authenticated]);
+    return () => aborter.abort()
+  }, [authenticated])
 
   // 이미지 선택
   function handleFiles(event) {
-    const incoming = Array.from(event.target.files || []);
-    event.target.value = "";
+    const incoming = Array.from(event.target.files || [])
+    event.target.value = ''
 
-    if (!incoming.length) return;
+    if (!incoming.length) return
 
     if (filesRef.current.length + incoming.length > MAX_IMAGES) {
-      setError(`이미지는 최대 ${MAX_IMAGES}장까지 등록할 수 있습니다.`);
-      return;
+      setError(`이미지는 최대 ${MAX_IMAGES}장까지 등록할 수 있습니다.`)
+      return
     }
 
     const invalid = incoming.find(
@@ -224,16 +224,16 @@ function ProductRegister() {
         !ACCEPTED_TYPES.has(file.type) ||
         file.size > MAX_BYTES ||
         file.size === 0,
-    );
+    )
 
     if (invalid) {
       setError(
         `${invalid.name}: JPEG/PNG/WebP 파일만 가능하며, 한 장당 10MB 이하여야 합니다.`,
-      );
-      return;
+      )
+      return
     }
 
-    setError("");
+    setError('')
 
     updateFiles((old) =>
       old.concat(
@@ -241,26 +241,26 @@ function ProductRegister() {
           id: crypto.randomUUID(),
           file,
           preview: URL.createObjectURL(file),
-          status: "ready",
+          status: 'ready',
           progress: 0,
-          error: "",
+          error: '',
           objectKey: null,
         })),
       ),
-    );
+    )
   }
 
   // 이미지 제외
   function removeFile(id) {
-    if (busy.current) return;
+    if (busy.current) return
 
-    const entry = filesRef.current.find((item) => item.id === id);
+    const entry = filesRef.current.find((item) => item.id === id)
 
     if (entry) {
-      URL.revokeObjectURL(entry.preview);
+      URL.revokeObjectURL(entry.preview)
     }
 
-    updateFiles((old) => old.filter((item) => item.id !== id));
+    updateFiles((old) => old.filter((item) => item.id !== id))
   }
 
   // 이미지 한 장 업로드
@@ -270,17 +270,17 @@ function ProductRegister() {
         item.id === entry.id
           ? {
               ...item,
-              status: "uploading",
+              status: 'uploading',
               progress: 0,
-              error: "",
+              error: '',
             }
           : item,
       ),
-    );
+    )
 
     try {
       // 재시도 때마다 새로운 업로드 URL 발급
-      const upload = await requestProductImageUpload(entry.file, signal);
+      const upload = await requestProductImageUpload(entry.file, signal)
 
       const key = await putProductImage(
         entry.file,
@@ -290,31 +290,31 @@ function ProductRegister() {
             old.map((item) =>
               item.id === entry.id ? { ...item, progress } : item,
             ),
-          );
+          )
         },
         signal,
-      );
+      )
 
       updateFiles((old) =>
         old.map((item) =>
           item.id === entry.id
             ? {
                 ...item,
-                status: "uploaded",
+                status: 'uploaded',
                 progress: 100,
                 objectKey: key,
               }
             : item,
         ),
-      );
+      )
 
-      return true;
+      return true
     } catch (cause) {
-      if (signal.aborted) return false;
+      if (signal.aborted) return false
 
-      if (cause?.status === 401 || cause?.code === "INVALID_TOKEN") {
-        clearAccessToken();
-        if (mounted.current) setAuthExpired(true);
+      if (cause?.status === 401 || cause?.code === 'INVALID_TOKEN') {
+        clearAccessToken()
+        if (mounted.current) setAuthExpired(true)
       }
 
       updateFiles((old) =>
@@ -322,42 +322,42 @@ function ProductRegister() {
           item.id === entry.id
             ? {
                 ...item,
-                status: "failed",
+                status: 'failed',
                 error: getApiErrorMessage(cause),
               }
             : item,
         ),
-      );
+      )
 
-      return false;
+      return false
     }
   }
 
   // 실패한 이미지만 다시 업로드
   async function retryUpload(id) {
-    if (busy.current) return;
+    if (busy.current) return
 
-    const entry = filesRef.current.find((item) => item.id === id);
+    const entry = filesRef.current.find((item) => item.id === id)
 
-    if (!entry || entry.status !== "failed") return;
+    if (!entry || entry.status !== 'failed') return
 
-    busy.current = true;
-    setBusyUI(true);
-    controller.current = new AbortController();
+    busy.current = true
+    setBusyUI(true)
+    controller.current = new AbortController()
 
     try {
-      await uploadOne(entry, controller.current.signal);
+      await uploadOne(entry, controller.current.signal)
     } finally {
-      busy.current = false;
-      if (mounted.current) setBusyUI(false);
+      busy.current = false
+      if (mounted.current) setBusyUI(false)
     }
   }
 
   // 상품 등록
   async function handleSubmit(event) {
-    event.preventDefault();
+    event.preventDefault()
 
-    if (busy.current || success) return;
+    if (busy.current || success) return
 
     if (
       !form.title.trim() ||
@@ -365,45 +365,45 @@ function ProductRegister() {
       !form.category ||
       !form.condition
     ) {
-      setError("제목, 설명, 카테고리, 상태를 모두 입력해 주세요.");
-      return;
+      setError('제목, 설명, 카테고리, 상태를 모두 입력해 주세요.')
+      return
     }
 
     if (!filesRef.current.length) {
-      setError("상품 이미지를 1장 이상 선택해 주세요.");
-      return;
+      setError('상품 이미지를 1장 이상 선택해 주세요.')
+      return
     }
 
-    setError("");
-    busy.current = true;
-    setBusyUI(true);
+    setError('')
+    busy.current = true
+    setBusyUI(true)
 
-    controller.current = new AbortController();
-    const signal = controller.current.signal;
+    controller.current = new AbortController()
+    const signal = controller.current.signal
 
     try {
       // 모든 이미지 업로드
       for (const entry of filesRef.current) {
-        if (signal.aborted) return;
+        if (signal.aborted) return
 
-        const current = filesRef.current.find((item) => item.id === entry.id);
+        const current = filesRef.current.find((item) => item.id === entry.id)
 
-        if (current?.status === "uploaded") continue;
+        if (current?.status === 'uploaded') continue
 
-        const ok = await uploadOne(entry, signal);
+        const ok = await uploadOne(entry, signal)
 
         if (!ok) {
           setError(
-            "이미지 업로드에 실패했습니다. 실패한 이미지만 다시 업로드한 후 등록해 주세요.",
-          );
-          return;
+            '이미지 업로드에 실패했습니다. 실패한 이미지만 다시 업로드한 후 등록해 주세요.',
+          )
+          return
         }
       }
 
       // 업로드 완료된 이미지 키 확인
-      const imageKeys = filesRef.current.map((item) => item.objectKey);
+      const imageKeys = filesRef.current.map((item) => item.objectKey)
 
-      if (imageKeys.some((key) => !key)) return;
+      if (imageKeys.some((key) => !key)) return
 
       // 상품 등록 API 호출
       const created = await productApi.create(
@@ -416,47 +416,47 @@ function ProductRegister() {
           imageKeys,
         },
         signal,
-      );
+      )
 
       if (!created?.id) {
-        throw new Error("상품 등록 응답에 상품 ID가 없습니다.");
+        throw new Error('상품 등록 응답에 상품 ID가 없습니다.')
       }
 
       // 상품 등록 성공
-      setSuccess(created);
+      setSuccess(created)
 
       // 등록된 상품 이미지 재조회
       try {
-        const detail = await productApi.get(created.id, signal);
+        const detail = await productApi.get(created.id, signal)
 
         if (mounted.current && String(detail?.id) === String(created.id)) {
-          setSuccess(detail);
+          setSuccess(detail)
         }
       } catch {
         if (mounted.current) {
           setImageViewError(
-            "상품은 등록됐지만 서버 이미지 조회를 확인하지 못했습니다.",
-          );
+            '상품은 등록됐지만 서버 이미지 조회를 확인하지 못했습니다.',
+          )
         }
       }
     } catch (cause) {
       if (!signal.aborted && mounted.current) {
-        if (cause?.status === 401 || cause?.code === "INVALID_TOKEN") {
-          clearAccessToken();
-          setAuthExpired(true);
+        if (cause?.status === 401 || cause?.code === 'INVALID_TOKEN') {
+          clearAccessToken()
+          setAuthExpired(true)
         } else {
-          setError(getApiErrorMessage(cause));
+          setError(getApiErrorMessage(cause))
         }
       }
     } finally {
-      busy.current = false;
-      if (mounted.current) setBusyUI(false);
+      busy.current = false
+      if (mounted.current) setBusyUI(false)
     }
   }
 
   // 비로그인 사용자
   if (!authenticated || authExpired) {
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />
   }
 
   // 등록 완료 화면
@@ -503,7 +503,7 @@ function ProductRegister() {
           </HiddenHelp>
         </Notice>
       </AuthPage>
-    );
+    )
   }
 
   // 상품 등록 입력 화면
@@ -636,16 +636,16 @@ function ProductRegister() {
                 <FieldMessage>{entry.file.name}</FieldMessage>
 
                 <FieldMessage>
-                  {entry.status === "uploading"
+                  {entry.status === 'uploading'
                     ? `업로드 중 ${entry.progress}%`
-                    : entry.status === "uploaded"
-                      ? "업로드 완료"
-                      : entry.status === "failed"
-                        ? "업로드 실패"
-                        : "업로드 대기"}
+                    : entry.status === 'uploaded'
+                      ? '업로드 완료'
+                      : entry.status === 'failed'
+                        ? '업로드 실패'
+                        : '업로드 대기'}
                 </FieldMessage>
 
-                {entry.status === "uploading" && (
+                {entry.status === 'uploading' && (
                   <progress
                     value={entry.progress}
                     max="100"
@@ -658,7 +658,7 @@ function ProductRegister() {
                 )}
 
                 <ButtonRow>
-                  {entry.status === "failed" && (
+                  {entry.status === 'failed' && (
                     <Button
                       type="button"
                       $variant="secondary"
@@ -688,11 +688,11 @@ function ProductRegister() {
         {error && <FieldError role="alert">{error}</FieldError>}
 
         <Button type="submit" disabled={busyUI}>
-          {busyUI ? "업로드·등록 중..." : "상품 등록"}
+          {busyUI ? '업로드·등록 중...' : '상품 등록'}
         </Button>
       </AuthForm>
     </AuthPage>
-  );
+  )
 }
 
-export default ProductRegister;
+export default ProductRegister
