@@ -25,6 +25,7 @@ import {
   AuthPage,
   AuthTitle,
 } from '../components/AuthFormStyles'
+import { CATEGORIES } from '../constants/categories'
 
 // 이미지 형식 및 개수 제한
 const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -32,19 +33,10 @@ const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const MAX_IMAGES = 10
 const MAX_BYTES = 10 * 1024 * 1024
 
-// 백엔드 Category enum 기준
-const CATEGORY_LABELS = {
-  DIGITAL: '디지털',
-  HOME_APPLIANCE: '생활가전',
-  FURNITURE: '가구',
-  LIVING_KITCHEN: '생활·주방',
-  FASHION: '패션',
-  BEAUTY: '뷰티',
-  SPORTS_LEISURE: '스포츠·레저',
-  HOBBY_GAME: '취미·게임',
-  BOOK_MEDIA: '도서·미디어',
-  ETC: '기타',
-}
+// 서버 입력 글자 수 제한
+const MAX_TITLE_LENGTH = 120
+const MAX_DESCRIPTION_LENGTH = 10000
+const MAX_CONDITION_DESCRIPTION_LENGTH = 500
 
 // 상품 상태
 const CONDITIONS = [
@@ -144,8 +136,6 @@ function ProductRegister() {
     conditionDescription: '',
   })
 
-  const [categories, setCategories] = useState(Object.entries(CATEGORY_LABELS))
-
   const [busyUI, setBusyUI] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(null)
@@ -175,37 +165,6 @@ function ProductRegister() {
       })
     }
   }, [])
-
-  // 서버에서 카테고리 목록 조회
-  useEffect(() => {
-    if (!authenticated) return
-
-    const aborter = new AbortController()
-
-    productApi
-      .categories(aborter.signal)
-      .then((data) => {
-        const list = Array.isArray(data) ? data : data?.content
-
-        if (!Array.isArray(list) || !mounted.current) return
-
-        const options = list
-          .map((item) => [item.code, item.label])
-          .filter(
-            ([code, label]) =>
-              Object.hasOwn(CATEGORY_LABELS, code) && typeof label === 'string',
-          )
-
-        if (options.length) {
-          setCategories(options)
-        }
-      })
-      .catch(() => {
-        // API가 아직 준비되지 않았으면 enum 기준 목록 사용
-      })
-
-    return () => aborter.abort()
-  }, [authenticated])
 
   // 이미지 선택
   function handleFiles(event) {
@@ -359,13 +318,25 @@ function ProductRegister() {
 
     if (busy.current || success) return
 
+    // 필수 입력값 확인
     if (
       !form.title.trim() ||
       !form.description.trim() ||
       !form.category ||
-      !form.condition
+      !form.condition ||
+      !form.conditionDescription.trim()
     ) {
-      setError('제목, 설명, 카테고리, 상태를 모두 입력해 주세요.')
+      setError('모든 상품 정보를 입력해 주세요.')
+      return
+    }
+
+    // 서버의 문자열 길이 제한을 업로드 전에 검사
+    if (
+      form.title.trim().length > MAX_TITLE_LENGTH ||
+      form.description.trim().length > MAX_DESCRIPTION_LENGTH ||
+      form.conditionDescription.trim().length > MAX_CONDITION_DESCRIPTION_LENGTH
+    ) {
+      setError('상품 정보의 글자 수 제한을 확인해 주세요.')
       return
     }
 
@@ -523,6 +494,7 @@ function ProductRegister() {
             value={form.title}
             disabled={busyUI}
             required
+            maxLength={MAX_TITLE_LENGTH}
             onChange={(event) =>
               setForm((old) => ({
                 ...old,
@@ -539,6 +511,7 @@ function ProductRegister() {
             value={form.description}
             disabled={busyUI}
             required
+            maxLength={MAX_DESCRIPTION_LENGTH}
             onChange={(event) =>
               setForm((old) => ({
                 ...old,
@@ -564,7 +537,7 @@ function ProductRegister() {
           >
             <option value="">카테고리를 선택하세요</option>
 
-            {categories.map(([code, label]) => (
+            {CATEGORIES.map(([code, label]) => (
               <option key={code} value={code}>
                 {label}
               </option>
@@ -597,11 +570,13 @@ function ProductRegister() {
         </Field>
 
         <Field>
-          <Label htmlFor="condition-description">상태 상세 설명 (선택)</Label>
+          <Label htmlFor="condition-description">상태 상세 설명</Label>
           <Description
             id="condition-description"
             value={form.conditionDescription}
             disabled={busyUI}
+            required
+            maxLength={MAX_CONDITION_DESCRIPTION_LENGTH}
             onChange={(event) =>
               setForm((old) => ({
                 ...old,

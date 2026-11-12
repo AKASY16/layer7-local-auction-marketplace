@@ -1,4 +1,4 @@
-﻿import AuctionExplorer from '../components/AuctionExplorer'
+import AuctionExplorer from '../components/AuctionExplorer'
 
 function Home() {
   return <AuctionExplorer compact />

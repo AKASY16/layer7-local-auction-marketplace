@@ -107,10 +107,6 @@ export function putProductImage(file, upload, onProgress, signal) {
 
 // 3. 상품 관련 API
 export const productApi = {
-  categories(signal) {
-    return apiFetch('/categories', { signal })
-  },
-
   create(data, signal) {
     return apiFetch('/products', {
       method: 'POST',
