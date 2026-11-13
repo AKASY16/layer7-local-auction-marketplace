@@ -19,7 +19,7 @@ public record AuctionSummaryResponse(
 	ProductSummary product
 ) {
 
-	public static AuctionSummaryResponse from(Auction auction, Instant now) {
+	public static AuctionSummaryResponse from(Auction auction, Instant now, String thumbnailUrl) {
 		return new AuctionSummaryResponse(
 			auction.getId(),
 			auction.statusAt(now),
@@ -27,7 +27,7 @@ public record AuctionSummaryResponse(
 			auction.getCurrentPrice(),
 			auction.getStartAt(),
 			auction.getEndAt(),
-			ProductSummary.from(auction)
+			ProductSummary.from(auction, thumbnailUrl)
 		);
 	}
 
@@ -36,13 +36,12 @@ public record AuctionSummaryResponse(
 		String title,
 		Category category,
 		ProductCondition condition,
-		// 상품 이미지 기능이 생기기 전까지 null
 		String thumbnailUrl,
 		RegionSummary region
 	) {
 
 		// 지역은 경매에 복사해 둔 값(상품 지역과 같다)을 써서 상품의 지역을 따로 읽지 않는다
-		static ProductSummary from(Auction auction) {
+		static ProductSummary from(Auction auction, String thumbnailUrl) {
 			Product product = auction.getProduct();
 
 			return new ProductSummary(
@@ -50,7 +49,7 @@ public record AuctionSummaryResponse(
 				product.getTitle(),
 				product.getCategory(),
 				product.getCondition(),
-				null,
+				thumbnailUrl,
 				RegionSummary.from(auction.getRegion())
 			);
 		}

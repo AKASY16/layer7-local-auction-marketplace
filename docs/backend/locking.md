@@ -37,6 +37,7 @@ Product → Auction → Trade → User (여러 명이면 id 오름차순)
 | 경매 시작·종료 Scheduler | Auction (P1은 Trade 생성 제외, 향후 도입 시 INSERT) |
 | Trade 명령·Trade 기한 Scheduler | Product → Trade → (신뢰점수·정지가 바뀌면) 당사자 User |
 | 회원탈퇴 | User |
+| 업로드 URL 발급·최초 상품 등록 | User(FOR SHARE), 업로드 key는 정렬 순서로 조건 UPDATE |
 
 Trade 명령은 Product를 바꾸지 않는 경우(진행, 포기 등)에도 Product부터 잡습니다. 완료 시 Product를 SOLD로 바꾸는 경로와 같은 순서를 쓰게 해서 규칙을 하나로 유지하기 위함입니다.
 
@@ -70,6 +71,13 @@ Scheduler는 대상 하나마다 별도 트랜잭션으로 처리합니다. 여�
 ```
 
 ## 작업별 세부 규칙
+
+### 최초 상품 등록과 이미지 연결
+
+- HEAD로 객체를 확인할 때 DB 트랜잭션과 락을 유지하지 않는다.
+- 실제 저장은 별도 트랜잭션에서 판매자 User를 FOR SHARE로 읽어 ACTIVE 상태와 현재 지역을 확정한다. 새 Product만 INSERT하므로 기존 Product 락을 뒤늦게 요청하지 않는다.
+- 업로드 key를 문자열 오름차순으로 정렬해 `user_id`, `status = PENDING`, 발급 후 24시간 미만 조건의 UPDATE를 수행한다. 겹치는 여러 key를 반대 순서로 보내도 같은 순서로 행을 잠근다.
+- 하나라도 UPDATE가 0행이면 전체를 롤백한다. 상품·이미지 INSERT와 모든 ATTACHED 전환은 함께 커밋된다. `product_images.object_key` UNIQUE 제약이 최종 방어선이다.
 
 ### 상품 수정
 

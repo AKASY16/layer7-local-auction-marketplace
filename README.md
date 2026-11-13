@@ -14,7 +14,7 @@ TEAM LAYER7의 3인 캡스톤 프로젝트입니다. 전국의 수집품을 대�
 
 | 현재 구현 | 추가로 필요한 것 |
 |---|---|
-| 가입·로그인·내 정보·지역·공개 경매 목록·수동입찰 API | 이미지 업로드·상품 등록/이미지 표시·경매 생성/상세·입찰 이력·종료/낙찰 확정 |
+| 가입·로그인·내 정보·지역·공개 경매 목록·수동입찰·이미지 업로드·상품 등록/조회·목록 썸네일 API | 경매 생성/상세·입찰 이력·종료/낙찰 확정 |
 | 홈 목록·가입/로그인 화면·공통 디자인·분리된 demo DB | WebSocket·관심상품·앱 내부 알림·상품/경매 화면, 타임 경매, 통합 시연 |
 
 [현재 요구사항](docs/02-requirements.md) · [P1 범위와 선행 작업](docs/p1/README.md) · [최종 시연 마일스톤](https://github.com/AKASY16/layer7-local-auction-marketplace/milestone/2)
@@ -88,9 +88,9 @@ npm run dev
 | Access Key / Secret Key | `local` / `localsecret` (로컬 전용) |
 | 이미지 공개 URL | `http://localhost:8333/product-images/{objectKey}` |
 
-저장소 접근 정책은 서명된 URL 업로드·공개 읽기를 전제로 합니다. 상품 이미지 업로드 API는 아직 구현되지 않았습니다.
+이미지 업로드 URL 발급과 초기 이미지가 포함된 상품 등록·조회 API를 제공합니다. 파일은 서명된 URL로 직접 업로드하고, 등록된 이미지는 공개 URL로 조회합니다.
 
-백엔드 테스트는 Testcontainers로 MySQL 8.4를 띄우므로 Docker가 실행 중이어야 합니다.
+백엔드 테스트는 Testcontainers로 MySQL 8.4와 SeaweedFS 4.48을 띄우므로 Docker가 실행 중이어야 합니다.
 
 ```bash
 cd backend
@@ -118,6 +118,7 @@ cd backend
 
 ## Documents
 
+- [이미지 업로드·상품 등록 실행 안내](docs/product-images.md)
 - [팀 역할 및 협업 규칙](docs/00-team-and-collaboration.md)
 - [프로젝트 기획](docs/01-project-planning.md)
 - [요구사항](docs/02-requirements.md)
