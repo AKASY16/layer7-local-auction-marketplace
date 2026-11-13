@@ -5,6 +5,7 @@ Thumbs.db
 # IDE
 .idea/
 *.iml
+/.run/
 .vscode/*
 !.vscode/extensions.json
 
@@ -12,6 +13,9 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# 개인 PC의 Gradle 출력 경로 우회 설정
+/scripts/local-gradle-build.gradle
 
 # 로그
 *.log

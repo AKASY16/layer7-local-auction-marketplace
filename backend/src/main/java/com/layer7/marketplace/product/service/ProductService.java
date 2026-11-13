@@ -17,6 +17,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,5 +72,15 @@ public class ProductService {
 			.filter(found -> found.getStatus() != ProductStatus.DELETED)
 			.orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 		return ProductResponse.from(product, images.findByProductIdOrderBySortOrder(productId), storage);
+	}
+
+	// 요청한 상품의 첫 이미지 URL을 한 번에 조회한다. 이미지가 없거나 없는 상품 id는 결과에서 제외한다.
+	public Map<Long, String> getThumbnailUrls(List<Long> productIds) {
+		if (productIds.isEmpty()) {
+			return Map.of();
+		}
+		return images.findByProductIdInAndSortOrder(productIds, 0).stream()
+			.collect(Collectors.toMap(image -> image.getProduct().getId(),
+				image -> storage.getPublicUrl(image.getObjectKey())));
 	}
 }

@@ -10,14 +10,12 @@ import com.layer7.marketplace.auction.repository.AuctionRepository;
 import com.layer7.marketplace.auction.repository.AuctionSpecifications;
 import com.layer7.marketplace.global.error.BusinessException;
 import com.layer7.marketplace.global.error.ErrorCode;
-import com.layer7.marketplace.product.repository.ProductImageRepository;
-import com.layer7.marketplace.product.storage.ProductImageStorage;
+import com.layer7.marketplace.product.service.ProductService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -40,16 +38,14 @@ public class AuctionService {
 	private final AuctionRepository auctionRepository;
 	private final ApplicationEventPublisher eventPublisher;
 	private final Clock clock;
-	private final ProductImageRepository productImages;
-	private final ProductImageStorage imageStorage;
+	private final ProductService productService;
 
 	public AuctionService(AuctionRepository auctionRepository, ApplicationEventPublisher eventPublisher, Clock clock,
-		ProductImageRepository productImages, ProductImageStorage imageStorage) {
+		ProductService productService) {
 		this.auctionRepository = auctionRepository;
 		this.eventPublisher = eventPublisher;
 		this.clock = clock;
-		this.productImages = productImages;
-		this.imageStorage = imageStorage;
+		this.productService = productService;
 	}
 
 	// 락은 부른 쪽 트랜잭션이 끝날 때까지 유지돼야 하므로 진행 중인 쓰기 트랜잭션 안에서만 부른다
@@ -89,11 +85,7 @@ public class AuctionService {
 		Page<Auction> auctions = auctionRepository
 			.findAll(toSpecification(condition, now), PageRequest.of(page, size, NEWEST_FIRST));
 		List<Long> productIds = auctions.stream().map(auction -> auction.getProduct().getId()).toList();
-		// 컬렉션 fetch join으로 페이지를 깨뜨리거나 이미지마다 추가 쿼리를 보내지 않는다.
-		Map<Long, String> thumbnails = productIds.isEmpty() ? Map.of() : productImages
-			.findByProductIdInAndSortOrder(productIds, 0).stream()
-			.collect(Collectors.toMap(image -> image.getProduct().getId(),
-				image -> imageStorage.getPublicUrl(image.getObjectKey())));
+		Map<Long, String> thumbnails = productService.getThumbnailUrls(productIds);
 		Page<AuctionSummaryResponse> result = auctions.map(auction ->
 			AuctionSummaryResponse.from(auction, now, thumbnails.get(auction.getProduct().getId())));
 
