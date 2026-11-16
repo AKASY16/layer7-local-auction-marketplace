@@ -180,7 +180,7 @@ class AuctionSearchTest extends IntegrationTest {
 	}
 
 	@Test
-	@DisplayName("목록 항목에 상품 정보와 경매에 복사된 지역을 담고, 상품 이미지 전이라 thumbnailUrl은 null이다")
+	@DisplayName("목록 항목에 상품 정보와 경매에 복사된 지역을 담고, 이미지가 없는 상품의 thumbnailUrl은 null이다")
 	void itemContent() {
 		// given
 		Auction auction = fixtures.auction(

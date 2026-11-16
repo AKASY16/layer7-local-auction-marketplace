@@ -279,13 +279,18 @@ Category code/label 목록.
 
 ## 3. Product
 
-### 현재 구현 범위 — #63 (1차: 업로드 URL 발급)
+### 현재 구현 범위 — #63
 
-- `POST /api/v1/uploads/product-images`를 구현한다. JWT 인증이 필요하며 탈퇴한 사용자는 `403 ACCOUNT_WITHDRAWN`이다.
-- 요청 파일은 1~10개, JPEG/PNG/WebP, 파일당 1~10,485,760바이트(10MiB)여야 한다. 형식 검증 실패는 `400 VALIDATION_ERROR`이다.
-- 서버가 `uploads/{uuid}` objectKey를 생성하고 본인 소유의 PENDING 업로드 기록을 저장한다.
-- 응답은 10분짜리 PUT URL과 `headers.Content-Type`을 포함한다. PUT에 이 헤더를 그대로 보내야 한다. `expiresAt`은 SDK가 실제로 서명한 URL의 만료 시각이다.
-- 상품 등록·조회와 목록 썸네일 연결은 2차 변경에서 구현한다. 아래 관련 API는 전체 명세다.
+- `POST /api/v1/uploads/product-images`: 1~10개, JPEG/PNG/WebP, 파일당 1~10,485,760바이트(10MiB)를 검증하고 PENDING 기록과 10분짜리 PUT URL을 반환한다. 응답의 `headers.Content-Type`을 PUT에 그대로 보낸다. `expiresAt`은 SDK가 실제로 서명한 URL의 만료 시각이다.
+- `POST /api/v1/products`: 초기 이미지 1~10장과 상품을 함께 등록한다. `imageKeys` 순서가 0부터 시작하는 `sortOrder`이며 첫 이미지가 대표 이미지다. 중복 key는 `400 INVALID_UPLOAD`이다.
+- 상품 제목 1~120자, 설명 1~10,000자, 상태 설명 1~500자이며 공백만 있는 값은 허용하지 않는다. category·condition은 필수 enum 값이다.
+- 등록 전 HEAD로 실제 객체의 크기와 Content-Type을 확인한다. 파일 내용이 실제 이미지인지는 확인하지 않는다. HEAD 동안 DB 트랜잭션을 유지하지 않으며, 저장 트랜잭션에서 본인 소유·PENDING·발급 후 24시간 미만 조건의 UPDATE를 다시 수행한다. 정확히 24시간이 된 key도 만료로 처리한다.
+- 하나라도 유효하지 않으면 상품·이미지·업로드 상태 변경을 모두 롤백한다. 상품 지역은 등록 시 판매자의 현재 지역을 복사한다.
+- `GET /api/v1/products/{productId}`는 인증 없이 등록 응답과 같은 형태를 반환한다. 없는 상품과 DELETED 상품은 `404 RESOURCE_NOT_FOUND`이다. 삭제 상품의 당사자 조회는 후속 작업이다.
+- 경매 목록의 `product.thumbnailUrl`은 첫 이미지 공개 URL이다. 기존 시연 데이터처럼 이미지가 없는 상품은 `null`이다. 페이지의 대표 이미지는 한 번의 추가 조회로 가져온다.
+- 쓰기 API는 JWT 인증이 필요하며 탈퇴한 사용자는 `403 ACCOUNT_WITHDRAWN`이다. `Idempotency-Key`는 이번 범위에서 전달돼도 무시한다.
+- 이미지 추가·삭제·정렬, 상품 수정·삭제, 만료 업로드 정리, 썸네일 생성, 상품 등록 화면은 후속 작업이다. 아래 관련 명세는 전체 계획을 포함한다.
+- 로컬 실행과 버튼으로 API를 확인하는 방법: [이미지·상품 API 사용 안내](../product-images.md).
 
 ### ProductCondition
 - UNOPENED

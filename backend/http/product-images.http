@@ -1,0 +1,50 @@
+# IntelliJ HTTP Client: 각 요청 왼쪽 실행 버튼을 위에서부터 누른다.
+# demo 프로필 기본 판매자. 일반 실행이면 본인 계정으로 바꾼다.
+@host = http://localhost:8080
+@email = demo-seller@example.com
+@password = layer7-demo
+
+### 1. 로그인
+POST {{host}}/api/v1/auth/login
+Content-Type: application/json
+
+{"email":"{{email}}","password":"{{password}}"}
+
+> {% client.global.set("productSellerToken", response.body.accessToken); %}
+
+### 2. PNG 업로드 URL 발급 (sample.png는 68바이트)
+POST {{host}}/api/v1/uploads/product-images
+Authorization: Bearer {{productSellerToken}}
+Content-Type: application/json
+
+{"files":[{"contentType":"image/png","size":68}]}
+
+> {%
+client.global.set("productUploadUrl", response.body.uploads[0].uploadUrl);
+client.global.set("productImageKey", response.body.uploads[0].objectKey);
+%}
+
+### 3. 이미지 파일 PUT (발급 후 10분 이내)
+PUT {{productUploadUrl}}
+Content-Type: image/png
+
+< ./sample.png
+
+### 4. 이미지와 상품 등록 (발급 후 24시간 미만, key는 한 번만 사용)
+POST {{host}}/api/v1/products
+Authorization: Bearer {{productSellerToken}}
+Content-Type: application/json
+
+{
+  "category":"HOBBY_GAME",
+  "title":"수집품 이미지 등록 확인",
+  "description":"HTTP Client로 등록한 샘플 상품입니다.",
+  "condition":"GOOD",
+  "conditionDescription":"구성품과 외관을 확인했습니다.",
+  "imageKeys":["{{productImageKey}}"]
+}
+
+> {% client.global.set("createdProductId", response.body.id); %}
+
+### 5. 공개 상품 조회: images[0]이 대표 이미지
+GET {{host}}/api/v1/products/{{createdProductId}}
