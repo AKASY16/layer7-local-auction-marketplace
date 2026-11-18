@@ -8,6 +8,7 @@ import Signup from './pages/Signup'
 import AuctionList from './pages/AuctionList'
 import AuctionDetail from './pages/AuctionDetail'
 import ProductRegister from './pages/ProductRegister'
+import AuctionCreate from './pages/AuctionCreate'
 import MyPage from './pages/MyPage'
 
 function App() {
@@ -22,6 +23,10 @@ function App() {
           <Route path="auctions/:id" element={<AuctionDetail />} />
           {/*경매 상품이 여러개일 때 명령어를 중복 사용하지 않기위해 id를 변수처럼 사용*/}
           <Route path="products/new" element={<ProductRegister />} />
+          <Route
+            path="products/:productId/auctions/new"
+            element={<AuctionCreate />}
+          />
           {/*고정된 경로*/}
           <Route path="mypage" element={<MyPage />} />
         </Route>
