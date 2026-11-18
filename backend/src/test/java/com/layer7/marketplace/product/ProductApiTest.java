@@ -145,7 +145,10 @@ class ProductApiTest extends IntegrationTest {
 		Upload valid = issue("image/png", 3);
 		put(valid, "png");
 		Upload invalid = issue("image/png", 3);
-		put(invalid, "png");
+		// 크기·형식 위반 객체는 처음부터 잘못된 값으로 한 번만 올린다.
+		if (!scenario.equals("SIZE") && !scenario.equals("TYPE")) {
+			put(invalid, "png");
+		}
 		String invalidKey = invalid.key();
 		switch (scenario) {
 			case "OTHER_OWNER" -> jdbc.update("UPDATE image_uploads SET user_id = ? WHERE object_key = ?",
@@ -155,8 +158,7 @@ class ProductApiTest extends IntegrationTest {
 					.minusSeconds(scenario.equals("EXPIRED") ? 1 : 0), ZoneOffset.UTC), invalid.key());
 			case "MISSING" -> storage.deleteObject(r -> r.bucket("product-images").key(invalid.key()));
 			case "UNKNOWN" -> invalidKey = "uploads/unknown";
-			case "SIZE" -> storage.putObject(r -> r.bucket("product-images").key(invalid.key()).contentType("image/png"),
-				RequestBody.fromString("wrong-size"));
+			case "SIZE" -> put(invalid, "wrong-size");
 			case "TYPE" -> storage.putObject(r -> r.bucket("product-images").key(invalid.key()).contentType("image/jpeg"),
 				RequestBody.fromString("png"));
 			case "DUPLICATE" -> invalidKey = valid.key();
