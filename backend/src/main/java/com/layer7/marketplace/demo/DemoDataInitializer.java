@@ -10,6 +10,7 @@ import com.layer7.marketplace.notification.service.NotificationService;
 import com.layer7.marketplace.product.domain.Category;
 import com.layer7.marketplace.product.domain.Product;
 import com.layer7.marketplace.product.domain.ProductCondition;
+import com.layer7.marketplace.product.service.FavoriteService;
 import com.layer7.marketplace.user.domain.User;
 import jakarta.persistence.EntityManager;
 import java.time.Clock;
@@ -23,7 +24,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * demo 프로필로 서버를 켜면 시연용 계정·상품·경매·입찰 기록과 앱 내부 알림을 만든다. 이미 있으면 다시 만들지 않는다.
+ * demo 프로필로 서버를 켜면 시연용 계정·상품·경매·입찰 기록과 앱 내부 알림·관심상품을 만든다. 이미 있으면 다시 만들지 않는다.
  *
  * <p>시각은 실행 시점 기준이라, 시연 직전에 시연용 MySQL을 새로 띄우고 서버를 켠다 (docs/demo.md).
  * 새 DB에서 켜면 경매 id는 만든 순서대로 1~5다.
@@ -46,6 +47,7 @@ public class DemoDataInitializer implements ApplicationRunner {
 	private final AuthService authService;
 	private final BidService bidService;
 	private final NotificationService notificationService;
+	private final FavoriteService favoriteService;
 	private final EntityManager em;
 	private final TransactionTemplate tx;
 	private final Clock clock;
@@ -54,6 +56,7 @@ public class DemoDataInitializer implements ApplicationRunner {
 		AuthService authService,
 		BidService bidService,
 		NotificationService notificationService,
+		FavoriteService favoriteService,
 		EntityManager em,
 		TransactionTemplate tx,
 		Clock clock
@@ -61,6 +64,7 @@ public class DemoDataInitializer implements ApplicationRunner {
 		this.authService = authService;
 		this.bidService = bidService;
 		this.notificationService = notificationService;
+		this.favoriteService = favoriteService;
 		this.em = em;
 		this.tx = tx;
 		this.clock = clock;
@@ -151,6 +155,10 @@ public class DemoDataInitializer implements ApplicationRunner {
 		addNotification(seller, NotificationType.AUCTION_UNSOLD, endedCase,
 			"아이패드 프로 키보드 케이스 경매가 입찰 없이 종료되었습니다.");
 
+		// 관심상품 목록을 확인할 데이터. 익산사는개발자가 입찰하지 않은 키보드와 시작 전인 마우스를 등록한다
+		favoriteService.favorite(bidder1, productIdOf(keyboard));
+		favoriteService.favorite(bidder1, productIdOf(upcomingMouse));
+
 		return new DemoAuctions(keyboard, coffeeMachine, chair, endedCase, upcomingMouse);
 	}
 
@@ -206,11 +214,14 @@ public class DemoDataInitializer implements ApplicationRunner {
 	}
 
 	private void addNotification(Long userId, NotificationType type, Long auctionId, String message) {
-		Long productId = tx.execute(status -> em.find(Auction.class, auctionId).getProduct().getId());
 		notificationService.create(new NewNotification(
-			userId, type, message, productId, auctionId, null,
+			userId, type, message, productIdOf(auctionId), auctionId, null,
 			"demo:" + type.name() + ":" + auctionId + ":" + userId
 		));
+	}
+
+	private Long productIdOf(Long auctionId) {
+		return tx.execute(status -> em.find(Auction.class, auctionId).getProduct().getId());
 	}
 
 	record DemoAuctions(Long keyboard, Long coffeeMachine, Long chair, Long endedCase, Long upcomingMouse) {
