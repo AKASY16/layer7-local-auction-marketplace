@@ -47,6 +47,7 @@ public enum ErrorCode {
 	PRODUCT_LOCKED_AFTER_BID(HttpStatus.CONFLICT, "입찰이 있었던 상품은 수정할 수 없습니다."),
 	PRODUCT_LOCKED_AUCTION_STARTED(HttpStatus.CONFLICT, "경매가 시작된 상품은 수정할 수 없습니다."),
 	PRODUCT_DELETE_NOT_ALLOWED(HttpStatus.CONFLICT, "진행 중인 경매나 거래가 있는 상품은 삭제할 수 없습니다."),
+	PRODUCT_NOT_ACTIVE(HttpStatus.CONFLICT, "판매 가능한 상품에만 경매를 만들 수 있습니다."),
 	ACTIVE_AUCTION_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 진행 중이거나 예약된 경매가 있습니다."),
 	AUCTION_NOT_OPEN(HttpStatus.CONFLICT, "입찰할 수 있는 경매가 아닙니다."),
 	AUCTION_ENDED(HttpStatus.CONFLICT, "종료된 경매에는 입찰할 수 없습니다."),

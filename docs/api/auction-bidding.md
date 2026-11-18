@@ -1,6 +1,6 @@
 # Auction / Bid / AutoBid API
 
-> 2026-10-29: 현재 구현은 경매 목록과 수동입찰입니다. P1 필수는 경매 생성/상세(#64), 입찰 이력(#65), 종료·낙찰(#47)이며 AutoBid·재경매·ProductAppend는 후순위입니다. 아래 미구현 응답 예시를 현재 동작으로 간주하지 않습니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
+> 경매 생성·목록·수동입찰 API와 종료·낙찰 확정이 구현돼 있습니다. 경매 상세(#64)와 입찰 이력(#65)은 P1 필수이며, AutoBid·재경매·ProductAppend는 후순위입니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
 
 ## 1. Auction
 
@@ -18,14 +18,12 @@ Request:
 ```
 
 - `startAt = null`: 즉시 시작. Backend가 serverNow를 startAt으로 사용하고 OPEN으로 생성
-- 미래 startAt: READY
-- 경매 기간(`endAt - effective startAt`)은 1시간 이상 7일 이하, startAt은 serverNow + 7일 이내 (`400 AUCTION_PERIOD_INVALID`)
-- startPrice는 유효 가격단위이며 10,000,000원 이하 (`400 AMOUNT_LIMIT_EXCEEDED`)
-- Product 소유자이며 Product.status = ACTIVE
+- `startAt`을 명시하면 serverNow보다 미래이고 serverNow + 7일 이내여야 하며 READY로 생성
+- 경매 기간(`endAt - effective startAt`)은 1시간 이상 7일 이하. 예약 시각 또는 기간 위반은 `400 AUCTION_PERIOD_INVALID`
+- 시작가는 가격 단위표를 따릅니다 (`400 INVALID_PRICE_UNIT`). 10,000,000원을 초과하면 `400 AMOUNT_LIMIT_EXCEEDED`를 반환합니다.
+- 상품 소유자만 생성할 수 있습니다 (`403 FORBIDDEN`). 상품 상태는 ACTIVE여야 합니다. 없는 상품 또는 DELETED 상품은 `404 RESOURCE_NOT_FOUND`, SOLD 상품은 `409 PRODUCT_NOT_ACTIVE`를 반환합니다.
 - 판매자가 거래 참여 정지 상태가 아님 (`403 USER_RESTRICTED`)
-- 동일 Product에 READY/OPEN Auction이 이미 있으면 409
-- `startAt = null`이면 즉시 시작
-- `startAt`을 명시했다면 serverNow보다 미래여야 함
+- 동일 상품에 저장 상태 READY/OPEN인 경매가 있으면 `409 ACTIVE_AUCTION_ALREADY_EXISTS`를 반환합니다. 상품 행을 잠근 뒤 중복을 검사하고, 새 경매에 상품의 지역과 카테고리를 복사합니다.
 
 Response `201`:
 ```json
@@ -96,7 +94,7 @@ Item:
 응답은 [페이지](../05-api-spec.md#페이지) 공통 형식이고 `content`에 Item이 들어갑니다.
 
 - `status`는 서버 시각 기준 논리 상태, `finalized`는 저장 status가 ENDED·CANCELED인지 여부 ([상태 모델](../backend/auction-state.md))
-- 현재 구현의 `thumbnailUrl`은 `null`. P1의 최초 이미지 등록(#63) 이후에는 등록된 첫 이미지 URL을 반환해 표시하며 썸네일 변환 기능은 요구하지 않음
+- `thumbnailUrl`은 등록된 첫 이미지의 URL입니다. 이미지가 없는 상품에서는 `null`입니다.
 
 Errors:
 - 400 VALIDATION_ERROR

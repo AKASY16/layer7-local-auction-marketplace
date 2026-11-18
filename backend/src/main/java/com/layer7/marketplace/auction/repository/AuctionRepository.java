@@ -19,6 +19,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface AuctionRepository extends JpaRepository<Auction, Long>, JpaSpecificationExecutor<Auction> {
 
+	boolean existsByProductIdAndStatusIn(Long productId, Collection<AuctionStatus> statuses);
+
 	// SELECT ... FOR UPDATE. 같은 경매의 입찰·종료 처리를 한 줄로 세운다 (docs/backend/locking.md)
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT a FROM Auction a WHERE a.id = :id")

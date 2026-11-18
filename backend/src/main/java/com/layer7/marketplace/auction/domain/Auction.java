@@ -95,6 +95,12 @@ public class Auction extends BaseTimeEntity {
 		return auction;
 	}
 
+	public static Auction openImmediately(Product product, long startPrice, Instant now, Instant endAt) {
+		Auction auction = create(product, startPrice, now, endAt);
+		auction.status = AuctionStatus.OPEN;
+		return auction;
+	}
+
 	// 서버 시각 기준 논리 상태 (docs/backend/auction-state.md)
 	public AuctionStatus statusAt(Instant now) {
 		if (status == AuctionStatus.CANCELED || status == AuctionStatus.ENDED) {
