@@ -49,6 +49,22 @@ public class TestFixtures {
 		});
 	}
 
+	// 경매 없이 상품만 만든다
+	public Product product(User seller, String title) {
+		return tx.execute(status -> {
+			Product product = Product.create(
+				em.getReference(User.class, seller.getId()),
+				Category.DIGITAL,
+				title,
+				"테스트 상품 설명",
+				ProductCondition.GOOD,
+				"사용감 적음"
+			);
+			em.persist(product);
+			return product;
+		});
+	}
+
 	// seller의 상품으로 READY 경매를 만든다. 시작 시각이 지났으면 첫 입찰에서 OPEN으로 바뀐다
 	public Auction auction(User seller, long startPrice, Instant startAt, Instant endAt) {
 		return auction(seller, "테스트 상품", Category.DIGITAL, startPrice, startAt, endAt);

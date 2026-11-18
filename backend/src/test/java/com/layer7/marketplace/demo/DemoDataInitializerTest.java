@@ -7,6 +7,7 @@ import com.layer7.marketplace.bid.service.BidService;
 import com.layer7.marketplace.global.error.BusinessException;
 import com.layer7.marketplace.global.error.ErrorCode;
 import com.layer7.marketplace.notification.service.NotificationService;
+import com.layer7.marketplace.product.service.FavoriteService;
 import com.layer7.marketplace.support.IntegrationTest;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +36,9 @@ class DemoDataInitializerTest extends IntegrationTest {
 
 	@Autowired
 	private NotificationService notificationService;
+
+	@Autowired
+	private FavoriteService favoriteService;
 
 	@Autowired
 	private EntityManager em;
@@ -136,8 +140,24 @@ class DemoDataInitializerTest extends IntegrationTest {
 		)).isZero();
 	}
 
+	@Test
+	@DisplayName("관심상품 목록을 확인할 수 있도록 입찰자 한 명에게 키보드와 마우스 관심상품을 만든다")
+	void createsFavorites() {
+		// given
+		initializer().run(null);
+		Long bidder1 = userId(DemoDataInitializer.BIDDER1_EMAIL);
+
+		// then
+		assertThat(count("SELECT COUNT(*) FROM favorites WHERE user_id = ?", bidder1)).isEqualTo(2);
+		assertThat(count(
+			"SELECT COUNT(*) FROM favorites f JOIN products p ON p.id = f.product_id "
+				+ "WHERE f.user_id = ? AND p.title IN (?, ?)",
+			bidder1, "몬스타기어 닌자87 기계식 키보드", "로지텍 MX Master 3S 마우스"
+		)).isEqualTo(2);
+	}
+
 	private DemoDataInitializer initializer() {
-		return new DemoDataInitializer(authService, bidService, notificationService, em, tx, clock);
+		return new DemoDataInitializer(authService, bidService, notificationService, favoriteService, em, tx, clock);
 	}
 
 	// 성공하면 null, 거절되면 그 ErrorCode
