@@ -1,6 +1,6 @@
 # Auction / Bid / AutoBid API
 
-> 경매 생성·목록·상세·수동입찰 API와 종료·낙찰 확정이 구현돼 있습니다. 입찰 이력(#65)은 P1 필수이며, AutoBid·재경매·ProductAppend는 후순위입니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
+> 경매 생성·목록·상세·수동입찰 API, 가격단위표 조회(`GET /bid-increment-policy`)와 종료·낙찰 확정이 구현돼 있습니다. 입찰 이력(#65)은 P1 필수이며, AutoBid·재경매·ProductAppend는 후순위입니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
 
 ## 1. Auction
 
