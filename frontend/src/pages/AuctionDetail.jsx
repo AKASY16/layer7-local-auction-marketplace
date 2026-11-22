@@ -4,6 +4,7 @@ import styled from 'styled-components'
 
 import { getAccessToken, getAuthUser, subscribeAuth } from '../api/client'
 import { auctionDetailApi } from '../api/auctionDetail'
+import useAuctionRealtime from '../hooks/useAuctionRealtime'
 import Button from '../components/common/Button'
 import {
   Field,
@@ -61,6 +62,11 @@ const Time = styled.strong`
   font-variant-numeric: tabular-nums;
 `
 
+const ConnectionText = styled.span`
+  color: ${({ theme }) => theme.colors.textSub};
+  font-size: ${({ theme }) => theme.fontSizes.sub};
+`
+
 const Grid = styled.dl`
   display: grid;
   grid-template-columns: minmax(96px, 1fr) 2fr;
@@ -91,6 +97,12 @@ const History = styled.ol`
 `
 
 const BID_PAGE_SIZE = 20
+
+const CONNECTION_LABELS = {
+  connecting: '실시간 연결 중',
+  connected: '실시간 연결됨',
+  disconnected: '연결 끊김 · 재연결 시도 중',
+}
 
 function dateLabel(value) {
   if (!value) return '정보 없음'
@@ -126,7 +138,15 @@ function statusLabel(auction, logicalStatus) {
       return '종료 · 낙찰 집계 중'
     }
 
-    return auction.winningBid ? '낙찰 확정' : '유찰'
+    if (auction.winningBid) {
+      return '낙찰 확정'
+    }
+
+    if (auction.pendingWinningBidId != null) {
+      return '낙찰 결과 확인 중'
+    }
+
+    return '유찰'
   }
 
   return (
@@ -188,7 +208,6 @@ function bidBlockReason({
     return '현재 입찰할 수 없는 경매입니다.'
   }
 
-  // 예약 경매 시작 시각 이후에는 최신 OPEN 응답이 필요하다.
   if (auction.status === 'READY') {
     return '경매가 시작되어 최신 상태를 확인하는 중입니다.'
   }
@@ -253,6 +272,7 @@ function AuctionDetail() {
 
   const [page, setPage] = useState(0)
   const [revision, setRevision] = useState(0)
+  const [historyRevision, setHistoryRevision] = useState(0)
   const [elapsed, setElapsed] = useState(0)
 
   const [clock, setClock] = useState({
@@ -262,8 +282,134 @@ function AuctionDetail() {
 
   const requestBusy = useRef(false)
   const boundaryAttempts = useRef(new Set())
+  const bidAmountEdited = useRef(false)
 
-  // OS 시각 변경과 독립적으로 카운트다운 갱신
+  // REST 응답까지 포함해 가장 큰 version을 보관한다.
+  const latestVersion = useRef({
+    auctionId: id,
+    version: -1,
+  })
+
+  function refreshDetail() {
+    setLoading(true)
+    setRevision((value) => value + 1)
+  }
+
+  function refreshHistory() {
+    setPage(0)
+    setHistoryRevision((value) => value + 1)
+  }
+
+  function handleAuctionEvent(event) {
+    const version = Number(event.version)
+
+    if (
+      !Number.isSafeInteger(version) ||
+      version < 0 ||
+      String(event.auctionId) !== String(id)
+    ) {
+      return
+    }
+
+    if (latestVersion.current.auctionId !== id) {
+      return
+    }
+
+    // 이미 REST 또는 WebSocket으로 확인한 버전은 버린다.
+    if (version <= latestVersion.current.version) {
+      return
+    }
+
+    if (
+      event.type !== 'AUCTION_PRICE_CHANGED' &&
+      event.type !== 'AUCTION_STATUS_CHANGED'
+    ) {
+      return
+    }
+
+    if (!event.data || typeof event.data !== 'object') {
+      return
+    }
+
+    const data = event.data
+
+    latestVersion.current.version = version
+
+    if (event.type === 'AUCTION_PRICE_CHANGED') {
+      setAuction((previous) => {
+        if (
+          !previous ||
+          String(previous.id) !== String(id) ||
+          Number(previous.version) >= version
+        ) {
+          return previous
+        }
+
+        return {
+          ...previous,
+          version,
+          currentPrice: data.currentPrice,
+          nextBidAmount: data.nextBidAmount,
+          bidCount: data.bidCount,
+          status: 'OPEN',
+          leadingBid: data.leadingBidder
+            ? {
+                amount: data.currentPrice,
+                bidder: data.leadingBidder,
+              }
+            : null,
+        }
+      })
+
+      if (!bidAmountEdited.current) {
+        setBidAmount(
+          data.nextBidAmount == null ? '' : String(data.nextBidAmount),
+        )
+      }
+
+      refreshHistory()
+      return
+    }
+
+    if (event.type === 'AUCTION_STATUS_CHANGED') {
+      setAuction((previous) => {
+        if (
+          !previous ||
+          String(previous.id) !== String(id) ||
+          Number(previous.version) >= version
+        ) {
+          return previous
+        }
+
+        return {
+          ...previous,
+          version,
+          status: data.status,
+          finalized: data.finalized,
+          endAt: data.endAt ?? previous.endAt,
+          pendingWinningBidId: data.winningBidId ?? null,
+          nextBidAmount: data.status === 'OPEN' ? previous.nextBidAmount : null,
+        }
+      })
+
+      // 상세 응답에서 winningBid 전체 정보와 서버 시간을 받는다.
+      refreshDetail()
+    }
+  }
+
+  function handleWebSocketConnected() {
+    // 최초 연결과 재연결 모두 REST 기준으로 상태를 맞춘다.
+    refreshDetail()
+    refreshHistory()
+  }
+
+  const connectionStatus = useAuctionRealtime(
+    id,
+    handleAuctionEvent,
+    handleWebSocketConnected,
+    userId ?? 'anonymous',
+  )
+
   useEffect(() => {
     const timer = setInterval(() => {
       setElapsed(performance.now())
@@ -272,7 +418,17 @@ function AuctionDetail() {
     return () => clearInterval(timer)
   }, [])
 
-  // 최신 경매 상세 조회
+  useEffect(() => {
+    latestVersion.current = {
+      auctionId: id,
+      version: -1,
+    }
+
+    boundaryAttempts.current.clear()
+    bidAmountEdited.current = false
+  }, [id])
+
+  // 상세 REST 조회
   useEffect(() => {
     const controller = new AbortController()
     const signal = controller.signal
@@ -285,10 +441,26 @@ function AuctionDetail() {
 
         const receivedAt = performance.now()
         const serverMs = Date.parse(result.serverTime)
+        const version = Number(result.version)
 
         if (!Number.isFinite(serverMs)) {
           throw new Error('서버 시각을 확인할 수 없습니다.')
         }
+
+        if (!Number.isSafeInteger(version)) {
+          throw new Error('경매 응답의 version이 올바르지 않습니다.')
+        }
+
+        if (latestVersion.current.auctionId !== id) {
+          return
+        }
+
+        // REST 응답도 최신 WebSocket 이벤트보다 오래됐으면 버린다.
+        if (version < latestVersion.current.version) {
+          return
+        }
+
+        latestVersion.current.version = version
 
         setClock({
           serverMs,
@@ -298,9 +470,11 @@ function AuctionDetail() {
         setElapsed(receivedAt)
         setAuction(result)
 
-        setBidAmount(
-          result.nextBidAmount == null ? '' : String(result.nextBidAmount),
-        )
+        if (!bidAmountEdited.current) {
+          setBidAmount(
+            result.nextBidAmount == null ? '' : String(result.nextBidAmount),
+          )
+        }
 
         setLoadError('')
       } catch (error) {
@@ -319,28 +493,30 @@ function AuctionDetail() {
     return () => controller.abort()
   }, [id, revision])
 
-  // 서버 시간 기준 시작·종료 경계에서 상세를 자동 재조회한다.
-  // WebSocket이나 지속적인 API 폴링은 사용하지 않는다.
+  // 서버 시간 기준 시작·종료 경계에서 REST 재조회
   useEffect(() => {
     if (!auction || !clock.serverMs) return undefined
 
-    const serverNow = clock.serverMs + (performance.now() - clock.performanceMs)
+    if (String(auction.id) !== String(id)) {
+      return undefined
+    }
 
-    const startMs = Date.parse(auction.startAt)
-    const endMs = Date.parse(auction.endAt)
+    const serverNow = clock.serverMs + (performance.now() - clock.performanceMs)
 
     let boundaryMs = null
     let boundaryName = ''
 
     if (auction.status === 'READY') {
-      boundaryMs = startMs
+      boundaryMs = Date.parse(auction.startAt)
       boundaryName = 'START'
     } else if (auction.status === 'OPEN') {
-      boundaryMs = endMs
+      boundaryMs = Date.parse(auction.endAt)
       boundaryName = 'END'
     }
 
-    if (!Number.isFinite(boundaryMs)) return undefined
+    if (!Number.isFinite(boundaryMs)) {
+      return undefined
+    }
 
     const boundaryKey = `${id}:${boundaryName}:${boundaryMs}`
 
@@ -348,22 +524,18 @@ function AuctionDetail() {
       return undefined
     }
 
-    const remainingMs = boundaryMs - serverNow
-
     const timer = setTimeout(
       () => {
         boundaryAttempts.current.add(boundaryKey)
-
-        setLoading(true)
-        setRevision((value) => value + 1)
+        refreshDetail()
       },
-      Math.max(0, remainingMs),
+      Math.max(0, boundaryMs - serverNow),
     )
 
     return () => clearTimeout(timer)
   }, [auction, clock, id])
 
-  // 입찰 이력
+  // 입찰 이력 REST 조회
   useEffect(() => {
     const controller = new AbortController()
 
@@ -387,7 +559,7 @@ function AuctionDetail() {
       })
 
     return () => controller.abort()
-  }, [id, page, revision])
+  }, [id, page, revision, historyRevision])
 
   // 서버 가격단위표
   useEffect(() => {
@@ -401,25 +573,32 @@ function AuctionDetail() {
         }
       })
       .catch(() => {
-        // 조회 실패 시 서버의 최종 금액 검증을 사용한다.
+        // 서버에서 입찰 금액을 최종 검증한다.
       })
 
     return () => controller.abort()
   }, [])
 
-  const serverNow = auction
+  const visibleAuction =
+    auction && String(auction.id) === String(id) ? auction : null
+
+  const serverNow = visibleAuction
     ? clock.serverMs + (elapsed - clock.performanceMs)
     : 0
 
-  const logicalStatus = getLogicalStatus(auction, serverNow)
+  const logicalStatus = getLogicalStatus(visibleAuction, serverNow)
 
-  const untilStart = auction ? Date.parse(auction.startAt) - serverNow : 0
+  const untilStart = visibleAuction
+    ? Date.parse(visibleAuction.startAt) - serverNow
+    : 0
 
-  const untilEnd = auction ? Date.parse(auction.endAt) - serverNow : 0
+  const untilEnd = visibleAuction
+    ? Date.parse(visibleAuction.endAt) - serverNow
+    : 0
 
-  const reason = auction
+  const reason = visibleAuction
     ? bidBlockReason({
-        auction,
+        auction: visibleAuction,
         userId,
         signedIn,
         logicalStatus,
@@ -428,7 +607,7 @@ function AuctionDetail() {
       })
     : ''
 
-  const minimum = auction?.nextBidAmount
+  const minimum = visibleAuction?.nextBidAmount
   const amount = Number(bidAmount)
 
   const validAmount =
@@ -441,15 +620,16 @@ function AuctionDetail() {
       ? page + 1 < history.totalPages
       : historyItems.length === BID_PAGE_SIZE
 
-  function refreshDetail() {
-    setLoading(true)
-    setRevision((value) => value + 1)
-  }
-
   async function submitBid(event) {
     event.preventDefault()
 
-    if (!auction || requestBusy.current || loading || reason || !validAmount) {
+    if (
+      !visibleAuction ||
+      requestBusy.current ||
+      loading ||
+      reason ||
+      !validAmount
+    ) {
       return
     }
 
@@ -475,18 +655,18 @@ function AuctionDetail() {
         setBidResult('입찰이 접수됐습니다.')
       }
     } catch (error) {
-      // 서버가 제공한 구체적인 거절 이유를 표시
       setBidError(error.message || '입찰 요청에 실패했습니다.')
     } finally {
       requestBusy.current = false
+      bidAmountEdited.current = false
       setSubmitting(false)
-
       setPage(0)
       refreshDetail()
+      refreshHistory()
     }
   }
 
-  if (!/^\d+$/.test(String(id || '')) || Number(id) <= 0) {
+  if (!/^[1-9]\d*$/.test(String(id ?? ''))) {
     return (
       <Page>
         <FieldError role="alert">올바르지 않은 경매 번호입니다.</FieldError>
@@ -498,6 +678,10 @@ function AuctionDetail() {
     <Page>
       <Row>
         <Title>경매 상세 #{id}</Title>
+
+        <ConnectionText role="status">
+          {CONNECTION_LABELS[connectionStatus]}
+        </ConnectionText>
 
         <Button
           type="button"
@@ -514,64 +698,70 @@ function AuctionDetail() {
 
       {loadError && <FieldError role="alert">{loadError}</FieldError>}
 
-      {auction && (
+      {visibleAuction && (
         <>
           <Panel>
-            <Title>{auction.product?.title || '상품 정보 없음'}</Title>
+            <Title>{visibleAuction.product?.title || '상품 정보 없음'}</Title>
 
-            {Array.isArray(auction.product?.images) &&
-              auction.product.images.length > 0 && (
+            {Array.isArray(visibleAuction.product?.images) &&
+              visibleAuction.product.images.length > 0 && (
                 <Gallery>
-                  {auction.product.images.map((image) => (
+                  {visibleAuction.product.images.map((image) => (
                     <Photo
                       key={image.id ?? image.url}
                       src={image.url}
-                      alt={`${auction.product.title} 상품 이미지`}
+                      alt={`${visibleAuction.product.title} 상품 이미지`}
                     />
                   ))}
                 </Gallery>
               )}
 
-            <p>{auction.product?.description || '상품 설명 없음'}</p>
+            <p>{visibleAuction.product?.description || '상품 설명 없음'}</p>
 
             <Grid>
               <dt>판매자</dt>
-              <dd>{auction.product?.seller?.nickname || '정보 없음'}</dd>
+              <dd>{visibleAuction.product?.seller?.nickname || '정보 없음'}</dd>
 
               <dt>상품 상태</dt>
-              <dd>{formatProductCondition(auction.product?.condition)}</dd>
+              <dd>
+                {formatProductCondition(visibleAuction.product?.condition)}
+              </dd>
 
               <dt>상세 상태</dt>
-              <dd>{auction.product?.conditionDescription || '정보 없음'}</dd>
+              <dd>
+                {visibleAuction.product?.conditionDescription || '정보 없음'}
+              </dd>
 
               <dt>지역</dt>
-              <dd>{auction.product?.region?.sigunguName || '정보 없음'}</dd>
+              <dd>
+                {visibleAuction.product?.region?.sigunguName || '정보 없음'}
+              </dd>
 
               <dt>경매 상태</dt>
-              <dd>{statusLabel(auction, logicalStatus)}</dd>
+              <dd>{statusLabel(visibleAuction, logicalStatus)}</dd>
 
               <dt>시작가</dt>
-              <dd>{formatPrice(auction.startPrice)}</dd>
+              <dd>{formatPrice(visibleAuction.startPrice)}</dd>
 
               <dt>현재가</dt>
               <dd>
-                <Price>{formatPrice(auction.currentPrice)}</Price>
+                <Price>{formatPrice(visibleAuction.currentPrice)}</Price>
               </dd>
 
               <dt>다음 최소 입찰가</dt>
               <dd>{minimum == null ? '입찰 불가' : formatPrice(minimum)}</dd>
 
               <dt>입찰 수</dt>
-              <dd>{auction.bidCount}건</dd>
+              <dd>{visibleAuction.bidCount}건</dd>
 
               <dt>현재 선두</dt>
-              <dd>{auction.leadingBid?.bidder?.nickname || '없음'}</dd>
+              <dd>{visibleAuction.leadingBid?.bidder?.nickname || '없음'}</dd>
 
               <dt>시작 시각</dt>
-              <dd>{dateLabel(auction.startAt)}</dd>
+              <dd>{dateLabel(visibleAuction.startAt)}</dd>
 
               <dt>종료 시각</dt>
-              <dd>{dateLabel(auction.endAt)}</dd>
+              <dd>{dateLabel(visibleAuction.endAt)}</dd>
 
               <dt>남은 시간</dt>
               <dd>
@@ -582,15 +772,17 @@ function AuctionDetail() {
                 </Time>
               </dd>
 
-              {logicalStatus === 'ENDED' && auction.finalized && (
+              {logicalStatus === 'ENDED' && visibleAuction.finalized && (
                 <>
                   <dt>최종 결과</dt>
                   <dd>
-                    {auction.winningBid
+                    {visibleAuction.winningBid
                       ? `${
-                          auction.winningBid.bidder?.nickname || '낙찰자'
-                        } · ${formatPrice(auction.winningBid.amount)}`
-                      : '유찰'}
+                          visibleAuction.winningBid.bidder?.nickname || '낙찰자'
+                        } · ${formatPrice(visibleAuction.winningBid.amount)}`
+                      : visibleAuction.pendingWinningBidId != null
+                        ? '낙찰 결과 확인 중'
+                        : '유찰'}
                   </dd>
                 </>
               )}
@@ -601,8 +793,8 @@ function AuctionDetail() {
             <h3>수동입찰</h3>
 
             <FieldMessage>
-              입찰이 성립하면 철회할 수 없습니다. 실시간 갱신은 제공하지
-              않으므로 다른 사용자의 입찰은 새로고침 후 확인해 주세요.
+              입찰이 성립하면 철회할 수 없습니다. 가격과 선두 정보는 실시간으로
+              갱신됩니다. 최종 입찰 가능 여부는 서버가 판단합니다.
             </FieldMessage>
 
             {reason && <FieldMessage role="status">{reason}</FieldMessage>}
@@ -620,7 +812,10 @@ function AuctionDetail() {
                   step="1"
                   value={bidAmount}
                   disabled={Boolean(reason) || submitting}
-                  onChange={(event) => setBidAmount(event.target.value)}
+                  onChange={(event) => {
+                    bidAmountEdited.current = true
+                    setBidAmount(event.target.value)
+                  }}
                 />
 
                 {minimum != null && (
