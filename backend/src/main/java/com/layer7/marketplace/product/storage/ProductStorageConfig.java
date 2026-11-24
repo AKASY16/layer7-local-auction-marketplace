@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
+import software.amazon.awssdk.core.checksums.ResponseChecksumValidation;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -35,6 +37,10 @@ public class ProductStorageConfig {
 			.region(Region.of(region))
 			.credentialsProvider(credentials)
 			.forcePathStyle(true)
+			// AWS SDK는 기본으로 업로드에 CRC32 체크섬을 덧붙여 보내는데, SeaweedFS가 이를 Content-MD5 오류로 거절하는 경우가 있다.
+			// S3 호환 저장소에서 쓰도록 API가 요구할 때만 체크섬을 계산·검증한다
+			.requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+			.responseChecksumValidation(ResponseChecksumValidation.WHEN_REQUIRED)
 			.httpClientBuilder(UrlConnectionHttpClient.builder()
 				.connectionTimeout(Duration.ofSeconds(3)).socketTimeout(Duration.ofSeconds(3)))
 			.overrideConfiguration(config -> config.apiCallTimeout(Duration.ofSeconds(5)))
