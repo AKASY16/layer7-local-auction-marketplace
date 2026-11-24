@@ -1,6 +1,6 @@
 # Auction / Bid / AutoBid API
 
-> 경매 생성·목록·수동입찰 API와 종료·낙찰 확정이 구현돼 있습니다. 경매 상세(#64)와 입찰 이력(#65)은 P1 필수이며, AutoBid·재경매·ProductAppend는 후순위입니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
+> 경매 생성·목록·상세·수동입찰 API와 종료·낙찰 확정이 구현돼 있습니다. 입찰 이력(#65)은 P1 필수이며, AutoBid·재경매·ProductAppend는 후순위입니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
 
 ## 1. Auction
 
@@ -101,6 +101,7 @@ Errors:
 
 ### GET /auctions/{auctionId}
 경매 상세. 인증 없이 호출할 수 있습니다.
+경매가 없거나 연결된 상품이 삭제된 경우 `404 RESOURCE_NOT_FOUND`를 반환합니다.
 
 Response `200` 주요 필드:
 ```json
@@ -137,9 +138,11 @@ Response `200` 주요 필드:
 - Scheduler 반영이 늦어 저장 status가 잠시 OPEN이어도 endAt이 지났다면 `status=ENDED`, `finalized=false`, `nextBidAmount=null`로 반환
 - startAt이 지났는데 저장 status가 READY로 남아 있으면 `status=OPEN`으로 반환하고 입찰을 받음
 - 입찰 가능 여부는 `status == OPEN`으로 판단하며 별도 `biddingOpen` 필드는 두지 않음
+- `nextBidAmount`는 OPEN일 때 첫 입찰 전에는 시작가, 입찰이 있으면 가격 단위표의 다음 유효 금액입니다. READY·ENDED·CANCELED 상태이거나 이미 입찰이 상한에 도달했다면 `null`입니다.
 - `ENDED + finalized=false`는 집계 중이며 winningBid는 아직 null. 낙찰 예정자는 leadingBid로 표시 가능
 - `version`은 Auction row가 바뀔 때마다 증가하는 값으로, 실시간 이벤트의 순서 판단에 사용 ([Realtime](realtime.md#공개-auction-topic))
-- `appends`는 같은 Product의 모든 경매에서 등록한 내용 추가를 시간순으로 담고, 항목마다 `auctionId`를 포함해 어느 경매에서 고지했는지 보여줌
+- `product`는 [상품 조회](auth-user-product.md#get-productsproductid)와 같은 형식으로, 표시 순서대로 정렬된 이미지 URL을 포함합니다.
+- `appends`는 빈 배열입니다. 내용 추가 기능이 구현되면 같은 상품의 모든 경매에서 등록된 내용을 시간순으로 담습니다.
 
 ### POST /auctions/{auctionId}/cancel
 판매자 전용. 판정은 논리 상태 기준.
