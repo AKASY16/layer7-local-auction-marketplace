@@ -10,6 +10,7 @@ import AuctionDetail from './pages/AuctionDetail'
 import ProductRegister from './pages/ProductRegister'
 import AuctionCreate from './pages/AuctionCreate'
 import MyPage from './pages/MyPage'
+import Notifications from './pages/Notifications'
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           />
           {/*고정된 경로*/}
           <Route path="mypage" element={<MyPage />} />
+          <Route path="notifications" element={<Notifications />} />
         </Route>
       </Routes>
     </BrowserRouter>
