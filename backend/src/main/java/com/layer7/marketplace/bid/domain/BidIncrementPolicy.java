@@ -1,5 +1,6 @@
 package com.layer7.marketplace.bid.domain;
 
+import java.util.List;
 import java.util.OptionalLong;
 
 import org.springframework.stereotype.Component;
@@ -9,6 +10,32 @@ public class BidIncrementPolicy {
 
 	private static final long MIN_AMOUNT = 100;
 	private static final long MAX_AMOUNT = 10_000_000;
+
+	// 가격 구간별 입찰 단위 (docs/03-auction-policy.md). 검증과 GET /bid-increment-policy 응답이 이 표 하나를 쓴다
+	private static final List<Band> BANDS = List.of(
+		new Band(100, 9_999, 100),
+		new Band(10_000, 49_999, 500),
+		new Band(50_000, 99_999, 1_000),
+		new Band(100_000, 499_999, 5_000),
+		new Band(500_000, 999_999, 10_000),
+		new Band(1_000_000, MAX_AMOUNT, 20_000)
+	);
+
+	// from 이상 to 이하 금액은 unit 단위로 입찰한다
+	public record Band(long from, long to, long unit) {
+	}
+
+	public long minAmount() {
+		return MIN_AMOUNT;
+	}
+
+	public long maxAmount() {
+		return MAX_AMOUNT;
+	}
+
+	public List<Band> bands() {
+		return BANDS;
+	}
 
 	// 허용 범위와 가격 단위에 맞으면 true
 	public boolean isValidAmount(long amount) {
@@ -41,20 +68,12 @@ public class BidIncrementPolicy {
 		return OptionalLong.of(nextAmount);
 	}
 
-	// 가격 구간에 따른 단위
+	// 가격 구간에 따른 단위. 허용 범위 안의 금액으로만 부른다
 	private long getUnit(long amount) {
-		if (amount < 10_000) {
-			return 100;
-		} else if (amount < 50_000) {
-			return 500;
-		} else if (amount < 100_000) {
-			return 1_000;
-		} else if (amount < 500_000) {
-			return 5_000;
-		} else if (amount < 1_000_000) {
-			return 10_000;
-		} else {
-			return 20_000;
-		}
+		return BANDS.stream()
+			.filter(band -> amount <= band.to())
+			.findFirst()
+			.orElseThrow()
+			.unit();
 	}
 }

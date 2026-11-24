@@ -1,5 +1,6 @@
 package com.layer7.marketplace.bid.domain;
 
+import java.util.List;
 import java.util.OptionalLong;
 
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
@@ -122,5 +123,26 @@ class BidIncrementPolicyTest {
 
 		// then
 		assertThat(nextAmount).isEmpty();
+	}
+
+	@Test
+	@DisplayName("가격 구간은 최소 금액부터 최대 금액까지 빈틈과 겹침 없이 이어지고, 각 구간의 시작 금액은 그 단위에 맞는다")
+	void bandsCoverWholeRange() {
+		// given
+		BidIncrementPolicy policy = new BidIncrementPolicy();
+
+		// when
+		List<BidIncrementPolicy.Band> bands = policy.bands();
+
+		// then
+		assertThat(bands.getFirst().from()).isEqualTo(policy.minAmount());
+		assertThat(bands.getLast().to()).isEqualTo(policy.maxAmount());
+		for (int i = 1; i < bands.size(); i++) {
+			assertThat(bands.get(i).from()).isEqualTo(bands.get(i - 1).to() + 1);
+		}
+		for (BidIncrementPolicy.Band band : bands) {
+			assertThat(band.from() % band.unit()).isZero();
+			assertThat(policy.isValidAmount(band.from())).isTrue();
+		}
 	}
 }
