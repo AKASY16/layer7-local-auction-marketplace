@@ -39,6 +39,7 @@ Product → Auction → Trade → User (여러 명이면 id 오름차순)
 | Trade 명령·Trade 기한 Scheduler | Product → Trade → (신뢰점수·정지가 바뀌면) 당사자 User |
 | 회원탈퇴 | User |
 | 업로드 URL 발급·최초 상품 등록 | User(FOR SHARE), 업로드 key는 정렬 순서로 조건 UPDATE |
+| 관심상품 등록 | User(FOR SHARE), 중복은 favorites 고유 키로 판정 |
 
 Trade 명령은 Product를 바꾸지 않는 경우(진행, 포기 등)에도 Product부터 잡습니다. 완료 시 Product를 SOLD로 바꾸는 경로와 같은 순서를 쓰게 해서 규칙을 하나로 유지하기 위함입니다.
 

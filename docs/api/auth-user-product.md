@@ -1,6 +1,6 @@
 # Auth / User / Product API
 
-> 2026-10-29: 현재 구현은 가입·로그인·내 정보·지역 조회입니다. 최소 상품 등록(#63)은 최초 이미지 업로드·연결·표시를 포함합니다. Favorite(관심상품, #84)는 타임 경매 시작 알림 대상이므로 P1 필수입니다. Refresh·등록 후 이미지 편집/정리 배치·탈퇴 등은 후순위 설계입니다. 기존 지역 계약은 유지합니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
+> 2026-10-29: 현재 구현은 가입·로그인·내 정보·지역 조회입니다. 최소 상품 등록(#63)은 최초 이미지 업로드·연결·표시를 포함합니다. Favorite(관심상품, #84)는 타임 경매 시작 알림 대상이므로 P1 필수이며 4장의 API는 구현돼 있습니다. Refresh·등록 후 이미지 편집/정리 배치·탈퇴 등은 후순위 설계입니다. 기존 지역 계약은 유지합니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
 
 ## 1. Auth
 
@@ -485,8 +485,14 @@ Response: `204`
 
 ## 4. Favorite
 
+모두 로그인이 필요하고, 로그인한 본인의 관심상품만 다룹니다. 같은 요청을 반복해도 결과가 같으므로 Idempotency-Key를 받지 않습니다.
+
+- 삭제된 상품(`DELETED`)은 상품 조회와 같이 없는 상품으로 보고 `404 RESOURCE_NOT_FOUND`입니다. 판매된 상품(`SOLD`)과 내가 판매하는 상품은 등록할 수 있습니다.
+- 등록한 사용자에게 타임 경매 시작 알림이 가므로, 탈퇴한 회원은 등록할 수 없습니다(`403 ACCOUNT_WITHDRAWN`). 해제와 조회는 할 수 있습니다.
+- 같은 사용자·상품은 한 행만 남습니다(`uq_favorites_user_product`). 동시에 등록해도 모든 요청이 `favorited: true`로 끝납니다.
+
 ### PUT /products/{productId}/favorite
-관심상품 등록. 동일 요청 반복 시에도 결과는 동일.
+관심상품 등록. 이미 등록돼 있으면 처음 등록 시각을 그대로 두고 같은 결과를 돌려줍니다.
 
 Response `200`:
 ```json
@@ -496,8 +502,13 @@ Response `200`:
 }
 ```
 
+Errors:
+- 401 UNAUTHORIZED
+- 403 ACCOUNT_WITHDRAWN
+- 404 RESOURCE_NOT_FOUND
+
 ### DELETE /products/{productId}/favorite
-관심상품 해제.
+관심상품 해제. 등록돼 있지 않아도 같은 결과를 돌려줍니다.
 
 Response `200`:
 ```json
@@ -507,5 +518,54 @@ Response `200`:
 }
 ```
 
+Errors:
+- 401 UNAUTHORIZED
+- 404 RESOURCE_NOT_FOUND
+
+### GET /products/{productId}/favorite
+이 상품을 관심상품으로 등록했는지 조회. 상품 상세 화면의 관심상품 버튼 상태에 씁니다.
+
+Response `200`:
+```json
+{
+  "productId": 30,
+  "favorited": true
+}
+```
+
+Errors:
+- 401 UNAUTHORIZED
+- 404 RESOURCE_NOT_FOUND
+
 ### GET /users/me/favorites
-관심상품 목록.
+내 관심상품 목록. 등록 시각 최신순이고, 같은 시각이면 나중에 등록한 것이 먼저입니다. 삭제된 상품은 목록에서 빠집니다.
+
+Query:
+- `page`: 0부터, 기본 0
+- `size`: 1~50, 기본 20
+
+Response `200`:
+```json
+{
+  "content": [
+    {
+      "productId": 30,
+      "title": "몬스타기어 닌자87 기계식 키보드",
+      "category": "DIGITAL",
+      "status": "ACTIVE",
+      "thumbnailUrl": "https://...",
+      "favoritedAt": "2026-11-05T03:00:00Z"
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+`thumbnailUrl`은 첫 이미지 주소이고, 이미지가 없으면 `null`입니다. 경매 가격·시작 시각은 넣지 않습니다. 타임 경매 화면에서 필요해지면 그때 추가합니다.
+
+Errors:
+- 400 VALIDATION_ERROR (page, size)
+- 401 UNAUTHORIZED
