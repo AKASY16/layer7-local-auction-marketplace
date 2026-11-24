@@ -1,6 +1,6 @@
 # Auction / Bid / AutoBid API
 
-> 2026-10-29: 현재 구현은 경매 목록과 수동입찰입니다. P1 필수는 경매 생성/상세(#64), 입찰 이력(#65), 종료·낙찰(#47)이며 AutoBid·재경매·ProductAppend는 후순위입니다. 아래 미구현 응답 예시를 현재 동작으로 간주하지 않습니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
+> 경매 생성·목록·상세·수동입찰·입찰 이력 API, 가격단위표 조회(`GET /bid-increment-policy`)와 종료·낙찰 확정이 구현돼 있습니다. AutoBid·재경매·ProductAppend는 후순위입니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
 
 ## 1. Auction
 
@@ -18,14 +18,12 @@ Request:
 ```
 
 - `startAt = null`: 즉시 시작. Backend가 serverNow를 startAt으로 사용하고 OPEN으로 생성
-- 미래 startAt: READY
-- 경매 기간(`endAt - effective startAt`)은 1시간 이상 7일 이하, startAt은 serverNow + 7일 이내 (`400 AUCTION_PERIOD_INVALID`)
-- startPrice는 유효 가격단위이며 10,000,000원 이하 (`400 AMOUNT_LIMIT_EXCEEDED`)
-- Product 소유자이며 Product.status = ACTIVE
+- `startAt`을 명시하면 serverNow보다 미래이고 serverNow + 7일 이내여야 하며 READY로 생성
+- 경매 기간(`endAt - effective startAt`)은 1시간 이상 7일 이하. 예약 시각 또는 기간 위반은 `400 AUCTION_PERIOD_INVALID`
+- 시작가는 가격 단위표를 따릅니다 (`400 INVALID_PRICE_UNIT`). 10,000,000원을 초과하면 `400 AMOUNT_LIMIT_EXCEEDED`를 반환합니다.
+- 상품 소유자만 생성할 수 있습니다 (`403 FORBIDDEN`). 상품 상태는 ACTIVE여야 합니다. 없는 상품 또는 DELETED 상품은 `404 RESOURCE_NOT_FOUND`, SOLD 상품은 `409 PRODUCT_NOT_ACTIVE`를 반환합니다.
 - 판매자가 거래 참여 정지 상태가 아님 (`403 USER_RESTRICTED`)
-- 동일 Product에 READY/OPEN Auction이 이미 있으면 409
-- `startAt = null`이면 즉시 시작
-- `startAt`을 명시했다면 serverNow보다 미래여야 함
+- 동일 상품에 저장 상태 READY/OPEN인 경매가 있으면 `409 ACTIVE_AUCTION_ALREADY_EXISTS`를 반환합니다. 상품 행을 잠근 뒤 중복을 검사하고, 새 경매에 상품의 지역과 카테고리를 복사합니다.
 
 Response `201`:
 ```json
@@ -96,13 +94,14 @@ Item:
 응답은 [페이지](../05-api-spec.md#페이지) 공통 형식이고 `content`에 Item이 들어갑니다.
 
 - `status`는 서버 시각 기준 논리 상태, `finalized`는 저장 status가 ENDED·CANCELED인지 여부 ([상태 모델](../backend/auction-state.md))
-- 현재 구현의 `thumbnailUrl`은 `null`. P1의 최초 이미지 등록(#63) 이후에는 등록된 첫 이미지 URL을 반환해 표시하며 썸네일 변환 기능은 요구하지 않음
+- `thumbnailUrl`은 등록된 첫 이미지의 URL입니다. 이미지가 없는 상품에서는 `null`입니다.
 
 Errors:
 - 400 VALIDATION_ERROR
 
 ### GET /auctions/{auctionId}
 경매 상세. 인증 없이 호출할 수 있습니다.
+경매가 없거나 연결된 상품이 삭제된 경우 `404 RESOURCE_NOT_FOUND`를 반환합니다.
 
 Response `200` 주요 필드:
 ```json
@@ -139,9 +138,11 @@ Response `200` 주요 필드:
 - Scheduler 반영이 늦어 저장 status가 잠시 OPEN이어도 endAt이 지났다면 `status=ENDED`, `finalized=false`, `nextBidAmount=null`로 반환
 - startAt이 지났는데 저장 status가 READY로 남아 있으면 `status=OPEN`으로 반환하고 입찰을 받음
 - 입찰 가능 여부는 `status == OPEN`으로 판단하며 별도 `biddingOpen` 필드는 두지 않음
+- `nextBidAmount`는 OPEN일 때 첫 입찰 전에는 시작가, 입찰이 있으면 가격 단위표의 다음 유효 금액입니다. READY·ENDED·CANCELED 상태이거나 이미 입찰이 상한에 도달했다면 `null`입니다.
 - `ENDED + finalized=false`는 집계 중이며 winningBid는 아직 null. 낙찰 예정자는 leadingBid로 표시 가능
 - `version`은 Auction row가 바뀔 때마다 증가하는 값으로, 실시간 이벤트의 순서 판단에 사용 ([Realtime](realtime.md#공개-auction-topic))
-- `appends`는 같은 Product의 모든 경매에서 등록한 내용 추가를 시간순으로 담고, 항목마다 `auctionId`를 포함해 어느 경매에서 고지했는지 보여줌
+- `product`는 [상품 조회](auth-user-product.md#get-productsproductid)와 같은 형식으로, 표시 순서대로 정렬된 이미지 URL을 포함합니다.
+- `appends`는 빈 배열입니다. 내용 추가 기능이 구현되면 같은 상품의 모든 경매에서 등록된 내용을 시간순으로 담습니다.
 
 ### POST /auctions/{auctionId}/cancel
 판매자 전용. 판정은 논리 상태 기준.
@@ -310,8 +311,31 @@ Errors (위에서부터 먼저 확인):
 공개 Bid 이력. 인증 없이 호출할 수 있습니다.
 
 Query:
-- page / size
+- page / size (기본 0 / 20, size 최대 50)
 - 기본 정렬: id DESC (같은 트랜잭션에서 저장된 패자·승자 Bid의 순서를 보존)
+
+Response:
+```json
+{
+  "content": [
+    {
+      "id": 902,
+      "amount": 10500,
+      "type": "MANUAL",
+      "createdAt": "2026-10-04T03:12:00Z",
+      "bidder": { "id": 7, "nickname": "중고왕" }
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+- `createdAt`은 입찰을 받아들인 판정 시각입니다(경매 락을 잡은 뒤 읽은 서버 시각).
+- 입찰자는 id와 닉네임만 내보냅니다. 이메일 등 다른 회원 정보는 응답에 없습니다.
+- 없는 경매는 `404 RESOURCE_NOT_FOUND`, page가 음수이거나 size가 1~50을 벗어나면 `400 VALIDATION_ERROR`입니다.
 
 다른 사용자의 AutoBid 설정 상한은 노출하지 않고 실제 성립한 Bid만 반환.
 `bidCount`는 이 API에 나타나는 **실제 Bid row 개수**이며 AutoBid 내부의 가상 중간 상승단계는 포함하지 않습니다.

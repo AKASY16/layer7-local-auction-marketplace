@@ -6,6 +6,7 @@ import com.layer7.marketplace.auction.service.AuctionService;
 import com.layer7.marketplace.bid.domain.Bid;
 import com.layer7.marketplace.bid.domain.BidIncrementPolicy;
 import com.layer7.marketplace.bid.dto.BidCreateResponse;
+import com.layer7.marketplace.bid.dto.BidHistoryPageResponse;
 import com.layer7.marketplace.bid.repository.BidRepository;
 import com.layer7.marketplace.global.error.BusinessException;
 import com.layer7.marketplace.global.error.ErrorCode;
@@ -16,6 +17,8 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.OptionalLong;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +50,14 @@ public class BidService {
 		this.bidIncrementPolicy = bidIncrementPolicy;
 		this.eventPublisher = eventPublisher;
 		this.clock = clock;
+	}
+
+	// 공개 입찰 이력. 최신 입찰부터 보여 준다.
+	// 같은 트랜잭션에서 저장된 Bid의 순서를 보존하려고 시각이 아니라 id로 정렬한다 (docs/api/auction-bidding.md)
+	public BidHistoryPageResponse getBidHistory(Long auctionId, int page, int size) {
+		auctionService.requireAuctionExists(auctionId);
+		PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
+		return BidHistoryPageResponse.from(bidRepository.findHistory(auctionId, pageable));
 	}
 
 	// 락 순서는 Auction → 입찰자 User(FOR SHARE)다 (docs/backend/locking.md)

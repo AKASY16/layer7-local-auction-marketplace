@@ -2,20 +2,24 @@ package com.layer7.marketplace.auction.service;
 
 import com.layer7.marketplace.auction.domain.Auction;
 import com.layer7.marketplace.auction.domain.AuctionStatus;
+import com.layer7.marketplace.auction.dto.AuctionDetailResponse;
 import com.layer7.marketplace.auction.dto.AuctionPageResponse;
 import com.layer7.marketplace.auction.dto.AuctionSearchCondition;
 import com.layer7.marketplace.auction.dto.AuctionSummaryResponse;
 import com.layer7.marketplace.auction.event.AuctionClosedEvent;
 import com.layer7.marketplace.auction.repository.AuctionRepository;
 import com.layer7.marketplace.auction.repository.AuctionSpecifications;
+import com.layer7.marketplace.bid.domain.BidIncrementPolicy;
 import com.layer7.marketplace.global.error.BusinessException;
 import com.layer7.marketplace.global.error.ErrorCode;
+import com.layer7.marketplace.product.dto.ProductResponse;
 import com.layer7.marketplace.product.service.ProductService;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -39,13 +43,15 @@ public class AuctionService {
 	private final ApplicationEventPublisher eventPublisher;
 	private final Clock clock;
 	private final ProductService productService;
+	private final BidIncrementPolicy bidIncrementPolicy;
 
 	public AuctionService(AuctionRepository auctionRepository, ApplicationEventPublisher eventPublisher, Clock clock,
-		ProductService productService) {
+		ProductService productService, BidIncrementPolicy bidIncrementPolicy) {
 		this.auctionRepository = auctionRepository;
 		this.eventPublisher = eventPublisher;
 		this.clock = clock;
 		this.productService = productService;
+		this.bidIncrementPolicy = bidIncrementPolicy;
 	}
 
 	// 락은 부른 쪽 트랜잭션이 끝날 때까지 유지돼야 하므로 진행 중인 쓰기 트랜잭션 안에서만 부른다
@@ -53,6 +59,13 @@ public class AuctionService {
 	public Auction getAuctionForUpdate(Long auctionId) {
 		return auctionRepository.findByIdForUpdate(auctionId)
 			.orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+	}
+
+	// 경매가 없으면 404. 락 없이 존재만 확인한다 (입찰 이력처럼 읽기만 하는 조회에서 쓴다)
+	public void requireAuctionExists(Long auctionId) {
+		if (!auctionRepository.existsById(auctionId)) {
+			throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+		}
 	}
 
 	// 종료 Scheduler가 처리할 경매 id. 마감이 지난 READY·OPEN 경매를 마감 시각이 이른 순으로 최대 limit개 고른다
@@ -76,6 +89,28 @@ public class AuctionService {
 		eventPublisher.publishEvent(
 			new AuctionClosedEvent(auctionId, auction.getVersion(), now, winningBidId, auction.getEndAt()));
 		return true;
+	}
+
+	public AuctionDetailResponse getAuctionDetail(Long auctionId) {
+		AuctionRepository.AuctionDetailView detail = auctionRepository.findDetailById(auctionId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+		Auction auction = detail.getAuction();
+		ProductResponse product = productService.getProduct(auction.getProduct().getId());
+		Instant now = Instant.now(clock);
+		AuctionStatus status = auction.statusAt(now);
+		return AuctionDetailResponse.from(auction, status, nextBidAmount(auction, status), detail.getBidCount(),
+			now, product);
+	}
+
+	private Long nextBidAmount(Auction auction, AuctionStatus status) {
+		if (status != AuctionStatus.OPEN) {
+			return null;
+		}
+		if (!auction.hasBid()) {
+			return auction.getStartPrice();
+		}
+		OptionalLong next = bidIncrementPolicy.nextValidAmount(auction.getCurrentPrice());
+		return next.isPresent() ? next.getAsLong() : null;
 	}
 
 	// GET /api/v1/auctions. 상태 조건과 응답의 status는 같은 서버 시각으로 판단한다

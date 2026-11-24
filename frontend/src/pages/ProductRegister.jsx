@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Navigate, useLocation } from 'react-router'
+import { Navigate, useLocation, useNavigate } from 'react-router'
 import styled from 'styled-components'
 
 import { clearAccessToken, getAccessToken } from '../api/client'
@@ -115,6 +115,7 @@ const HiddenHelp = styled.span`
 
 function ProductRegister() {
   const location = useLocation()
+  const navigate = useNavigate()
 
   // 현재 Access Token 존재 여부
   const authenticated = Boolean(getAccessToken())
@@ -462,15 +463,13 @@ function ProductRegister() {
 
           <Button
             type="button"
-            disabled
-            title="경매 생성 화면은 이슈 #87에서 구현합니다."
+            onClick={() => navigate(`/products/${success.id}/auctions/new`)}
           >
-            경매 생성 (준비 중)
+            경매 생성
           </Button>
 
           <HiddenHelp>
-            상품 등록은 완료되었습니다. 경매 생성은 후속 이슈 #87에서
-            연결합니다.
+            경매 생성 화면에서 시작가와 경매 일정을 설정할 수 있습니다.
           </HiddenHelp>
         </Notice>
       </AuthPage>

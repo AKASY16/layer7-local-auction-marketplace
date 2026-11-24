@@ -22,7 +22,13 @@ const Nickname = styled.span`
   font-weight: ${({ theme }) => theme.fontWeights.semibold};
 `
 
-const LoginLink = styled(Link)`
+const UserMenu = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space.md};
+`
+
+const HeaderLink = styled(Link)`
   font-size: ${({ theme }) => theme.fontSizes.bodySmall};
   font-weight: ${({ theme }) => theme.fontWeights.semibold};
   color: ${({ theme }) => theme.colors.primary};
@@ -43,9 +49,12 @@ function Header() {
       </Link>
 
       {user?.nickname ? (
-        <Nickname>{user.nickname}님</Nickname>
+        <UserMenu>
+          <HeaderLink to="/notifications">알림</HeaderLink>
+          <Nickname>{user.nickname}님</Nickname>
+        </UserMenu>
       ) : (
-        !onAuthPage && <LoginLink to="/login">로그인</LoginLink>
+        !onAuthPage && <HeaderLink to="/login">로그인</HeaderLink>
       )}
     </Bar>
   )
