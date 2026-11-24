@@ -29,7 +29,8 @@ Product → Auction → Trade → User (여러 명이면 id 오름차순)
 
 | 작업 | 잡는 락 |
 |---|---|
-| 경매 생성·재경매 | Product |
+| 경매 생성 | Product → 판매자 User(FOR SHARE) |
+| 재경매 | Product |
 | 상품 수정·이미지 추가/삭제/순서 변경 | Product → 그 상품의 READY/OPEN Auction |
 | 상품 삭제 | Product |
 | 수동입찰·AutoBid 설정/변경 | Auction → 입찰자 User(FOR SHARE) |
@@ -71,6 +72,11 @@ Scheduler는 대상 하나마다 별도 트랜잭션으로 처리합니다. 여�
 ```
 
 ## 작업별 세부 규칙
+
+### 경매 생성
+
+- 요청 경로의 Product 행을 `FOR UPDATE`로 잠그고 소유자와 상태를 확인합니다. 판매자 User는 회원탈퇴와 경합할 때 ACTIVE 확인이 유효하도록 `FOR SHARE`로 읽습니다.
+- Product 락 안에서 저장 상태가 READY/OPEN인 경매의 존재를 확인한 뒤 같은 트랜잭션에서 INSERT합니다. 두 번째 생성 요청은 첫 요청이 커밋한 경매를 확인하고 `409 ACTIVE_AUCTION_ALREADY_EXISTS`로 거절됩니다.
 
 ### 최초 상품 등록과 이미지 연결
 

@@ -74,6 +74,13 @@ public class ProductService {
 		return ProductResponse.from(product, images.findByProductIdOrderBySortOrder(productId), storage);
 	}
 
+	@Transactional(propagation = Propagation.MANDATORY)
+	public Product getProductForUpdate(Long productId) {
+		return products.findByIdForUpdate(productId)
+			.filter(product -> product.getStatus() != ProductStatus.DELETED)
+			.orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+	}
+
 	// 요청한 상품의 첫 이미지 URL을 한 번에 조회한다. 이미지가 없거나 없는 상품 id는 결과에서 제외한다.
 	public Map<Long, String> getThumbnailUrls(List<Long> productIds) {
 		if (productIds.isEmpty()) {
