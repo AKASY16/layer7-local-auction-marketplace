@@ -61,6 +61,13 @@ public class AuctionService {
 			.orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 	}
 
+	// 경매가 없으면 404. 락 없이 존재만 확인한다 (입찰 이력처럼 읽기만 하는 조회에서 쓴다)
+	public void requireAuctionExists(Long auctionId) {
+		if (!auctionRepository.existsById(auctionId)) {
+			throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+		}
+	}
+
 	// 종료 Scheduler가 처리할 경매 id. 마감이 지난 READY·OPEN 경매를 마감 시각이 이른 순으로 최대 limit개 고른다
 	public List<Long> findAuctionIdsToClose(int limit) {
 		return auctionRepository.findIdsToClose(CLOSABLE_STATUSES, Instant.now(clock), PageRequest.of(0, limit));
