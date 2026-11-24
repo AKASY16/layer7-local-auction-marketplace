@@ -1,6 +1,6 @@
 # Auction / Bid / AutoBid API
 
-> 경매 생성·목록·상세·수동입찰 API, 가격단위표 조회(`GET /bid-increment-policy`)와 종료·낙찰 확정이 구현돼 있습니다. 입찰 이력(#65)은 P1 필수이며, AutoBid·재경매·ProductAppend는 후순위입니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
+> 경매 생성·목록·상세·수동입찰·입찰 이력 API, 가격단위표 조회(`GET /bid-increment-policy`)와 종료·낙찰 확정이 구현돼 있습니다. AutoBid·재경매·ProductAppend는 후순위입니다. 적용 범위는 [요구사항](../02-requirements.md)을 따릅니다.
 
 ## 1. Auction
 
@@ -311,8 +311,31 @@ Errors (위에서부터 먼저 확인):
 공개 Bid 이력. 인증 없이 호출할 수 있습니다.
 
 Query:
-- page / size
+- page / size (기본 0 / 20, size 최대 50)
 - 기본 정렬: id DESC (같은 트랜잭션에서 저장된 패자·승자 Bid의 순서를 보존)
+
+Response:
+```json
+{
+  "content": [
+    {
+      "id": 902,
+      "amount": 10500,
+      "type": "MANUAL",
+      "createdAt": "2026-10-04T03:12:00Z",
+      "bidder": { "id": 7, "nickname": "중고왕" }
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+- `createdAt`은 입찰을 받아들인 판정 시각입니다(경매 락을 잡은 뒤 읽은 서버 시각).
+- 입찰자는 id와 닉네임만 내보냅니다. 이메일 등 다른 회원 정보는 응답에 없습니다.
+- 없는 경매는 `404 RESOURCE_NOT_FOUND`, page가 음수이거나 size가 1~50을 벗어나면 `400 VALIDATION_ERROR`입니다.
 
 다른 사용자의 AutoBid 설정 상한은 노출하지 않고 실제 성립한 Bid만 반환.
 `bidCount`는 이 API에 나타나는 **실제 Bid row 개수**이며 AutoBid 내부의 가상 중간 상승단계는 포함하지 않습니다.
