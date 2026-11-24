@@ -19,6 +19,20 @@ import org.springframework.data.repository.query.Param;
 
 public interface AuctionRepository extends JpaRepository<Auction, Long>, JpaSpecificationExecutor<Auction> {
 
+	boolean existsByProductIdAndStatusIn(Long productId, Collection<AuctionStatus> statuses);
+
+	// READ COMMITTED에서 현재가·선두 입찰·입찰 수가 같은 커밋을 반영하도록 한 문장으로 읽는다.
+	@Query("""
+		SELECT a AS auction, (SELECT COUNT(b.id) FROM Bid b WHERE b.auction = a) AS bidCount
+		FROM Auction a WHERE a.id = :id
+		""")
+	Optional<AuctionDetailView> findDetailById(@Param("id") Long id);
+
+	interface AuctionDetailView {
+		Auction getAuction();
+		long getBidCount();
+	}
+
 	// SELECT ... FOR UPDATE. 같은 경매의 입찰·종료 처리를 한 줄로 세운다 (docs/backend/locking.md)
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT a FROM Auction a WHERE a.id = :id")
